@@ -41,6 +41,7 @@
 /* ── Brand ──────────────────────────────────────────────── */
 .auth-brand {
   padding: 1.25rem 1.5rem;
+  flex-shrink: 0;   /* jangan menyusut di flex column */
 }
 
 @media (min-width: 860px) {
@@ -48,6 +49,7 @@
     position: absolute;
     top: 0; left: 0;
     padding: 1.75rem 2.5rem;
+    z-index: 10;    /* di atas auth-card */
   }
 }
 
@@ -74,8 +76,10 @@
 @media (min-width: 860px) {
   .auth-card {
     grid-column: 1;
-    padding: 0 3rem 0 2.5rem;
+    /* padding-top memberi ruang untuk .auth-brand yang absolute */
+    padding: 5rem 3rem 3rem 2.5rem;
     max-width: 460px;
+    justify-content: center;
   }
 }
 

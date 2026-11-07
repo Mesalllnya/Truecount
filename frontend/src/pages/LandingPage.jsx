@@ -106,7 +106,7 @@ export default function LandingPage() {
 
       {/* ══ NAV ══════════════════════════════════════════════ */}
       <header className="nav">
-        <span className="nav-brand">TrueCount</span>
+        <Link to="/" className="nav-brand">TrueCount</Link>
 
         <nav className={`nav-links${menuOpen ? ' nav-links--open' : ''}`} aria-label="Navigasi utama">
           <a href="#cara-kerja" onClick={() => setMenuOpen(false)}>Cara Kerja</a>
@@ -262,7 +262,7 @@ export default function LandingPage() {
 
       {/* ══ FOOTER ═══════════════════════════════════════════ */}
       <footer className="footer">
-        <span className="nav-brand">TrueCount</span>
+        <Link to="/" className="nav-brand">TrueCount</Link>
         <p>Sistem E-Voting Aman — Proyek Akademik</p>
         <p className="footer-copy">© 2026</p>
       </footer>

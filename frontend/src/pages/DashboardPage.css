@@ -1,32 +1,91 @@
-/* ── Dashboard shell ────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════
+   DashboardPage.css — TrueCount
+   Font: Plus Jakarta Sans · Palette: #F13C35
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --red:    #F13C35;
+  --rd-dk:  #c72e27;
+  --black:  #0d0d0d;
+  --white:  #ffffff;
+  --cream:  #fafaf8;
+  --border: #e4e4e1;
+  --muted:  #6a6a67;
+  --font:   'Plus Jakarta Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --nav-h:  60px;
+  --ease:   cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Shell ──────────────────────────────────────────────── */
 .dash-shell {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: #f5f5f3;
-  font-family: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  background: var(--cream);
+  font-family: var(--font);
+  color: var(--black);
 }
 
-/* ── Nav ─────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   NAV
+   ══════════════════════════════════════════════════════════ */
 .dash-nav {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 0;
   padding: 0 2rem;
-  height: 56px;
-  background: #ffffff;
-  border-bottom: 1px solid #e8e8e6;
+  height: var(--nav-h);
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
+/* Brand — button untuk easter egg, tapi visually like a wordmark */
 .dash-brand {
-  font-size: 0.8rem;
-  font-weight: 700;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #0d0d0d;
-  white-space: nowrap;
+  color: var(--black);
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-right: 1.5rem;
+  /* tidak ada outline default, tapi accessible lewat focus-visible */
+}
+.dash-brand:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+  border-radius: 3px;
 }
 
+/* Progress dots saat klik 1–4x */
+.dash-brand-dots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.dash-brand-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 200ms, transform 200ms;
+}
+.dash-brand-dot.active {
+  background: var(--red);
+  transform: scale(1.3);
+}
+
+/* Nav links */
 .dash-nav-links {
   display: flex;
   gap: 0;
@@ -35,32 +94,47 @@
 
 .dash-nav-item {
   padding: 0 1rem;
-  height: 56px;
+  height: var(--nav-h);
   display: inline-flex;
   align-items: center;
   font-size: 0.8rem;
-  color: #5a5a57;
+  font-weight: 500;
+  color: var(--muted);
   border-bottom: 2px solid transparent;
-  transition: color 180ms, border-color 180ms;
+  transition: color 160ms, border-color 160ms;
+  white-space: nowrap;
 }
-.dash-nav-item:hover { color: #0d0d0d; }
-.dash-nav-active     { color: #0d0d0d; border-bottom-color: #0d0d0d; }
+.dash-nav-item:hover  { color: var(--black); }
+.dash-nav-active      { color: var(--black); border-bottom-color: var(--red); }
 
+/* Logout button — merah dengan icon pintu */
 .dash-logout {
   margin-left: auto;
-  padding: 0.4rem 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1rem;
   font-size: 0.8rem;
-  border: 1px solid #d4d4d0;
-  border-radius: 4px;
+  font-weight: 600;
+  font-family: var(--font);
+  border: 1.5px solid var(--red);
+  border-radius: 6px;
   background: transparent;
-  color: #3a3a38;
-  font-family: inherit;
+  color: var(--red);
   cursor: pointer;
-  transition: border-color 180ms, background 180ms;
+  transition: background 150ms, color 150ms, transform 100ms;
+  flex-shrink: 0;
 }
-.dash-logout:hover { border-color: #0d0d0d; background: #f5f5f3; }
+.dash-logout:hover  { background: var(--red); color: var(--white); }
+.dash-logout:active { transform: scale(0.97); }
+.dash-logout:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+}
 
-/* ── Main content ──────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   MAIN CONTENT
+   ══════════════════════════════════════════════════════════ */
 .dash-main {
   flex: 1;
   display: flex;
@@ -69,7 +143,7 @@
   padding: 3rem 2rem;
 }
 
-/* ── Empty state ────────────────────────────────────────── */
+/* Empty state */
 .dash-empty {
   text-align: center;
   max-width: 320px;
@@ -77,11 +151,10 @@
 
 .dash-empty-icon {
   margin: 0 auto 1.5rem;
-  width: 64px;
-  height: 64px;
-  border: 1px solid #e8e8e6;
+  width: 64px; height: 64px;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -91,21 +164,144 @@
 
 @keyframes emptyFloat {
   0%,100% { transform: translateY(0); }
-  50%      { transform: translateY(-5px); }
+  50%     { transform: translateY(-5px); }
 }
 
 .dash-empty h1 {
   font-size: 1.05rem;
-  font-weight: 500;
-  color: #0d0d0d;
+  font-weight: 600;
+  color: var(--black);
   margin-bottom: 0.5rem;
   letter-spacing: -0.01em;
 }
-
 .dash-empty p {
   font-size: 0.875rem;
-  color: #8a8a85;
+  color: var(--muted);
   line-height: 1.65;
   max-width: 30ch;
   margin: 0 auto;
 }
+
+/* ══════════════════════════════════════════════════════════
+   EASTER EGG OVERLAY
+   ══════════════════════════════════════════════════════════ */
+.egg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* subtle dark scrim behind ripples */
+  background: rgba(13, 13, 13, 0.12);
+  animation: eggFadeIn 200ms ease both;
+}
+
+@keyframes eggFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Ripple circles — expand dari tengah ke tepi */
+.egg-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--red);
+  pointer-events: none;
+}
+
+.egg-ripple--1 {
+  width: 40vmax; height: 40vmax;
+  animation: rippleGrow 600ms 0ms var(--ease) both;
+  opacity: 0.95;
+}
+.egg-ripple--2 {
+  width: 80vmax; height: 80vmax;
+  animation: rippleGrow 600ms 80ms var(--ease) both;
+  opacity: 0.80;
+}
+.egg-ripple--3 {
+  width: 160vmax; height: 160vmax;
+  animation: rippleGrow 700ms 160ms var(--ease) both;
+  opacity: 0.70;
+}
+
+@keyframes rippleGrow {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: inherit; }
+}
+
+/* Notification card */
+.egg-card {
+  position: relative;
+  z-index: 10;
+  background: var(--white);
+  border-radius: 16px;
+  padding: 2.5rem 2rem 2rem;
+  text-align: center;
+  max-width: 320px;
+  width: 90%;
+  animation: cardPop 500ms 300ms var(--ease) both;
+  box-shadow: 0 32px 64px rgba(241, 60, 53, 0.25), 0 4px 16px rgba(0,0,0,0.12);
+}
+
+@keyframes cardPop {
+  from { opacity: 0; transform: scale(0.7) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Avatar — initial huruf pertama username */
+.egg-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--red);
+  color: var(--white);
+  font-size: 1.6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  letter-spacing: 0;
+  animation: avatarSpin 600ms 350ms var(--ease) both;
+}
+
+@keyframes avatarSpin {
+  from { transform: rotate(-20deg) scale(0.6); opacity: 0; }
+  to   { transform: rotate(0deg) scale(1);     opacity: 1; }
+}
+
+.egg-greeting {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--black);
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.02em;
+}
+.egg-greeting strong { color: var(--red); }
+
+.egg-sub {
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 1.75rem;
+}
+
+.egg-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: var(--font);
+  background: var(--black);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 150ms, transform 100ms;
+}
+.egg-close:hover  { background: #1f1f1c; }
+.egg-close:active { transform: scale(0.98); }

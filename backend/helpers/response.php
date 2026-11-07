@@ -14,17 +14,26 @@ $allowedOrigins = [
     FRONTEND_ORIGIN,
     'http://tauri.localhost',   // Windows WebView2
     'tauri://localhost',        // macOS / Linux WebKitGTK
-    'http://localhost',         // fallback webview
-    'http://127.0.0.1',         // fallback
 ];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-$origin = rtrim($origin, '/');
-$allowOrigin = in_array($origin, $allowedOrigins, true) ? $origin : FRONTEND_ORIGIN;
+$origin = rtrim($_SERVER['HTTP_ORIGIN'] ?? '', '/');
+
+// Origin lokal (localhost / 127.0.0.1 / [::1]) diizinkan dengan PORT BERAPA PUN —
+// Vite dev server pakai host 127.0.0.1:5173, jangan diblokir hanya karena
+// port/host penulisannya beda dari FRONTEND_ORIGIN.
+$isLocalOrigin = (bool) preg_match(
+    '#^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$#i',
+    $origin
+);
+$allowOrigin = (in_array($origin, $allowedOrigins, true) || $isLocalOrigin)
+    ? $origin
+    : FRONTEND_ORIGIN;
 
 header('Access-Control-Allow-Origin: ' . $allowOrigin);
+header('Vary: Origin');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Private-Network: true');
 
 // Pre-flight: browser mengirim OPTIONS sebelum request utama
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

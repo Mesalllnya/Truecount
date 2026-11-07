@@ -26,10 +26,16 @@
 | Vite | 8.x | Dev server port **5173**, HMR port 5183 |
 | esbuild | 0.28.x | DevDependency — Vite 8 TIDAK lagi bundle esbuild, harus diinstall terpisah |
 | terser | 5.x | Minifier production build (esbuild minify tidak kompatibel dengan target lama) |
+| concurrently | 9.x | Jalankan PHP + Vite sekaligus: `npm run dev:full` |
 | react-router-dom | 7.x | URL Bahasa Indonesia: `/masuk`, `/daftar`, `/dasbor` |
 | axios | 1.x | Diinstall tapi belum dipakai — fetch native dipakai di Sprint 1 |
 | @tauri-apps/cli | 2.x | Desktop wrapper, opsional |
 | @tauri-apps/api | 2.x | JS bindings untuk Tauri commands |
+
+**Script npm penting:**
+- `npm run dev` — hanya frontend Vite (backend PHP HARUS dijalankan manual)
+- `npm run dev:backend` — hanya backend PHP di :8000
+- `npm run dev:full` — PHP + Vite sekaligus dalam satu terminal (pakai concurrently)
 
 ### Backend
 | Teknologi | Versi | Catatan |
@@ -71,8 +77,9 @@
 
 ### Backend
 ```
-backend/index.php           — Router utama, match() berdasarkan $uri
+backend/index.php           — Router utama, match() berdasarkan $uri + access log + exception handler
 backend/helpers/response.php — jsonResponse() + CORS multi-origin (FRONTEND_ORIGIN + origin Tauri)
+backend/helpers/logger.php   — tc_log() file logger → backend/storage/logs/app.log
 backend/helpers/jwt.php      — generateJwt() + verifyJwt() — HS256 manual
 backend/config/database.php  — getDB() singleton PDO
 backend/config/app.php       — Konstanta JWT_SECRET, JWT_EXPIRE, ARGON2_*

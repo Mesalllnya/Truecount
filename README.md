@@ -79,15 +79,23 @@ php database/migrate.php --seed
 
 Akun admin default: `admin` / `Admin@1234`
 
-### 3. Backend
+### 3. Backend + Frontend
 
+Dua cara:
+
+**Cara cepat — satu terminal menjalankan PHP + Vite sekaligus:**
 ```bash
-php -S localhost:8000 -t backend backend/index.php
+cd frontend
+npm install
+npm run dev:full     # PHP :8000 + Vite :5173 sekaligus
 ```
 
-### 4. Frontend
-
+**Cara terpisah (2 terminal):**
 ```bash
+# Terminal 1 — backend
+php -S localhost:8000 -t backend backend/index.php
+
+# Terminal 2 — frontend
 cd frontend
 npm install
 npm run dev     # http://localhost:5173

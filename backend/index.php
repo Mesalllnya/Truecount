@@ -7,8 +7,37 @@
  * PHP built-in server: php -S localhost:8000 -t backend backend/index.php
  */
 
+require_once __DIR__ . '/helpers/logger.php';     // File logger → storage/logs/
+
+// Access log — SEMUA request tercatat, termasuk preflight OPTIONS
+// (harus sebelum response.php yang meng-exit OPTIONS lebih awal)
+tc_log_info(sprintf(
+    '%s %s | origin=%s | ip=%s',
+    $_SERVER['REQUEST_METHOD'] ?? '-',
+    $_SERVER['REQUEST_URI'] ?? '-',
+    $_SERVER['HTTP_ORIGIN'] ?? '-',
+    $_SERVER['REMOTE_ADDR'] ?? '-'
+));
+
 require_once __DIR__ . '/helpers/response.php';   // CORS + jsonResponse()
 require_once __DIR__ . '/config/database.php';
+
+// Warning / error PHP native juga masuk ke file log
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/storage/logs/php_errors.log');
+
+// Semua exception / error fatal → JSON ke client, detail ke file log
+set_exception_handler(function (Throwable $e): void {
+    tc_log_error(
+        get_class($e) . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString()
+    );
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=UTF-8');
+        http_response_code(500);
+    }
+    echo json_encode(['error' => 'Terjadi kesalahan pada server. Silakan coba lagi.']);
+    exit;
+});
 
 // Simple router: baca URI dan method
 $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);

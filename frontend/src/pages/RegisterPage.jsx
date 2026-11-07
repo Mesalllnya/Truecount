@@ -2,6 +2,18 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './AuthPage.css'
 
+/** Baca response server sebagai JSON — kalau bukan JSON (error HTML PHP dsb),
+ *  jangan pernah tampilkan mentah ke user. */
+async function readJson(res) {
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    console.error('[TrueCount] Respons server bukan JSON:', text.slice(0, 400))
+    throw new Error('Server sedang mengalami gangguan. Silakan coba lagi sebentar.')
+  }
+}
+
 export default function RegisterPage() {
   const navigate = useNavigate()
   const [form, setForm]       = useState({ username: '', email: '', password: '', confirm: '' })
@@ -35,11 +47,15 @@ export default function RegisterPage() {
           password: form.password,
         }),
       })
-      const data = await res.json()
+      const data = await readJson(res)
       if (!res.ok) { setError(data.error || 'Pendaftaran gagal.'); return }
       navigate('/masuk')
     } catch (err) {
-      setError('Tidak dapat terhubung ke server. (' + (err?.message || 'network error') + ')')
+      setError(
+        err?.message && err.message !== 'Failed to fetch'
+          ? err.message
+          : 'Tidak dapat terhubung ke server. Periksa koneksi Anda.'
+      )
     } finally {
       setLoading(false)
     }

@@ -103,7 +103,10 @@ Verifikasi: buka `http://localhost:8000/health` — harus muncul `{"status":"ok"
 ```bash
 cd frontend
 npm install       # hanya pertama kali atau setelah pull
-npm run dev
+npm run dev       # http://localhost:5173
+
+# Alternatif: jalankan backend PHP + frontend sekaligus dalam satu terminal
+npm run dev:full
 ```
 
 Frontend tersedia di `http://localhost:5173`.

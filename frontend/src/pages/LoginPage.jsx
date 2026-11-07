@@ -2,6 +2,18 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './AuthPage.css'
 
+/** Baca response server sebagai JSON — kalau bukan JSON (error HTML PHP dsb),
+ *  jangan pernah tampilkan mentah ke user. */
+async function readJson(res) {
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    console.error('[TrueCount] Respons server bukan JSON:', text.slice(0, 400))
+    throw new Error('Server sedang mengalami gangguan. Silakan coba lagi sebentar.')
+  }
+}
+
 export default function LoginPage() {
   const navigate = useNavigate()
   const [form, setForm]       = useState({ identifier: '', password: '' })
@@ -11,6 +23,12 @@ export default function LoginPage() {
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
     setError('')
+  }
+
+  function handleBack() {
+    // Kembali ke halaman sebelumnya; kalau dibuka langsung (tanpa riwayat), ke landing
+    if (window.history.length > 1) navigate(-1)
+    else navigate('/')
   }
 
   async function handleSubmit(e) {
@@ -23,12 +41,16 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Login gagal.'); return }
+      const data = await readJson(res)
+      if (!res.ok) { setError(data.error || 'Login gagal. Silakan coba lagi.'); return }
       localStorage.setItem('tc_token', data.token)
       navigate('/dasbor')
     } catch (err) {
-      setError('Tidak dapat terhubung ke server. (' + (err?.message || 'network error') + ')')
+      setError(
+        err?.message && err.message !== 'Failed to fetch'
+          ? err.message
+          : 'Tidak dapat terhubung ke server. Periksa koneksi Anda.'
+      )
     } finally {
       setLoading(false)
     }
@@ -37,6 +59,23 @@ export default function LoginPage() {
   return (
     <div className="auth-shell">
       <div className="auth-brand">
+        <button
+          type="button"
+          className="back-btn"
+          onClick={handleBack}
+          aria-label="Kembali ke halaman sebelumnya"
+          title="Kembali"
+        >
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path
+              d="M10 3.5 5.5 8 10 12.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
         <Link to="/" className="brand-link">TrueCount</Link>
       </div>
 

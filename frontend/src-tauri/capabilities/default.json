@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability utama TrueCount - akses file token di drive removable",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "fs:default",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$REMOVABLE/**" },
+        { "path": "$REMOVABLE/.truecount_token" }
+      ]
+    },
+    "shell:allow-open"
+  ]
+}

@@ -7,6 +7,10 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{Manager, RunEvent};
 
+// USB Token module
+mod usb_token;
+use usb_token::{create_usb_token_file, decrypt_usb_token_private_key, list_usb_drives, scan_usb_tokens, start_usb_monitor};
+
 /// Child process PHP server - di-kill saat aplikasi ditutup.
 struct PhpServer(Mutex<Option<Child>>);
 
@@ -17,6 +21,8 @@ struct AppLog(Mutex<std::fs::File>);
 pub fn run() {
     tauri::Builder::<tauri::Wry>::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             // ── Siapkan logger ──────────────────────────────────────────
             let log_dir = app
@@ -40,6 +46,9 @@ pub fn run() {
             // ── Spawn backend PHP ──────────────────────────────────────
             spawn_php_backend(app.handle());
 
+            // ── Start USB Token Monitor ────────────────────────────────
+            start_usb_monitor(app.handle().clone());
+
             // Buka DevTools otomatis di debug build
             #[cfg(debug_assertions)]
             {
@@ -48,6 +57,12 @@ pub fn run() {
             }
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![
+            decrypt_usb_token_private_key,
+            scan_usb_tokens,
+            list_usb_drives,
+            create_usb_token_file
+        ])
         .build(tauri::generate_context!())
         .expect("error saat menjalankan aplikasi TrueCount")
         .run(|app_handle, event| {

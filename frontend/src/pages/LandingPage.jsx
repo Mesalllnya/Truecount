@@ -47,6 +47,13 @@ function Icon({ name, size = 20 }) {
         <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
       </svg>
     ),
+    login: (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+        <polyline points="10 17 15 12 10 7"/>
+        <line x1="15" y1="12" x2="3" y2="12"/>
+      </svg>
+    ),
     check: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12"/>
@@ -114,19 +121,21 @@ export default function LandingPage() {
           <a href="#keamanan"   onClick={() => setMenuOpen(false)}>Keamanan</a>
         </nav>
 
-        <div className="nav-actions">
-          <Link to="/masuk"  className="btn-ghost">Masuk</Link>
-          <Link to="/daftar" className="btn-solid">Daftar</Link>
-        </div>
+        <div className="nav-right">
+          <Link to="/masuk" className="btn-solid nav-login">
+            <Icon name="login" size={16} />
+            Masuk
+          </Link>
 
-        <button
-          className="nav-hamburger"
-          aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen(v => !v)}
-        >
-          <Icon name={menuOpen ? 'close' : 'menu'} size={22} />
-        </button>
+          <button
+            className="nav-hamburger"
+            aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(v => !v)}
+          >
+            <Icon name={menuOpen ? 'close' : 'menu'} size={22} />
+          </button>
+        </div>
       </header>
 
       {/* ══ HERO ═════════════════════════════════════════════ */}
@@ -146,8 +155,8 @@ export default function LandingPage() {
             yang dapat diverifikasi.
           </p>
           <div className="hero-cta">
-            <Link to="/daftar" className="btn-solid btn-lg">
-              Mulai sekarang <Icon name="arrow" size={16} />
+            <Link to="/masuk" className="btn-solid btn-lg">
+              Masuk sekarang <Icon name="arrow" size={16} />
             </Link>
             <a href="#cara-kerja" className="btn-ghost btn-lg">Pelajari caranya</a>
           </div>
@@ -203,7 +212,7 @@ export default function LandingPage() {
           className={`steps${stepVis ? ' steps--visible' : ''}`}
         >
           {[
-            { n: '01', icon: 'check',  title: 'Daftarkan akun',    body: 'Buat akun dengan email institusi Anda. Identitas diverifikasi sekali — lalu dipisahkan dari suara Anda.' },
+            { n: '01', icon: 'check',  title: 'Terima undangan',    body: 'Admin mengirim tautan undangan. Klaim akun Anda — identitas diverifikasi sekali, lalu dipisahkan dari suara.' },
             { n: '02', icon: 'ballot', title: 'Berikan suara',      body: 'Pilih kandidat Anda. Suara dienkripsi di sisi klien sebelum meninggalkan perangkat Anda.' },
             { n: '03', icon: 'chain',  title: 'Verifikasi hasil',   body: 'Setiap surat suara dicatat di blockchain. Rekapitulasi bersifat publik dan dapat diaudit.' },
           ].map((s, i) => (
@@ -251,8 +260,8 @@ export default function LandingPage() {
             Setiap keputusan desain — dari anonimitas suara hingga manajemen kunci —
             mengikuti prinsip keamanan yang ketat.
           </p>
-          <Link to="/daftar" className="btn-solid btn-lg">
-            Buat akun gratis <Icon name="arrow" size={16} />
+          <Link to="/masuk" className="btn-solid btn-lg">
+            Masuk ke TrueCount <Icon name="arrow" size={16} />
           </Link>
         </div>
         <div className="security-visual" aria-hidden="true">

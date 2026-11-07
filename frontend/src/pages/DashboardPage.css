@@ -48,7 +48,7 @@
   border: none;
   padding: 0;
   font-family: var(--font);
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -97,7 +97,7 @@
   height: var(--nav-h);
   display: inline-flex;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 500;
   color: var(--muted);
   border-bottom: 2px solid transparent;
@@ -113,8 +113,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.45rem 1rem;
-  font-size: 0.8rem;
+  padding: 0.5rem 1.05rem;
+  font-size: 0.88rem;
   font-weight: 600;
   font-family: var(--font);
   border: 1.5px solid var(--red);
@@ -180,6 +180,29 @@
   line-height: 1.65;
   max-width: 30ch;
   margin: 0 auto;
+}
+
+.dash-empty-demo {
+  margin-top: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--font);
+  border: 1.5px solid var(--red);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--red);
+  cursor: pointer;
+  transition: background 150ms, color 150ms, transform 100ms;
+}
+.dash-empty-demo:hover  { background: var(--red); color: var(--white); }
+.dash-empty-demo:active { transform: scale(0.97); }
+.dash-empty-demo:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -305,3 +328,326 @@
 }
 .egg-close:hover  { background: #1f1f1c; }
 .egg-close:active { transform: scale(0.98); }
+
+/* ══════════════════════════════════════════════════════════
+   ADMIN — PANEL UNDANGAN
+   ══════════════════════════════════════════════════════════ */
+.dash-main--admin {
+  display: block;
+  padding: 3rem 2rem 5rem;
+}
+
+.admin-panel {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.admin-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+}
+
+.admin-title h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--black);
+  margin-bottom: 0.2rem;
+}
+
+.admin-title p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  max-width: 46ch;
+}
+
+.admin-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: var(--font);
+  border: 1.5px solid var(--red);
+  border-radius: 8px;
+  background: var(--red);
+  color: var(--white);
+  transition: background 150ms, border-color 150ms, transform 100ms;
+  flex-shrink: 0;
+}
+.admin-create-btn:hover  { background: var(--rd-dk); border-color: var(--rd-dk); }
+.admin-create-btn:active { transform: scale(0.98); }
+.admin-create-btn:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+}
+
+/* ── Form buat undangan ─────────────────────────────────── */
+.create-panel {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  animation: eggFadeIn 240ms ease both;
+}
+
+.create-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 640px) {
+  .create-fields { grid-template-columns: 2fr 1fr; align-items: end; }
+}
+
+.create-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.create-field label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #3a3a38;
+  letter-spacing: 0.01em;
+}
+.create-field input,
+.create-field select {
+  padding: 0.6rem 0.85rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--black);
+  outline: none;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+.create-field input::placeholder { color: #b5b5b0; }
+.create-field input:focus,
+.create-field select:focus {
+  border-color: var(--black);
+  box-shadow: 0 0 0 3px rgba(13,13,13,0.07);
+}
+.create-hint { font-size: 0.74rem; color: var(--muted); }
+
+.create-actions { display: flex; gap: 0.6rem; margin-top: 1.25rem; }
+.create-submit {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.55rem 1.3rem;
+  font-size: 0.88rem; font-weight: 600; font-family: var(--font);
+  border: 1.5px solid var(--black); border-radius: 8px;
+  background: var(--black); color: var(--white);
+  transition: background 150ms, transform 100ms;
+}
+.create-submit:hover:not(:disabled) { background: #1f1f1c; }
+.create-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.create-cancel {
+  padding: 0.55rem 1.1rem;
+  font-size: 0.88rem; font-weight: 500; font-family: var(--font);
+  border: 1.5px solid var(--border); border-radius: 8px;
+  background: transparent; color: var(--black);
+  transition: border-color 150ms, background 150ms;
+}
+.create-cancel:hover { border-color: var(--black); background: var(--cream); }
+.create-submit:focus-visible,
+.create-cancel:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+}
+
+.invite-error {
+  font-size: 0.82rem;
+  color: #c0392b;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  background: #fdf0ef;
+  border: 1px solid #f5c6c3;
+  margin-bottom: 1rem;
+}
+
+/* ── Kotak tautan undangan baru ─────────────────────────── */
+.link-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background: var(--white);
+  border: 1px dashed #d6b5b2;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  animation: eggFadeIn 300ms ease both;
+}
+.link-box-label { font-size: 0.8rem; font-weight: 600; color: var(--black); }
+.link-box code {
+  flex: 1;
+  min-width: 220px;
+  font-size: 0.78rem;
+  color: var(--red);
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+/* ── Statistik undangan ─────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 640px) { .stat-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.stat-card--total { border-color: #f2b7b4; }
+.stat-card--total .stat-num { color: var(--red); }
+.stat-num {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--black);
+  font-variant-numeric: tabular-nums;
+}
+.stat-label { font-size: 0.8rem; color: var(--muted); }
+
+/* ── Daftar undangan ────────────────────────────────────── */
+.invite-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.invite-list-head {
+  display: none;
+  grid-template-columns: 1.6fr 0.7fr 0.9fr 0.9fr 0.9fr 0.9fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.7rem 1.25rem;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+@media (min-width: 860px) { .invite-list-head { display: grid; } }
+
+.invite-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  transition: background 140ms;
+}
+.invite-row:last-child { border-bottom: none; }
+.invite-row:hover { background: var(--cream); }
+
+@media (min-width: 860px) {
+  .invite-row {
+    grid-template-columns: 1.6fr 0.7fr 0.9fr 0.9fr 0.9fr 0.9fr;
+    gap: 1rem;
+    align-items: center;
+  }
+  .invite-cell-label { display: none; }
+}
+
+.invite-cell { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.invite-cell-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.invite-email { font-size: 0.88rem; font-weight: 600; color: var(--black); overflow-wrap: anywhere; }
+.invite-role  { font-size: 0.85rem; color: var(--black); }
+.invite-date  { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.invite-cell--action { align-items: flex-start; }
+@media (min-width: 860px) { .invite-cell--action { align-items: center; } }
+
+.invite-list-note {
+  padding: 2rem 1.25rem;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+/* ── Badge status ──────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.badge--menunggu    { color: #8a6d1f; background: #faf3dd; border-color: #ecdcae; }
+.badge--diterima    { color: #2a7a3b; background: #e9f4ec; border-color: #c3e0cb; }
+.badge--kedaluwarsa { color: #c0392b; background: #fdeceb; border-color: #f3c6c3; }
+.badge--dibatalkan  { color: #6a6a67; background: #f1f1ee; border-color: #e0e0dc; }
+
+/* ── Tombol salin ───────────────────────────────────────── */
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--black);
+  transition: border-color 150ms, background 150ms;
+  white-space: nowrap;
+}
+.copy-btn:hover:not(:disabled) { border-color: var(--black); background: var(--cream); }
+.copy-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.copy-btn:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+/* ── Footnote + tautan demo ─────────────────────────────── */
+.admin-footnote {
+  margin-top: 1rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.admin-footnote code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.74rem;
+  color: var(--black);
+  background: #f0f0ec;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.admin-demo-link {
+  max-width: 980px;
+  margin: 1.75rem auto 0;
+  font-size: 0.85rem;
+}
+.admin-demo-link a {
+  color: var(--muted);
+  font-weight: 500;
+  transition: color 150ms;
+}
+.admin-demo-link a:hover { color: var(--red); }

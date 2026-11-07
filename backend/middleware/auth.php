@@ -51,3 +51,19 @@ function requireAuth(): array
 
     return $payload;
 }
+
+/**
+ * Paksa autentikasi + role admin. Jika bukan admin, langsung 403 dan exit.
+ *
+ * @return array  JWT payload (sub, username, email, role, iat, exp)
+ */
+function requireAdmin(): array
+{
+    $user = requireAuth();
+
+    if (($user['role'] ?? '') !== 'admin') {
+        jsonResponse(['error' => 'Akses ditolak. Hanya admin yang diizinkan.'], 403);
+    }
+
+    return $user;
+}

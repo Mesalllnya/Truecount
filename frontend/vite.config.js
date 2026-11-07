@@ -29,12 +29,14 @@ export default defineConfig(({ command }) => ({
 
   build: {
     // Tauri butuh target ES2021+ dengan output yang efisien
+    // Pakai target yang kompatibel dengan esbuild/terser
     target:
       command === 'build'
-        ? ['es2021', 'chrome100', 'safari13']
+        ? ['es2020', 'chrome90', 'safari13']
         : undefined,
     // Jangan minify pada dev — mempercepat iterasi
-    minify: command === 'build' ? 'esbuild' : false,
+    // Terser adalah default Vite 8+, lebih stabil untuk syntax modern
+    minify: command === 'build' ? 'terser' : false,
     // Tingkatkan batas chunk warning ke 1.5 MB
     chunkSizeWarningLimit: 1500,
     sourcemap: command !== 'build',

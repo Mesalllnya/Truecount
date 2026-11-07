@@ -103,7 +103,10 @@ Verifikasi: buka `http://localhost:8000/health` — harus muncul `{"status":"ok"
 ```bash
 cd frontend
 npm install       # hanya pertama kali atau setelah pull
-npm run dev
+npm run dev       # http://localhost:5173
+
+# Alternatif: jalankan backend PHP + frontend sekaligus dalam satu terminal
+npm run dev:full
 ```
 
 Frontend tersedia di `http://localhost:5173`.
@@ -349,20 +352,28 @@ Untuk panduan lengkap konversi ke aplikasi desktop, lihat [`desktop.md`](desktop
 Ringkasan cepat:
 
 ```bash
-# Prasyarat: Rust + Build Tools (lihat desktop.md)
+# Prasyarat: Rust + Build Tools + PHP di PATH (lihat desktop.md)
 cd frontend
-npm run desktop:dev      # dev mode dengan window desktop
+npm run desktop:dev      # dev mode dengan window desktop (PHP di-spawn otomatis)
 npm run desktop:build    # build installer (.exe / .dmg / .deb)
 ```
+
+Backend PHP di-spawn otomatis oleh app (port 8000, tanpa konsol) dan di-kill saat app ditutup.
+Folder `backend/` ikut ter-bundle di installer sebagai resource.
 
 Output installer ada di `frontend/src-tauri/target/release/bundle/`.
 
 | Tambahan Troubleshoot Desktop | Penyebab | Solusi |
 |---|---|---|
 | `error: linker 'link.exe' not found` | Build Tools belum terinstall | Install Microsoft C++ Build Tools |
-| Window putih / blank | PHP server belum jalan | Jalankan `php -S localhost:8000` dulu |
+| "Tidak dapat terhubung ke server" | PHP gagal spawn / error backend / MySQL mati | Cek `%LOCALAPPDATA%\com.truecount.app\logs\truecount.log` + `php.log`; pastikan service MySQL jalan |
+| Log: `gagal menjalankan php` | `php` tidak ada di PATH mesin user | Install PHP 8.1+, verifikasi `where php` |
+| Log: `Failed opening required '\\?\C:\...'` | Extended path `\\?\` tidak di-strip | Sudah ditangani di `lib.rs` (`clean_path`); jangan hapus |
+| `Entry Point Not Found: TaskDialogIndirect` | Fitur `dialog` Tauri butuh Windows baru | Sudah ditangani: `default-features = false` di `Cargo.toml` |
+| Build gagal `transformWithEsbuild` | Vite 8 tidak bundle esbuild | `npm install -D esbuild terser` di `frontend/` |
+| Window putih / blank | PHP server tidak jalan | Sekarang auto-spawn — cek `php.log` di folder log di atas |
 | `tauri: command not found` | `@tauri-apps/cli` belum terinstall | `npm install` di folder `frontend/` |
-| Build gagal `icons not found` | Folder `src-tauri/icons/` kosong | Jalankan `npx tauri icon icon.png` |
+| Build gagal `icons not found` | Folder `src-tauri/icons/` kosong | `npx tauri icon public/raise_hand.jpg --fit cover` |
 
 ---
 

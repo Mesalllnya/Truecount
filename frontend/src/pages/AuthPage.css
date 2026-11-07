@@ -42,6 +42,38 @@
 .auth-brand {
   padding: 1.25rem 1.5rem;
   flex-shrink: 0;   /* jangan menyusut di flex column */
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+/* ── Back button ────────────────────────────────────────── */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--black);
+  cursor: pointer;
+  transition: border-color 150ms, background 150ms, color 150ms, transform 100ms;
+}
+
+.back-btn:hover {
+  border-color: var(--black);
+  background: var(--black);
+  color: var(--white);
+}
+
+.back-btn:active { transform: scale(0.94); }
+
+.back-btn:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
 }
 
 @media (min-width: 860px) {
@@ -75,11 +107,19 @@
 
 @media (min-width: 860px) {
   .auth-card {
-    grid-column: 1;
-    /* padding-top memberi ruang untuk .auth-brand yang absolute */
-    padding: 5rem 3rem 3rem 2.5rem;
-    max-width: 460px;
-    justify-content: center;
+    /* Span penuh → card bisa benar-benar di tengah viewport */
+    grid-column: 1 / -1;
+    grid-row: 1;
+    z-index: 5;               /* di atas mosaic */
+    justify-self: center;     /* tengah horizontal */
+    align-self: center;       /* tengah vertikal */
+    width: 100%;
+    max-width: 440px;
+    padding: 3rem 2.5rem 2.5rem;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 24px 48px rgba(13, 13, 13, 0.08);
   }
 }
 
@@ -140,6 +180,87 @@
 .field input:focus {
   border-color: var(--black);
   box-shadow: 0 0 0 3px rgba(13,13,13,0.07);
+}
+
+/* ── Dongle status ──────────────────────────────────────── */
+.dongle-status {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--white);
+  margin-bottom: 1.5rem;
+  transition: border-color 160ms;
+}
+
+.dongle-status--ok { border-color: #bcd9c3; }
+
+.dongle-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c9c9c4;
+  flex-shrink: 0;
+  transition: background 160ms;
+}
+.dongle-status--ok .dongle-dot { background: #2a7a3b; }
+
+.dongle-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #f0f0ec;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 160ms, color 160ms;
+}
+.dongle-status--ok .dongle-icon { background: #2a7a3b; color: var(--white); }
+
+.dongle-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dongle-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--black);
+  letter-spacing: -0.01em;
+}
+
+.dongle-sub {
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.dongle-demo-btn {
+  flex-shrink: 0;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: var(--font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition: color 150ms, border-color 150ms;
+}
+.dongle-demo-btn:hover { color: var(--black); border-color: var(--muted); }
+.dongle-demo-btn:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
 }
 
 /* ── Error ──────────────────────────────────────────────── */
@@ -233,6 +354,7 @@
     grid-row: 1;
     position: relative;
     overflow: hidden;
+    z-index: 0;              /* di belakang card login yang centered */
     background: var(--off-white);
 
     /* subtle grid lines */
@@ -284,3 +406,136 @@
 
 /* ── Selection ──────────────────────────────────────────── */
 ::selection { background: #d4d4d0; color: var(--black); }
+
+/* ═════════════════════════════════════════════════════════
+   UNDANGAN — state panel (register via invite)
+   ═════════════════════════════════════════════════════════ */
+.auth-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem 1.5rem 3.5rem;
+  animation: cardReveal 600ms var(--ease-out) both;
+}
+
+@media (min-width: 860px) {
+  .auth-state {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    z-index: 5;
+    justify-self: center;
+    align-self: center;
+    width: 100%;
+    max-width: 440px;
+    padding: 3rem 2.5rem;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 24px 48px rgba(13, 13, 13, 0.08);
+  }
+}
+
+.auth-state-spinner {
+  width: 34px; height: 34px;
+  border: 3px solid var(--border);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+  margin-bottom: 1.25rem;
+}
+
+.auth-state-icon {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--off-white);
+  border: 1px solid var(--border);
+  color: var(--black);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.auth-state-icon--error {
+  background: #fdf0ef;
+  border-color: #f5c6c3;
+  color: var(--error);
+}
+
+.auth-state h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--black);
+  margin-bottom: 0.6rem;
+}
+
+.auth-state p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 1.75rem;
+  max-width: 34ch;
+}
+
+.auth-state-cta {
+  max-width: 320px;
+  width: 100%;
+  text-decoration: none;
+  margin-top: 0;
+}
+
+/* ── Chip info undangan (form register) ─────────────────── */
+.invite-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #c3e0cb;
+  border-radius: 10px;
+  background: #e9f4ec;
+  margin-bottom: 1.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2a7a3b;
+}
+
+.invite-chip-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #2a7a3b;
+  flex-shrink: 0;
+}
+
+.invite-chip-text { letter-spacing: 0.01em; }
+
+/* ── Notifikasi sukses (login setelah klaim undangan) ───── */
+.auth-success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #2a7a3b;
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  background: #e9f4ec;
+  border: 1px solid #c3e0cb;
+  margin-bottom: 1.25rem;
+  animation: cardReveal 400ms var(--ease-out) both;
+}
+
+/* ── Input email terkunci (mengikuti undangan) ──────────── */
+.field input:disabled {
+  background: var(--off-white);
+  color: var(--muted);
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+/* ── Footer: teks tanpa tautan (undangan via admin) ─────── */
+.auth-footer-note {
+  color: var(--black);
+  font-weight: 500;
+}

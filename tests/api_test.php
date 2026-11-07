@@ -8,8 +8,8 @@
  *   php tests/api_test.php
  *   php tests/api_test.php --verbose
  *
- * Menguji semua endpoint Auth API secara otomatis.
- * Tidak butuh library eksternal — murni PHP + cURL.
+ * Menguji Auth API + Invite API (pendaftaran via undangan) secara otomatis.
+ * Tidak butuh library eksternal — murni PHP + cURL (+ PDO untuk fixture).
  */
 
 define('BASE_URL', 'http://localhost:8000');
@@ -106,8 +106,32 @@ function assert_not_empty(mixed $value, string $msg = ''): void
     }
 }
 
+// ── Fixture: buat undangan langsung ke DB (untuk test validasi) ──
+require_once __DIR__ . '/../backend/config/database.php';
+
+function createDbInvite(array $opts = []): array
+{
+    $db    = getDB();
+    $token = bin2hex(random_bytes(24));
+    $email = $opts['email'] ?? null;
+    $expired = (bool)($opts['expired'] ?? false);
+
+    $expiresExpr = $expired
+        ? 'DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 HOUR)'
+        : 'DATE_ADD(UTC_TIMESTAMP(), INTERVAL 7 DAY)';
+
+    $stmt = $db->prepare(
+        "INSERT INTO invites (token, email, role, created_by, expires_at)
+         SELECT ?, NULLIF(?, ''), 'voter', id, {$expiresExpr}
+           FROM users WHERE role = 'admin' ORDER BY id LIMIT 1"
+    );
+    $stmt->execute([$token, $email]);
+
+    return ['token' => $token, 'email' => $email];
+}
+
 // ── Unique suffix agar tidak collision test berulang ─────
-$suffix = substr(md5(microtime()), 0, 6);
+$suffix   = substr(md5(microtime()), 0, 6);
 $testUser = [
     'username' => "tc_test_{$suffix}",
     'email'    => "tc_test_{$suffix}@truecount.test",
@@ -128,39 +152,17 @@ test('GET /health → 200', function () {
     assert_equals('TrueCount', $r['body']['app'] ?? null, 'body.app');
 });
 
-// ── 2. Register ───────────────────────────────────────────
-echo "\n" . bold("2. Register\n");
+// ── 2. Pendaftaran tanpa undangan ─────────────────────────
+echo "\n" . bold("2. Pendaftaran Tanpa Undangan (harus ditolak)\n");
 
-test('POST /auth/register → 201 (akun baru)', function () use ($testUser) {
-    $r = request('POST', '/auth/register', $testUser);
-    assert_equals(201, $r['status'], 'Status HTTP');
-    assert_has($r['body'], 'user', 'Key user');
-    assert_equals($testUser['username'], $r['body']['user']['username'] ?? null, 'username');
-    assert_equals('voter', $r['body']['user']['role'] ?? null, 'role default voter');
-});
-
-test('POST /auth/register → 409 (username duplikat)', function () use ($testUser) {
-    $r = request('POST', '/auth/register', $testUser);
-    assert_equals(409, $r['status'], 'Status HTTP harus 409');
-    assert_has($r['body'], 'error', 'Key error');
-});
-
-test('POST /auth/register → 422 (password terlalu pendek)', function () {
+test('POST /auth/register tanpa undangan → 403', function () {
     $r = request('POST', '/auth/register', [
-        'username' => 'shortpass_user',
-        'email'    => 'shortpass@test.com',
-        'password' => '123',
-    ]);
-    assert_equals(422, $r['status'], 'Status HTTP harus 422');
-});
-
-test('POST /auth/register → 422 (email tidak valid)', function () {
-    $r = request('POST', '/auth/register', [
-        'username' => 'bademail_user',
-        'email'    => 'bukan-email',
+        'username' => 'noinvite_user',
+        'email'    => 'noinvite@test.com',
         'password' => 'ValidPass@1',
     ]);
-    assert_equals(422, $r['status'], 'Status HTTP harus 422');
+    assert_equals(403, $r['status'], 'Status HTTP harus 403');
+    assert_has($r['body'], 'error', 'Key error');
 });
 
 test('POST /auth/register → 422 (field kosong)', function () {
@@ -168,8 +170,194 @@ test('POST /auth/register → 422 (field kosong)', function () {
     assert_equals(422, $r['status'], 'Status HTTP harus 422');
 });
 
-// ── 3. Login ──────────────────────────────────────────────
-echo "\n" . bold("3. Login\n");
+// ── 3. Login admin (untuk buat undangan) ─────────────────
+echo "\n" . bold("3. Login Admin\n");
+
+$adminToken = null;
+test('POST /auth/login → 200 (akun admin)', function () use (&$adminToken) {
+    $r = request('POST', '/auth/login', [
+        'identifier' => 'admin',
+        'password'   => 'Admin@1234',
+    ]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    assert_equals('admin', $r['body']['user']['role'] ?? null, 'role harus admin');
+    assert_not_empty($r['body']['token'] ?? '', 'Token tidak boleh kosong');
+    $adminToken = $r['body']['token'];
+});
+
+// ── 4. Buat undangan (admin) ─────────────────────────────
+echo "\n" . bold("4. Buat Undangan (POST /invites)\n");
+
+$inviteToken  = null;
+$inviteLink   = null;
+test('POST /invites (admin) → 201', function () use (&$inviteToken, &$inviteLink) {
+    global $adminToken;
+    $r = request('POST', '/invites', [], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(201, $r['status'], 'Status HTTP harus 201');
+    assert_has($r['body'], 'invite', 'Key invite');
+    assert_not_empty($r['body']['invite']['token'] ?? '', 'invite.token');
+    assert_not_empty($r['body']['invite']['link']  ?? '', 'invite.link');
+    $inviteToken = $r['body']['invite']['token'];
+    $inviteLink  = $r['body']['invite']['link'];
+});
+
+test('POST /invites (admin, email terikat) → 201', function () {
+    global $adminToken;
+    $r = request('POST', '/invites', ['email' => 'bound@truecount.test'], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(201, $r['status'], 'Status HTTP harus 201');
+    assert_equals('bound@truecount.test', $r['body']['invite']['email'] ?? null, 'email tersimpan');
+});
+
+test('POST /invites (admin, role admin) → 201', function () {
+    global $adminToken;
+    $r = request('POST', '/invites', ['role' => 'admin'], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(201, $r['status'], 'Status HTTP harus 201');
+    assert_equals('admin', $r['body']['invite']['role'] ?? null, 'role tersimpan');
+});
+
+test('POST /invites → 401 (tanpa token)', function () {
+    $r = request('POST', '/invites');
+    assert_equals(401, $r['status'], 'Status HTTP harus 401');
+});
+
+test('POST /invites → 422 (email tidak valid)', function () {
+    global $adminToken;
+    $r = request('POST', '/invites', ['email' => 'bukan-email'], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(422, $r['status'], 'Status HTTP harus 422');
+});
+
+test('POST /invites → 422 (role tidak valid)', function () {
+    global $adminToken;
+    $r = request('POST', '/invites', ['role' => 'hacker'], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(422, $r['status'], 'Status HTTP harus 422');
+});
+
+// ── 5. Daftar undangan + verifikasi ──────────────────────
+echo "\n" . bold("5. Daftar & Verifikasi Undangan\n");
+
+test('GET /invites (admin) → 200 + stats', function () {
+    global $adminToken;
+    $r = request('GET', '/invites', [], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    assert_has($r['body'], 'stats', 'Key stats');
+    assert_has($r['body'], 'invites', 'Key invites');
+    assert_has($r['body']['stats'], 'total', 'stats.total');
+    assert_has($r['body']['stats'], 'menunggu', 'stats.menunggu');
+    assert_has($r['body']['stats'], 'diterima', 'stats.diterima');
+    assert_has($r['body']['stats'], 'kedaluwarsa', 'stats.kedaluwarsa');
+});
+
+test('GET /invites → 401 (tanpa token)', function () {
+    $r = request('GET', '/invites');
+    assert_equals(401, $r['status'], 'Status HTTP harus 401');
+});
+
+test('GET /invites/verify (token valid) → 200', function () use ($inviteToken) {
+    $r = request('GET', "/invites/verify?token={$inviteToken}");
+    assert_equals(200, $r['status'], 'Status HTTP');
+    assert_equals(true, $r['body']['valid'] ?? null, 'body.valid');
+});
+
+test('GET /invites/verify (token palsu) → 404', function () {
+    $r = request('GET', '/invites/verify?token=token_palsu_123456');
+    assert_equals(404, $r['status'], 'Status HTTP harus 404');
+});
+
+test('GET /invites/verify (token kedaluwarsa) → 400', function () {
+    $fixture = createDbInvite(['expired' => true]);
+    $r = request('GET', "/invites/verify?token={$fixture['token']}");
+    assert_equals(400, $r['status'], 'Status HTTP harus 400');
+});
+
+test('GET /invites/verify (tanpa token) → 422', function () {
+    $r = request('GET', '/invites/verify');
+    assert_equals(422, $r['status'], 'Status HTTP harus 422');
+});
+
+// ── 6. Register via undangan ─────────────────────────────
+echo "\n" . bold("6. Register Via Undangan\n");
+
+test('POST /auth/register (undangan valid) → 201', function () use ($testUser, $inviteToken) {
+    $r = request('POST', '/auth/register', $testUser + ['invite_token' => $inviteToken]);
+    assert_equals(201, $r['status'], 'Status HTTP harus 201');
+    assert_has($r['body'], 'user', 'Key user');
+    assert_equals($testUser['username'], $r['body']['user']['username'] ?? null, 'username');
+    assert_equals('voter', $r['body']['user']['role'] ?? null, 'role mengikuti undangan (voter)');
+});
+
+test('POST /auth/register (undangan sudah dipakai) → 400', function () use ($testUser, $inviteToken) {
+    $r = request('POST', '/auth/register', [
+        'username'     => 'pakai_ulang_user',
+        'email'        => 'pakai_ulang@test.com',
+        'password'     => 'ValidPass@1',
+        'invite_token' => $inviteToken,
+    ]);
+    assert_equals(400, $r['status'], 'Status HTTP harus 400');
+});
+
+test('POST /auth/register (undangan palsu) → 400', function () {
+    $r = request('POST', '/auth/register', [
+        'username'     => 'invite_palsu_user',
+        'email'        => 'invite_palsu@test.com',
+        'password'     => 'ValidPass@1',
+        'invite_token' => 'token_palsu_123456',
+    ]);
+    assert_equals(400, $r['status'], 'Status HTTP harus 400');
+});
+
+test('POST /auth/register (undangan kedaluwarsa) → 400', function () {
+    $fixture = createDbInvite(['expired' => true]);
+    $r = request('POST', '/auth/register', [
+        'username'     => 'expired_user',
+        'email'        => 'expired@test.com',
+        'password'     => 'ValidPass@1',
+        'invite_token' => $fixture['token'],
+    ]);
+    assert_equals(400, $r['status'], 'Status HTTP harus 400');
+});
+
+test('POST /auth/register (username duplikat) → 409', function () use ($testUser) {
+    $fixture = createDbInvite();
+    $r = request('POST', '/auth/register', $testUser + ['invite_token' => $fixture['token']]);
+    assert_equals(409, $r['status'], 'Status HTTP harus 409');
+});
+
+test('POST /auth/register (password pendek) → 422', function () {
+    $fixture = createDbInvite();
+    $r = request('POST', '/auth/register', [
+        'username'     => 'shortpass_user',
+        'email'        => 'shortpass@test.com',
+        'password'     => '123',
+        'invite_token' => $fixture['token'],
+    ]);
+    assert_equals(422, $r['status'], 'Status HTTP harus 422');
+});
+
+test('POST /auth/register (email tidak valid) → 422', function () {
+    $fixture = createDbInvite();
+    $r = request('POST', '/auth/register', [
+        'username'     => 'bademail_user',
+        'email'        => 'bukan-email',
+        'password'     => 'ValidPass@1',
+        'invite_token' => $fixture['token'],
+    ]);
+    assert_equals(422, $r['status'], 'Status HTTP harus 422');
+});
+
+test('POST /auth/register (email terikat undangan) → 201 & email mengikuti undangan', function () use ($suffix) {
+    $fixture = createDbInvite(['email' => "bound_{$suffix}@truecount.test"]);
+    $r = request('POST', '/auth/register', [
+        'username'     => "bound_{$suffix}",
+        'email'        => 'email_lain@test.com',   // diabaikan — undangan terikat
+        'password'     => 'ValidPass@1',
+        'invite_token' => $fixture['token'],
+    ]);
+    assert_equals(201, $r['status'], 'Status HTTP harus 201');
+    assert_equals($fixture['email'], $r['body']['user']['email'] ?? null, 'email harus dari undangan');
+});
+
+// ── 7. Login ──────────────────────────────────────────────
+echo "\n" . bold("7. Login\n");
 
 test('POST /auth/login → 200 (username + password benar)', function () use ($testUser, &$token) {
     $r = request('POST', '/auth/login', [
@@ -188,16 +376,6 @@ test('POST /auth/login → 200 (login pakai email)', function () use ($testUser)
         'password'   => $testUser['password'],
     ]);
     assert_equals(200, $r['status'], 'Status HTTP');
-    assert_has($r['body'], 'token', 'Key token');
-});
-
-test('POST /auth/login → 200 (login akun admin)', function () {
-    $r = request('POST', '/auth/login', [
-        'identifier' => 'admin',
-        'password'   => 'Admin@1234',
-    ]);
-    assert_equals(200, $r['status'], 'Status HTTP');
-    assert_equals('admin', $r['body']['user']['role'] ?? null, 'role harus admin');
     assert_has($r['body'], 'token', 'Key token');
 });
 
@@ -223,8 +401,21 @@ test('POST /auth/login → 422 (field kosong)', function () {
     assert_equals(422, $r['status'], 'Status HTTP harus 422');
 });
 
-// ── 4. Me (butuh token) ───────────────────────────────────
-echo "\n" . bold("4. GET /auth/me\n");
+// ── 8. Invite permission (voter tidak boleh) ─────────────
+echo "\n" . bold("8. Hak Akses Undangan (voter ditolak)\n");
+
+test('POST /invites (token voter) → 403', function () use (&$token) {
+    $r = request('POST', '/invites', [], ["Authorization: Bearer {$token}"]);
+    assert_equals(403, $r['status'], 'Status HTTP harus 403');
+});
+
+test('GET /invites (token voter) → 403', function () use (&$token) {
+    $r = request('GET', '/invites', [], ["Authorization: Bearer {$token}"]);
+    assert_equals(403, $r['status'], 'Status HTTP harus 403');
+});
+
+// ── 9. Me (butuh token) ───────────────────────────────────
+echo "\n" . bold("9. GET /auth/me\n");
 
 test('GET /auth/me → 200 (token valid)', function () use (&$token) {
     if (!$token) throw new \RuntimeException('Token belum tersedia dari test login');
@@ -257,8 +448,8 @@ test('GET /auth/me → 401 (token kedaluwarsa)', function () {
     assert_equals(401, $r['status'], 'Status HTTP harus 401');
 });
 
-// ── 5. Logout ─────────────────────────────────────────────
-echo "\n" . bold("5. POST /auth/logout\n");
+// ── 10. Logout ────────────────────────────────────────────
+echo "\n" . bold("10. POST /auth/logout\n");
 
 test('POST /auth/logout → 200', function () {
     $r = request('POST', '/auth/logout');
@@ -266,8 +457,8 @@ test('POST /auth/logout → 200', function () {
     assert_has($r['body'], 'message', 'Key message');
 });
 
-// ── 6. Method not allowed ─────────────────────────────────
-echo "\n" . bold("6. Method Validation\n");
+// ── 11. Method not allowed ────────────────────────────────
+echo "\n" . bold("11. Method Validation\n");
 
 test('GET /auth/register → 405', function () {
     $r = request('GET', '/auth/register');
@@ -279,7 +470,17 @@ test('GET /auth/login → 405', function () {
     assert_equals(405, $r['status'], 'Status HTTP harus 405');
 });
 
-test('GET /health → tidak 404', function () {
+test('DELETE /invites → 405', function () {
+    $r = request('DELETE', '/invites');
+    assert_equals(405, $r['status'], 'Status HTTP harus 405');
+});
+
+test('POST /invites/verify → 405', function () {
+    $r = request('POST', '/invites/verify');
+    assert_equals(405, $r['status'], 'Status HTTP harus 405');
+});
+
+test('GET /endpoint-tidak-ada → 404', function () {
     $r = request('GET', '/endpoint-tidak-ada-sama-sekali');
     assert_equals(404, $r['status'], 'Status HTTP harus 404');
 });

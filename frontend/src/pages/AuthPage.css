@@ -1,0 +1,191 @@
+/* ── Auth shell — split layout ──────────────────────────── */
+.auth-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  background: #ffffff;
+  font-family: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  position: relative;
+}
+
+/* Right-side decorative mosaic stripe */
+@media (min-width: 860px) {
+  .auth-shell {
+    grid-template-columns: 1fr 380px;
+    grid-template-rows: 1fr;
+  }
+}
+
+/* ── Brand bar (top-left) ──────────────────────────────── */
+.auth-brand {
+  padding: 1.5rem 2.5rem;
+  grid-column: 1;
+}
+
+.brand-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #0d0d0d;
+}
+
+/* ── Card ──────────────────────────────────────────────── */
+.auth-card {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem 2.5rem 4rem;
+  max-width: 420px;
+}
+
+.auth-header { margin-bottom: 2.25rem; }
+
+.auth-header h1 {
+  font-size: 1.9rem;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  color: #0d0d0d;
+  margin-bottom: 0.35rem;
+}
+
+.auth-header p {
+  font-size: 0.875rem;
+  color: #5a5a57;
+}
+
+/* ── Form fields ────────────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1.1rem;
+}
+
+.field label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #3a3a38;
+  letter-spacing: 0.01em;
+}
+
+.field input {
+  padding: 0.6rem 0.8rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  border: 1px solid #d4d4d0;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #0d0d0d;
+  outline: none;
+  transition: border-color 180ms;
+  -webkit-appearance: none;
+}
+
+.field input::placeholder { color: #b0b0ac; }
+.field input:focus { border-color: #0d0d0d; }
+
+/* custom caret + selection from design system */
+.field input { caret-color: #0d0d0d; }
+::selection { background: #d4d4d0; color: #0d0d0d; }
+
+/* ── Error message ─────────────────────────────────────── */
+.field-error {
+  font-size: 0.825rem;
+  color: #c0392b;
+  margin: -0.25rem 0 0.75rem;
+}
+
+/* ── Submit button ─────────────────────────────────────── */
+.btn-submit {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid #0d0d0d;
+  border-radius: 4px;
+  background: #0d0d0d;
+  color: #ffffff;
+  margin-top: 0.5rem;
+  transition: background 180ms;
+  letter-spacing: 0.01em;
+}
+.btn-submit:hover:not(:disabled) { background: #1f1f1c; }
+.btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Footer link ───────────────────────────────────────── */
+.auth-footer {
+  font-size: 0.825rem;
+  color: #5a5a57;
+  margin-top: 1.5rem;
+  text-align: center;
+}
+.auth-footer a { color: #0d0d0d; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Mosaic sidebar (desktop only) ────────────────────── */
+.auth-mosaic {
+  display: none;
+}
+
+@media (min-width: 860px) {
+  .auth-brand {
+    position: absolute;
+    top: 0; left: 0;
+  }
+
+  .auth-card {
+    padding-top: 0;
+  }
+
+  .auth-mosaic {
+    display: block;
+    grid-column: 2;
+    grid-row: 1;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 28px,
+        #e8e8e6 28px,
+        #e8e8e6 29px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 28px,
+        #e8e8e6 28px,
+        #e8e8e6 29px
+      );
+    background-color: #f5f5f3;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Colored blocks overlay — matches mosaic palette */
+  .auth-mosaic::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      /* red blocks */
+      linear-gradient(#e8231a, #e8231a) 40px  60px  / 48px 80px no-repeat,
+      linear-gradient(#e8231a, #e8231a) 140px 180px / 32px 48px no-repeat,
+      linear-gradient(#e8231a, #e8231a) 260px 300px / 56px 40px no-repeat,
+      /* green blocks */
+      linear-gradient(#2a7a3b, #2a7a3b) 100px 80px  / 40px 64px no-repeat,
+      linear-gradient(#2a7a3b, #2a7a3b) 220px 200px / 32px 80px no-repeat,
+      linear-gradient(#2a7a3b, #2a7a3b) 310px 100px / 24px 48px no-repeat,
+      /* blue blocks */
+      linear-gradient(#3468b0, #3468b0) 200px 60px  / 56px 40px no-repeat,
+      linear-gradient(#3468b0, #3468b0) 60px  240px / 40px 56px no-repeat,
+      linear-gradient(#3468b0, #3468b0) 280px 380px / 48px 32px no-repeat,
+      /* black blocks */
+      linear-gradient(#0d0d0d, #0d0d0d) 160px 320px / 32px 32px no-repeat,
+      linear-gradient(#0d0d0d, #0d0d0d) 80px  400px / 24px 48px no-repeat,
+      /* beige blocks */
+      linear-gradient(#d4c4a0, #d4c4a0) 240px 140px / 40px 40px no-repeat,
+      linear-gradient(#d4c4a0, #d4c4a0) 320px 240px / 32px 56px no-repeat;
+  }
+}

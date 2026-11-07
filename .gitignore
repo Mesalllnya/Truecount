@@ -1,0 +1,20 @@
+﻿# ── Environment ──────────────────────────────────────────
+.env
+
+# ── PHP vendor ───────────────────────────────────────────
+backend/vendor/
+
+# ── Node / React ─────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+
+# ── Storage (file upload / temp) ─────────────────────────
+backend/storage/encrypted/
+backend/storage/temp/
+
+# ── OS / IDE ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

@@ -1,4 +1,5 @@
 # DOCUMENT DEVELOPING
+
 # Secure E-Voting System
 
 **Project Type:** Web-Based Application  
@@ -42,9 +43,9 @@ Sistem akan mengintegrasikan beberapa teknologi keamanan, yaitu hashing, encrypt
 
 Aplikasi memiliki dua jenis pengguna utama:
 
-| Role | Hak Akses |
-|---|---|
-| Administrator | Mengelola pemilihan, kandidat, pemilih, dan melihat hasil akhir. |
+| Role            | Hak Akses                                                           |
+| --------------- | ------------------------------------------------------------------- |
+| Administrator   | Mengelola pemilihan, kandidat, pemilih, dan melihat hasil akhir.    |
 | Voter (Pemilih) | Melihat kandidat, memberikan suara, dan melihat status partisipasi. |
 
 Fitur utama:
@@ -67,22 +68,22 @@ Fitur utama:
 
 Teknologi yang digunakan dalam pengembangan proyek.
 
-| Komponen | Teknologi | Fungsi |
-|---|---|---|
-| Programming Language | Python | Bahasa pemrograman utama. |
-| Backend | Flask | Menangani proses aplikasi dan API. |
-| Frontend | HTML, CSS, JavaScript | Membangun antarmuka pengguna. |
-| UI Framework | Bootstrap | Membantu desain antarmuka. |
-| Database | MySQL | Menyimpan data aplikasi. |
-| Database ORM | SQLAlchemy | Mengelola interaksi database. |
-| Password Hashing | Argon2id | Mengamankan password pengguna. |
-| Text Encryption | Vigenere + AES-256-GCM | Demonstrasi dan pengamanan data teks. |
-| File Encryption | ChaCha20-Poly1305 | Mengamankan dokumen dan file. |
-| Integrity Hashing | SHA-256 | Memeriksa integritas data. |
-| Biometrics | WebAuthn / Windows Hello | Autentikasi biometrik. |
-| Dongle | USB Security Token | Verifikasi kepemilikan perangkat. |
-| Steganography | LSB | Menyisipkan pesan ke dalam gambar. |
-| Blockchain | Python Implementation | Mencatat riwayat aktivitas secara berantai. |
+| Komponen             | Teknologi                | Fungsi                                      |
+| -------------------- | ------------------------ | ------------------------------------------- |
+| Programming Language | Python                   | Bahasa pemrograman utama.                   |
+| Backend              | Flask                    | Menangani proses aplikasi dan API.          |
+| Frontend             | HTML, CSS, JavaScript    | Membangun antarmuka pengguna.               |
+| UI Framework         | Bootstrap                | Membantu desain antarmuka.                  |
+| Database             | MySQL                    | Menyimpan data aplikasi.                    |
+| Database ORM         | SQLAlchemy               | Mengelola interaksi database.               |
+| Password Hashing     | Argon2id                 | Mengamankan password pengguna.              |
+| Text Encryption      | Vigenere + AES-256-GCM   | Demonstrasi dan pengamanan data teks.       |
+| File Encryption      | ChaCha20-Poly1305        | Mengamankan dokumen dan file.               |
+| Integrity Hashing    | SHA-256                  | Memeriksa integritas data.                  |
+| Biometrics           | WebAuthn / Windows Hello | Autentikasi biometrik.                      |
+| Dongle               | USB Security Token       | Verifikasi kepemilikan perangkat.           |
+| Steganography        | LSB                      | Menyisipkan pesan ke dalam gambar.          |
+| Blockchain           | Python Implementation    | Mencatat riwayat aktivitas secara berantai. |
 
 **Catatan implementasi:**
 
@@ -467,13 +468,13 @@ Modul ini bertanggung jawab untuk menjaga informasi penting yang tersimpan di My
 
 ### Data yang perlu diamankan
 
-| Data | Mekanisme |
-|---|---|
-| User Password | Argon2id |
-| Ballot | AES-256-GCM |
-| Pesan Administrasi | AES-256-GCM |
-| File Administrasi | ChaCha20-Poly1305 |
-| Hash Integritas | SHA-256 |
+| Data               | Mekanisme         |
+| ------------------ | ----------------- |
+| User Password      | Argon2id          |
+| Ballot             | AES-256-GCM       |
+| Pesan Administrasi | AES-256-GCM       |
+| File Administrasi  | ChaCha20-Poly1305 |
+| Hash Integritas    | SHA-256           |
 
 ### Contoh penyimpanan
 
@@ -556,6 +557,7 @@ flowchart TD
 Untuk ekstraksi, aplikasi membaca kembali bit LSB dan menyusun pesan aslinya.
 
 **Ketentuan teknis:**
+
 - Utamakan format PNG atau BMP.
 - Hindari JPEG karena kompresi dapat merusak bit pesan.
 - Untuk menjaga keamanan, enkripsi pesan menggunakan AES terlebih dahulu sebelum disisipkan.
@@ -571,13 +573,13 @@ Tujuannya adalah mendeteksi perubahan pada catatan yang telah dibuat.
 
 ### Informasi dalam Block
 
-| Field | Fungsi |
-|---|---|
-| Index | Nomor urut block |
-| Timestamp | Waktu pembuatan |
-| Data Hash | Hash aktivitas atau data |
-| Previous Hash | Hash block sebelumnya |
-| Current Hash | Hash block saat ini |
+| Field         | Fungsi                   |
+| ------------- | ------------------------ |
+| Index         | Nomor urut block         |
+| Timestamp     | Waktu pembuatan          |
+| Data Hash     | Hash aktivitas atau data |
+| Previous Hash | Hash block sebelumnya    |
+| Current Hash  | Hash block saat ini      |
 
 ### Contoh Struktur Blockchain
 
@@ -633,18 +635,18 @@ secure_evoting
 
 ## 5.1 Database Tables
 
-| Table | Fungsi |
-|---|---|
-| users | Menyimpan data akun pengguna. |
-| biometric_credentials | Menyimpan informasi credential WebAuthn. |
-| usb_tokens | Menyimpan data token USB terdaftar. |
-| elections | Menyimpan data pemilihan. |
-| candidates | Menyimpan data kandidat. |
-| voters | Menyimpan daftar pemilih dan status partisipasi. |
-| ballots | Menyimpan suara yang telah dienkripsi. |
-| encrypted_messages | Menyimpan pesan penting dalam bentuk terenkripsi. |
-| encrypted_files | Menyimpan informasi file terenkripsi. |
-| blocks | Menyimpan catatan blockchain. |
+| Table                 | Fungsi                                            |
+| --------------------- | ------------------------------------------------- |
+| users                 | Menyimpan data akun pengguna.                     |
+| biometric_credentials | Menyimpan informasi credential WebAuthn.          |
+| usb_tokens            | Menyimpan data token USB terdaftar.               |
+| elections             | Menyimpan data pemilihan.                         |
+| candidates            | Menyimpan data kandidat.                          |
+| voters                | Menyimpan daftar pemilih dan status partisipasi.  |
+| ballots               | Menyimpan suara yang telah dienkripsi.            |
+| encrypted_messages    | Menyimpan pesan penting dalam bentuk terenkripsi. |
+| encrypted_files       | Menyimpan informasi file terenkripsi.             |
+| blocks                | Menyimpan catatan blockchain.                     |
 
 ## 5.2 Entity Relationship Diagram
 
@@ -943,19 +945,19 @@ Task:
 
 Pengujian tidak hanya dilakukan dengan memastikan tombol bekerja. Setiap fitur keamanan perlu diuji dengan skenario tertentu.
 
-| No. | Skenario | Hasil yang Diharapkan |
-|---|---|---|
-| 1 | Login menggunakan password salah | Akses ditolak. |
-| 2 | Login tanpa verifikasi biometrik | Akses ditolak. |
-| 3 | Login tanpa USB dongle | Akses ditolak. |
-| 4 | Membuka dashboard admin dengan akun voter | Akses ditolak. |
-| 5 | Pemilih memberikan suara dua kali | Suara kedua ditolak. |
-| 6 | Mengubah ciphertext ballot | Proses verifikasi gagal. |
-| 7 | Mendekripsi file dengan key salah | Proses dekripsi gagal. |
-| 8 | Mengubah file asli | SHA-256 berubah. |
-| 9 | Mengekstrak pesan dari gambar steganografi | Pesan berhasil ditemukan. |
-| 10 | Mengubah isi block sebelumnya | Blockchain dinyatakan tidak valid. |
-| 11 | Membuka hasil sebelum pemilihan ditutup | Hasil tidak ditampilkan. |
+| No. | Skenario                                   | Hasil yang Diharapkan              |
+| --- | ------------------------------------------ | ---------------------------------- |
+| 1   | Login menggunakan password salah           | Akses ditolak.                     |
+| 2   | Login tanpa verifikasi biometrik           | Akses ditolak.                     |
+| 3   | Login tanpa USB dongle                     | Akses ditolak.                     |
+| 4   | Membuka dashboard admin dengan akun voter  | Akses ditolak.                     |
+| 5   | Pemilih memberikan suara dua kali          | Suara kedua ditolak.               |
+| 6   | Mengubah ciphertext ballot                 | Proses verifikasi gagal.           |
+| 7   | Mendekripsi file dengan key salah          | Proses dekripsi gagal.             |
+| 8   | Mengubah file asli                         | SHA-256 berubah.                   |
+| 9   | Mengekstrak pesan dari gambar steganografi | Pesan berhasil ditemukan.          |
+| 10  | Mengubah isi block sebelumnya              | Blockchain dinyatakan tidak valid. |
+| 11  | Membuka hasil sebelum pemilihan ditutup    | Hasil tidak ditampilkan.           |
 
 ---
 
@@ -1011,17 +1013,17 @@ Proyek ini merupakan simulasi akademik. Sistem belum dapat dianggap layak untuk 
 
 Hasil akhir pengembangan yang diharapkan:
 
-| No. | Deliverable | Keterangan |
-|---|---|---|
-| 1 | Web Application | Aplikasi Secure E-Voting. |
-| 2 | Authentication Module | Login, biometrik, dan USB dongle. |
-| 3 | Voting Module | Proses pemilihan kandidat. |
-| 4 | Cryptography Module | Enkripsi teks dan file. |
-| 5 | Secure Database | Penyimpanan data sensitif. |
-| 6 | Steganography Module | Penyisipan pesan ke gambar. |
-| 7 | Blockchain Module | Pencatatan hash aktivitas. |
-| 8 | Testing Report | Dokumentasi hasil pengujian. |
-| 9 | Technical Documentation | Dokumentasi teknis aplikasi. |
+| No. | Deliverable             | Keterangan                        |
+| --- | ----------------------- | --------------------------------- |
+| 1   | Web Application         | Aplikasi Secure E-Voting.         |
+| 2   | Authentication Module   | Login, biometrik, dan USB dongle. |
+| 3   | Voting Module           | Proses pemilihan kandidat.        |
+| 4   | Cryptography Module     | Enkripsi teks dan file.           |
+| 5   | Secure Database         | Penyimpanan data sensitif.        |
+| 6   | Steganography Module    | Penyisipan pesan ke gambar.       |
+| 7   | Blockchain Module       | Pencatatan hash aktivitas.        |
+| 8   | Testing Report          | Dokumentasi hasil pengujian.      |
+| 9   | Technical Documentation | Dokumentasi teknis aplikasi.      |
 
 ---
 
@@ -1061,4 +1063,4 @@ Dokumentasi resmi yang dapat digunakan selama pengembangan:
 
 **END OF DOCUMENT**
 
-*Secure E-Voting System — Development Documentation*
+_Secure E-Voting System — Development Documentation_

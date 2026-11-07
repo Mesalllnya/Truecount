@@ -197,6 +197,13 @@
 
 .dongle-status--ok { border-color: #bcd9c3; }
 
+/* ── Warning (format invalid) ── */
+.dongle-status--warn { border-color: #fde68a; background: #fffbeb; }
+.dongle-status--warn .dongle-dot { background: #f59e0b; }
+.dongle-status--warn .dongle-icon { background: #fef3c7; color: #b45309; }
+.dongle-status--warn .dongle-name { color: #b45309; }
+.dongle-status--warn .dongle-sub { color: #92400e; }
+
 .dongle-dot {
   width: 8px;
   height: 8px;

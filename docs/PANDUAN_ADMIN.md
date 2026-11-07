@@ -62,6 +62,8 @@ npm run dev:full           # PHP :8000 + Vite :5173
 2. Masukkan username/email + kata sandi
 3. Klik "Masuk" → diarahkan ke dasbor
 
+> **Status dongle di halaman login:** Indikator "Dongle terpasang / tidak terdeteksi" menunjukkan deteksi USB token secara otomatis. Ini **hanya indikator** — tidak memengaruhi proses login (belum menjadi syarat wajib).
+
 ---
 
 ## 4. Akun yang Tersedia
@@ -172,6 +174,17 @@ Output sukses:
 | Ubah label | Tombol "Ubah Label" → ketik nama baru → "Simpan" |
 | Nonaktifkan | Tombol ✕ → konfirmasi (misal flashdisk hilang) |
 
+### 7.5. Peringatan & Indikator
+
+| Indikator | Artinya | Aksi |
+| --- | --- | --- |
+| 🟢 **Hijau** "TrueCount Token · H:\" | Token valid & siap dipakai | Lanjut daftarkan / gunakan |
+| 🟡 **Kuning** "Format token tidak valid · H:\" | File corrupt / field hilang / bukan JSON valid | Hapus file → buat ulang via "＋ Buat Token di USB" |
+| 🔴 **Abu-abu** "Dongle tidak terdeteksi" | Tidak ada token di flashdisk | Buat token baru atau colok flashdisk benar |
+| ⚠️ **Peringatan overwrite** | Flashdisk sudah punya token, akan ditimpa | Centang konfirmasi → klik "Buat Token" |
+
+> **Penting:** Token yang ditimpa **tidak bisa dipulihkan**. Jika token lama sudah didaftarkan ke akun, nonaktifkan manual di daftar sebelum membuat token baru.
+
 ---
 
 ## 8. Troubleshooting
@@ -181,6 +194,8 @@ Output sukses:
 | App tidak mendeteksi flashdisk | 1) Pastikan file `.truecount_token` dibuat di drive yang benar · 2) Cabut-colok flashdisk · 3) Pastikan pakai app desktop, bukan browser |
 | "USB dicabut" muncul | Colok flashdisk kembali — flow lanjut otomatis |
 | PIN ditolak | PIN default generator: `123456`. Kalau lupa, generate ulang file token |
+| **Status dongle kuning (warning)** | File `.truecount_token` corrupt / field hilang / bukan JSON valid → hapus file → buat ulang via "＋ Buat Token di USB" |
+| **Tombol "Buat Token" tolak** | Flashdisk sudah punya token, belum centang konfirmasi → centang "Saya paham, timpa token lama" lalu coba lagi |
 | Tidak bisa daftar akun | Pendaftaran ditutup publik — minta tautan undangan ke admin |
 | Tautan undangan "tidak valid" | Undangan mungkin kedaluwarsa (7 hari) atau sudah dipakai/dibatalkan |
 | Server tidak tersambung | Pastikan backend jalan (`npm run dev:full` atau app desktop otomatis spawn PHP) |

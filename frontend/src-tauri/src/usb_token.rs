@@ -24,6 +24,7 @@ pub struct UsbTokenDetected {
     pub user_id: u64,
     pub credential_id: String,
     pub label: Option<String>,
+    pub is_valid: bool,
 }
 
 /// Response decrypt - private key dikembalikan sebagai JWK
@@ -115,15 +116,28 @@ fn list_removable_drives() -> Vec<String> {
     drives
 }
 
-/// Scan file .truecount_token di drive
+/// Scan file .truecount_token di drive (return token + error kalau format invalid)
 fn scan_token_file(drive: &str) -> Result<Option<UsbTokenFile>, String> {
     let path = Path::new(drive).join(".truecount_token");
     if !path.exists() {
         return Ok(None);
     }
     let content = std::fs::read_to_string(&path).map_err(|e| format!("Read file: {}", e))?;
-    let token: UsbTokenFile = serde_json::from_str(&content).map_err(|e| format!("Parse JSON: {}", e))?;
-    Ok(Some(token))
+    match serde_json::from_str::<UsbTokenFile>(&content) {
+        Ok(token) => Ok(Some(token)),
+        Err(_) => {
+            // JSON parse gagal - return token dengan field minimal biar frontend tahu ada file tapi corrupt
+            Ok(Some(UsbTokenFile {
+                v: 0,
+                uid: 0,
+                alg: "ERROR".to_string(),
+                pk: "".to_string(),
+                sk_enc: "".to_string(),
+                salt: "".to_string(),
+                iv: "".to_string(),
+            }))
+        }
+    }
 }
 
 /// Hitung credential_id = SHA-256(SPKI public key) -> hex
@@ -142,12 +156,18 @@ pub async fn scan_usb_tokens() -> Result<Vec<UsbTokenDetected>, String> {
     let mut found = Vec::new();
     for drive in list_removable_drives() {
         if let Ok(Some(token)) = scan_token_file(&drive) {
-            let credential_id = compute_credential_id(&token.pk).unwrap_or_default();
+            let is_valid = !token.alg.is_empty() && token.alg != "ERROR" && !token.pk.is_empty();
+            let credential_id = if is_valid {
+                compute_credential_id(&token.pk).unwrap_or_default()
+            } else {
+                "".to_string()
+            };
             found.push(UsbTokenDetected {
                 drive,
-                user_id: token.uid,
+                user_id: if is_valid { token.uid } else { 0 },
                 credential_id,
                 label: None,
+                is_valid,
             });
         }
     }
@@ -252,15 +272,21 @@ pub fn start_usb_monitor(app: AppHandle) {
                     // Drive baru terlihat
                     match scan_token_file(drive) {
                         Ok(Some(token)) => {
-                            let credential_id = compute_credential_id(&token.pk).unwrap_or_default();
-                            eprintln!("[usb-monitor] EMIT usb-token-detected drive={drive} uid={} cred={}", token.uid, credential_id);
+                            let is_valid = !token.alg.is_empty() && token.alg != "ERROR" && !token.pk.is_empty();
+                            let credential_id = if is_valid {
+                                compute_credential_id(&token.pk).unwrap_or_default()
+                            } else {
+                                "".to_string()
+                            };
+                            eprintln!("[usb-monitor] EMIT usb-token-detected drive={drive} uid={} cred={} valid={}", token.uid, credential_id, is_valid);
                             let _ = app.emit(
                                 "usb-token-detected",
                                 UsbTokenDetected {
                                     drive: drive.clone(),
-                                    user_id: token.uid,
+                                    user_id: if is_valid { token.uid } else { 0 },
                                     credential_id,
                                     label: None,
+                                    is_valid,
                                 },
                             );
                         }

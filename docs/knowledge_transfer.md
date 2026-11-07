@@ -126,7 +126,7 @@ frontend/src/App.jsx            - BrowserRouter + Routes
 frontend/src/hooks/useUsbToken.ts - Hook USB token: listen event Tauri, decrypt, sign, register API
 frontend/src/pages/
   LandingPage.jsx + .css        - Hero dengan raise_hand.jpg + nav link tengah, tombol Masuk (ikon) di kanan
-  LoginPage.jsx                 - Form login (card center), fetch ke /auth/login + status dongle (dummy, tombol Demo) + banner sukses registrasi
+  LoginPage.jsx                 - Form login (card center), fetch ke /auth/login + status dongle (DETEKSI USB ASLI via scanForTokens, polling 2 detik - hanya deteksi, TIDAK mengubah flow login) + banner sukses registrasi
   RegisterPage.jsx              - Form register INVITE-ONLY: verifikasi ?undangan=<token> via GET /invites/verify, state "pendaftaran ditutup" tanpa token
   AuthPage.css                  - Shared CSS untuk Login + Register + state panel undangan
   DashboardPage.jsx + .css      - Dasbor + easter egg 5-klik + auth guard; admin lihat panel undangan (stats + tabel status + form buat undangan + salin tautan) + panel USB token (semua user)
@@ -365,15 +365,15 @@ Desktop app **sudah bisa di-build dan berjalan** - installer `.msi` + `.exe` (NS
 
 | Komponen | File | Fungsi |
 |----------|------|--------|
-| **Rust Monitor** | `src-tauri/src/usb_token.rs` | Background task polling drive removable tiap 2 detik, scan file `.truecount_token`, emit event `usb-token-detected` |
+| **Rust Monitor** | `src-tauri/src/usb_token.rs` | Background task polling drive removable tiap 2 detik, scan file `.truecount_token`, emit event `usb-token-detected` (include `is_valid` flag) |
 | **Tauri Command** | `decrypt_usb_token_private_key` | Decrypt private key PKCS#8 (AES-256-GCM + PBKDF2) dari file USB, return JWK untuk Web Crypto API |
-| **Tauri Command** | `scan_usb_tokens` | Scan aktif semua drive removable → return daftar token ditemukan (dipakai frontend polling 2 detik saat register) |
+| **Tauri Command** | `scan_usb_tokens` | Scan aktif semua drive removable → return daftar token ditemukan (include `is_valid` flag untuk deteksi corrupt) |
 | **Tauri Command** | `list_usb_drives` | Daftar SEMUA drive removable (termasuk yang belum ada token) — untuk UI pemilihan drive saat buat token |
 | **Tauri Command** | `create_usb_token_file` | Buat file token BARU di USB: generate keypair P-256 → encrypt PKCS#8 (PBKDF2+AES-GCM) → tulis `.truecount_token`. **TANPA registrasi** — daftar terpisah |
 | **Frontend Hook** | `frontend/src/hooks/useUsbToken.ts` | Listen event Tauri, polling scan, state management, crypto helpers (importKey, sign, verify) |
-| **Panel Dasbor** | `frontend/src/components/UsbTokenPanel.jsx` | Panel "USB Token" di dasbor: daftar token, register flow (modal), revoke, label |
+| **Panel Dasbor** | `frontend/src/components/UsbTokenPanel.jsx` | Panel "USB Token" di dasbor: daftar token, register flow (modal), **buat token baru (modal)**, revoke, label |
 | **Test Page** | `frontend/src/pages/UsbTokenTestPage.jsx` | Halaman `/usb-token-test` - UI deteksi token, input PIN, dekripsi, challenge-response test |
-| **Generator** | `database/generate_test_token.php` | CLI generate file `.truecount_token` untuk testing |
+| **Generator** | `database/generate_test_token.php` | CLI generate file `.truecount_token` untuk testing (alternatif dev) |
 | **Migration** | `database/migrations/003_usb_tokens.sql` + `004_usb_challenges.sql` | Tabel `usb_token_credentials` (public key) + `usb_challenges` (challenge TTL 5 menit) |
 
 ### Format File Token (`.truecount_token`)
@@ -543,8 +543,11 @@ Kriptografi: PBKDF2-HMAC-SHA256 (100k iterasi, PIN → key) → AES-256-GCM (pri
 | Drive tidak muncul di Explorer | Flashdisk belum ke-mount | Cabut → colok ulang |
 | "USB dicabut" saat register | Flashdisk dilepas di tengah flow | Colok lagi — UI otomatis kembali ke state menunggu (fix Sprint 4) |
 | Decrypt gagal "wrong PIN" | PIN salah / file dari flashdisk lain | PIN default generator: `123456` |
+| **Status dongle kuning (warning)** | File `.truecount_token` corrupt / field hilang / bukan JSON valid | Hapus file → buat ulang via "＋ Buat Token di USB" atau CLI |
 | App di browser tidak auto-detect | Auto-detect hanya di Tauri desktop | Jalankan `npm run desktop:dev`, bukan browser |
 | Event terlewat (USB dicolok sebelum app buka) | Event hanya emit 1x per drive | Fixed: frontend aktif polling `scan_usb_tokens` tiap 2 detik |
+| **Tombol "Buat Token" tolak / error overwrite** | Flashdisk sudah punya token, belum centang konfirmasi | Centang "Saya paham, timpa token lama" lalu coba lagi |
+| **Error "missing required key userId"** | Tauri v2 rename snake_case → camelCase | Sudah fix: `#[tauri::command(rename_all = "snake_case")]` |
 
 ### Keamanan & Keterbatasan (Testing Only)
 
@@ -594,6 +597,7 @@ Endpoints yang perlu dibangun:
 - WebAuthn biometrics
 - **USB Token Test System ✅** (deteksi auto, decrypt, challenge-response test di `/usb-token-test` — **belum terintegrasi ke auth**)
 - **USB Token Management ✅** (daftar/revoke/label token di dasbor via `/mfa/usb/*` - register flow sudah end-to-end: challenge → sign → verify)
+- **USB Token Creation ✅** (User bikin token sendiri via UI "＋ Buat Token di USB" — generate keypair + encrypt + tulis file — **tanpa registrasi**, registrasi terpisah via "Daftarkan USB Baru")
 - Auto-spawn PHP dari Tauri untuk standalone desktop ✅ (selesai - catatan: masih butuh PHP terinstall di sistem user; bundling `php.exe` sebagai sidecar belum dilakukan)
 
 **Catatan MFA USB:**
@@ -602,6 +606,8 @@ Endpoints yang perlu dibangun:
 - Challenge disimpan di tabel `usb_challenges` (TTL 5 menit, single-use)
 - Browser mode (non-Tauri): decrypt fallback pakai Web Crypto langsung (untuk dev tanpa Tauri)
 - **Pembuatan token & pendaftaran terpisah** — `create_usb_token_file` (Rust) hanya tulis file, registrasi via `/mfa/usb/register/*` (backend). User bikin token sendiri dari UI panel, tidak perlu CLI admin
+- **Validasi format token** — `scan_usb_tokens` return `is_valid` flag; frontend tampilkan status **kuning (warning)** kalau file corrupt/format invalid
+- **Overwrite protection** — UI wajib centang konfirmasi sebelum menimpa token lama di flashdisk yang sudah berisi token
 - Generator CLI `database/generate_test_token.php` tetap ada sebagai alternatif dev
 
 ---

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useUsbToken } from '../hooks/useUsbToken'
 import './AuthPage.css'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
@@ -43,12 +44,40 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── Dongle status (dummy - nanti diganti deteksi WebAuthn/USB real) ────────
+  // ── Dongle status (deteksi USB asli - HANYA deteksi, bukan auth) ──────
+  const { scanForTokens } = useUsbToken()
   const [dongleStatus, setDongleStatus] = useState({
-    connected: false,           // true kalau dongle terdeteksi
-    name: 'TrueCount Key',      // nama dongle
-    lastSeen: null,             // timestamp terakhir terdeteksi
+    connected: false,       // true kalau dongle/flashdisk token terdeteksi
+    drive: null,            // huruf drive (misal "H:\")
+    credentialId: null,     // SHA-256 public key (identitas token)
+    formatValid: null,      // null = unknown, true = valid, false = invalid format
   })
+
+  // Polling deteksi + validasi format tiap 2 detik
+  useEffect(() => {
+    let cancelled = false
+    const poll = async () => {
+      const tokens = await scanForTokens()
+      if (cancelled) return
+      if (tokens.length > 0) {
+        const t = tokens[0]
+        setDongleStatus({
+          connected: true,
+          drive: t.drive,
+          credentialId: t.credential_id,
+          formatValid: t.is_valid === true ? true : false,
+        })
+      } else {
+        setDongleStatus({ connected: false, drive: null, credentialId: null, formatValid: null })
+      }
+    }
+    poll()
+    const intervalId = window.setInterval(poll, 2000)
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [scanForTokens])
 
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -111,7 +140,7 @@ export default function LoginPage() {
 
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Selamat datang</h1>
+          <h1>Selamat Datang</h1>
           <p>Masuk ke akun TrueCount Anda</p>
         </div>
 
@@ -124,9 +153,13 @@ export default function LoginPage() {
           </p>
         )}
 
-        {/* ── Status Dongle (dummy - Sprint 4: deteksi USB/WebAuthn asli) ── */}
+        {/* ── Status Dongle (deteksi asli - hanya deteksi, bukan auth) ── */}
         <div
-          className={`dongle-status${dongleStatus.connected ? ' dongle-status--ok' : ''}`}
+          className={`dongle-status
+            ${dongleStatus.connected
+              ? (dongleStatus.formatValid === false ? ' dongle-status--warn' : ' dongle-status--ok')
+              : ''
+            }`}
           role="status"
           aria-live="polite"
         >
@@ -140,18 +173,12 @@ export default function LoginPage() {
             </span>
             <span className="dongle-sub">
               {dongleStatus.connected
-                ? 'TrueCount Key · terverifikasi'
+                ? (dongleStatus.formatValid === false
+                    ? `Format token tidak valid · ${dongleStatus.drive}`
+                    : `TrueCount Token · ${dongleStatus.drive}`)
                 : 'Colokkan dongle TrueCount untuk pengamanan tambahan'}
             </span>
           </span>
-          <button
-            type="button"
-            className="dongle-demo-btn"
-            onClick={() => setDongleStatus(prev => ({ ...prev, connected: !prev.connected }))}
-            title="Simulasikan pasang/cabut dongle (demo)"
-          >
-            Demo
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>

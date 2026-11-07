@@ -8,6 +8,8 @@ export interface UsbTokenDetected {
   user_id: number
   credential_id: string
   label?: string
+  /** Empty string = token corrupt/invalid format */
+  is_valid?: boolean
 }
 
 /** Response decrypt private key */

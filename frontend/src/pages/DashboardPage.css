@@ -85,10 +85,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #b0b0ac;
+  animation: emptyFloat 3s ease-in-out infinite;
+}
+
+@keyframes emptyFloat {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
 }
 
 .dash-empty h1 {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 500;
   color: #0d0d0d;
   margin-bottom: 0.5rem;
@@ -98,5 +105,7 @@
 .dash-empty p {
   font-size: 0.875rem;
   color: #8a8a85;
-  line-height: 1.6;
+  line-height: 1.65;
+  max-width: 30ch;
+  margin: 0 auto;
 }

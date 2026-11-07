@@ -4,8 +4,8 @@ import './AuthPage.css'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const [form, setForm]     = useState({ username: '', email: '', password: '', confirm: '' })
-  const [error, setError]   = useState('')
+  const [form, setForm]       = useState({ username: '', email: '', password: '', confirm: '' })
+  const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
 
   function handleChange(e) {
@@ -16,7 +16,11 @@ export default function RegisterPage() {
   async function handleSubmit(e) {
     e.preventDefault()
     if (form.password !== form.confirm) {
-      setError('Password tidak cocok.')
+      setError('Konfirmasi kata sandi tidak cocok.')
+      return
+    }
+    if (form.password.length < 8) {
+      setError('Kata sandi minimal 8 karakter.')
       return
     }
     setLoading(true)
@@ -32,8 +36,8 @@ export default function RegisterPage() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Registrasi gagal.'); return }
-      navigate('/login')
+      if (!res.ok) { setError(data.error || 'Pendaftaran gagal.'); return }
+      navigate('/masuk')
     } catch {
       setError('Tidak dapat terhubung ke server.')
     } finally {
@@ -49,8 +53,8 @@ export default function RegisterPage() {
 
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Create account</h1>
-          <p>Join TrueCount to participate in secure elections</p>
+          <h1>Buat akun</h1>
+          <p>Bergabung dengan TrueCount untuk ikut dalam pemilihan yang aman</p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
@@ -75,7 +79,7 @@ export default function RegisterPage() {
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder="anda@contoh.com"
               value={form.email}
               onChange={handleChange}
               required
@@ -83,13 +87,13 @@ export default function RegisterPage() {
           </div>
 
           <div className="field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Kata sandi</label>
             <input
               id="password"
               name="password"
               type="password"
               autoComplete="new-password"
-              placeholder="Min. 8 characters"
+              placeholder="Min. 8 karakter"
               value={form.password}
               onChange={handleChange}
               required
@@ -97,7 +101,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="field">
-            <label htmlFor="confirm">Confirm password</label>
+            <label htmlFor="confirm">Konfirmasi kata sandi</label>
             <input
               id="confirm"
               name="confirm"
@@ -113,13 +117,15 @@ export default function RegisterPage() {
           {error && <p className="field-error" role="alert">{error}</p>}
 
           <button type="submit" className="btn-submit" disabled={loading}>
-            {loading ? 'Creating account…' : 'Create account'}
+            {loading
+              ? <span className="btn-loading"><span className="spinner" />Memproses…</span>
+              : 'Buat akun'}
           </button>
         </form>
 
-        <p className="auth-footer">
-          Already have an account?{' '}
-          <Link to="/login">Sign in</Link>
+        <p className="auth-footer-text">
+          Sudah punya akun?{' '}
+          <Link to="/masuk">Masuk di sini</Link>
         </p>
       </div>
 

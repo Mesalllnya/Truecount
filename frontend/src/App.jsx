@@ -8,11 +8,14 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"          element={<LandingPage />} />
-        <Route path="/login"     element={<LoginPage />} />
-        <Route path="/register"  element={<RegisterPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="*"          element={<Navigate to="/" replace />} />
+        <Route path="/"           element={<LandingPage />} />
+        <Route path="/masuk"      element={<LoginPage />} />
+        <Route path="/login"      element={<Navigate to="/masuk" replace />} />
+        <Route path="/daftar"     element={<RegisterPage />} />
+        <Route path="/register"   element={<Navigate to="/daftar" replace />} />
+        <Route path="/dasbor"     element={<DashboardPage />} />
+        <Route path="/dashboard"  element={<Navigate to="/dasbor" replace />} />
+        <Route path="*"           element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

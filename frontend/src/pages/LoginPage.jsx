@@ -4,8 +4,8 @@ import './AuthPage.css'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const [form, setForm]     = useState({ identifier: '', password: '' })
-  const [error, setError]   = useState('')
+  const [form, setForm]       = useState({ identifier: '', password: '' })
+  const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
 
   function handleChange(e) {
@@ -26,7 +26,7 @@ export default function LoginPage() {
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Login gagal.'); return }
       localStorage.setItem('tc_token', data.token)
-      navigate('/dashboard')
+      navigate('/dasbor')
     } catch {
       setError('Tidak dapat terhubung ke server.')
     } finally {
@@ -42,19 +42,19 @@ export default function LoginPage() {
 
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Welcome back</h1>
-          <p>Log in to your TrueCount account</p>
+          <h1>Selamat datang</h1>
+          <p>Masuk ke akun TrueCount Anda</p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="field">
-            <label htmlFor="identifier">Username or email</label>
+            <label htmlFor="identifier">Username atau email</label>
             <input
               id="identifier"
               name="identifier"
               type="text"
               autoComplete="username"
-              placeholder="you@example.com"
+              placeholder="anda@contoh.com"
               value={form.identifier}
               onChange={handleChange}
               required
@@ -62,7 +62,7 @@ export default function LoginPage() {
           </div>
 
           <div className="field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Kata sandi</label>
             <input
               id="password"
               name="password"
@@ -78,13 +78,15 @@ export default function LoginPage() {
           {error && <p className="field-error" role="alert">{error}</p>}
 
           <button type="submit" className="btn-submit" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading
+              ? <span className="btn-loading"><span className="spinner" />Memproses…</span>
+              : 'Masuk'}
           </button>
         </form>
 
-        <p className="auth-footer">
-          Don't have an account?{' '}
-          <Link to="/register">Create one</Link>
+        <p className="auth-footer-text">
+          Belum punya akun?{' '}
+          <Link to="/daftar">Daftar sekarang</Link>
         </p>
       </div>
 

@@ -108,6 +108,59 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    
+    // Encrypted Messages 
+
+    // POST /encrypted-messages
+    $uri === '/encrypted-messages' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/encrypted-messages/create.php';
+    })(),
+
+    // GET /encrypted-messages/{id}
+    preg_match('#^/encrypted-messages/(\d+)$#', $uri, $m)
+        && $method === 'GET' => (function () use ($m) {
+            $_GET['id'] = $m[1];
+            require_once __DIR__ . '/api/encrypted-messages/get.php';
+        })(),
+
+    // Method tidak diizinkan
+    $uri === '/encrypted-messages' ||
+    preg_match('#^/encrypted-messages/(\d+)$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Election Voting
+    preg_match('#^/elections/vote$#', $uri) && $method === 'POST'
+    => (function () {
+        require_once __DIR__ . '/api/elections/vote.php';
+    })(),
+
+    
+    // Election Results - Admin Only
+    $uri === '/elections/results' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/elections/results.php';
+    })(),
+
+    // Method tidak diizinkan untuk election endpoints
+    $uri === '/elections/results' ||
+    $uri === '/elections/vote' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    
+    // Blockchain - Seal Election
+    $uri === '/elections/blockchain/seal' && $method === 'POST'
+        => (function () {
+            require_once __DIR__ . '/api/elections/blockchain-seal.php';
+        })(),
+
+    // Blockchain - Verify Election
+    $uri === '/elections/blockchain/verify' && $method === 'GET'
+        => (function () {
+            require_once __DIR__ . '/api/elections/blockchain-verify.php';
+        })(),
+
+
     // 404
     default => jsonResponse(['error' => 'Endpoint tidak ditemukan.'], 404),
 };

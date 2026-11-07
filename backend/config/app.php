@@ -5,6 +5,8 @@
  * TrueCount - Secure E-Voting System
  */
 
+require_once __DIR__ . '/env.php';
+
 // Pastikan header CORS sesuai URL frontend yang dipakai.
 define('APP_ENV',         $_ENV['APP_ENV']         ?? 'development');
 define('FRONTEND_ORIGIN', $_ENV['FRONTEND_ORIGIN'] ?? 'http://localhost:5173');

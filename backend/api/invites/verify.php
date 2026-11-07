@@ -1,7 +1,7 @@
 <?php
 
 /**
- * GET /invites/verify?token=<token> — cek status undangan (publik)
+ * GET /invites/verify?token=<token> - cek status undangan (publik)
  *
  * Dipakai halaman /daftar untuk memvalidasi tautan undangan
  * sebelum menampilkan form pendaftaran.
@@ -10,8 +10,8 @@
  *   { "valid": true, "invite": { token, email, role, expires_at } }
  *
  * Response error:
- *   404 — undangan tidak ditemukan
- *   400 — sudah digunakan / kedaluwarsa / dibatalkan
+ *   404 - undangan tidak ditemukan
+ *   400 - sudah digunakan / kedaluwarsa / dibatalkan
  */
 
 require_once __DIR__ . '/../../helpers/response.php';

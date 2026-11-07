@@ -2,7 +2,7 @@
 <?php
 
 /**
- * TrueCount — Database Migration Runner
+ * TrueCount - Database Migration Runner
  *
  * Penggunaan:
  *   php database/migrate.php           → jalankan semua migration
@@ -17,7 +17,7 @@ $seed  = in_array('--seed',  $args, true);
 $fresh = in_array('--fresh', $args, true);
 
 try {
-    // Koneksi pertama TANPA dbname — database mungkin belum ada
+    // Koneksi pertama TANPA dbname - database mungkin belum ada
     $dsnNoDB = sprintf('mysql:host=%s;port=%s;charset=%s', DB_HOST, DB_PORT, DB_CHARSET);
     $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,

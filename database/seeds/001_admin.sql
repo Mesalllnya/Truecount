@@ -1,5 +1,5 @@
 -- =============================================================
--- TrueCount — Seed: Admin Default (Sprint 1)
+-- TrueCount - Seed: Admin Default (Sprint 1)
 --
 -- Password default: Admin@1234
 -- Hash dibuat dengan Argon2id (memory=65536, time=4, threads=2)

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Auth middleware — verifikasi JWT dari header Authorization.
+ * Auth middleware - verifikasi JWT dari header Authorization.
  *
  * Cara pakai di endpoint yang butuh auth:
  *

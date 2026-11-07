@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   VotePage.css — TrueCount Halaman Pemilihan
+   VotePage.css - TrueCount Halaman Pemilihan
    Font: Plus Jakarta Sans · Palette: #F13C35 + warna kandidat
    ═══════════════════════════════════════════════════════════ */
 
@@ -91,7 +91,7 @@
   }
 }
 
-/* Tombol kandidat — besar, warna dari --c */
+/* Tombol kandidat - besar, warna dari --c */
 .vote-card {
   position: relative;
   display: flex;
@@ -141,7 +141,7 @@
   color: var(--muted);
 }
 
-/* Medallion ikon — lingkaran warna kandidat */
+/* Medallion ikon - lingkaran warna kandidat */
 .vote-card-icon {
   width: 60px;
   height: 60px;

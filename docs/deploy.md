@@ -1,9 +1,9 @@
-# TrueCount — Panduan Deploy
+# TrueCount - Panduan Deploy
 
 Dokumen ini mencakup dua skenario:
 
-- **[Lokal / Development](#1-lokal--development)** — untuk pengerjaan sehari-hari di laptop masing-masing.
-- **[Server / Production](#2-server--production)** — untuk demo akhir atau hosting publik.
+- **[Lokal / Development](#1-lokal--development)** - untuk pengerjaan sehari-hari di laptop masing-masing.
+- **[Server / Production](#2-server--production)** - untuk demo akhir atau hosting publik.
 
 ---
 
@@ -17,7 +17,7 @@ Dokumen ini mencakup dua skenario:
 | Composer          | 2.x           | Jika nanti ada dependensi PHP                |
 | Git               | 2.x           | Untuk clone & version control                |
 
-> **Windows:** Disarankan pakai [Laragon](https://laragon.org/) — sudah bundle PHP 8, MySQL, dan Apache dalam satu installer.
+> **Windows:** Disarankan pakai [Laragon](https://laragon.org/) - sudah bundle PHP 8, MySQL, dan Apache dalam satu installer.
 > **Mac/Linux:** Gunakan Homebrew atau package manager distro masing-masing.
 
 ---
@@ -58,6 +58,7 @@ JWT_EXPIRE=3600
 ```
 
 > **Tips:** Buat JWT_SECRET dari terminal:
+>
 > ```bash
 > # Linux / Mac
 > openssl rand -hex 32
@@ -96,7 +97,7 @@ Akun admin default (setelah `--seed`):
 php -S localhost:8000 -t backend backend/index.php
 ```
 
-Verifikasi: buka `http://localhost:8000/health` — harus muncul `{"status":"ok"}`.
+Verifikasi: buka `http://localhost:8000/health` - harus muncul `{"status":"ok"}`.
 
 ### 1.5 Jalankan Frontend (Vite Dev Server)
 
@@ -115,8 +116,8 @@ Frontend tersedia di `http://localhost:5173`.
 
 | Service   | URL                        |
 |-----------|----------------------------|
-| Frontend  | http://localhost:5173      |
-| Backend   | http://localhost:8000      |
+| Frontend  | <http://localhost:5173>      |
+| Backend   | <http://localhost:8000>      |
 | MySQL     | localhost:3306             |
 
 ---
@@ -302,7 +303,7 @@ sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 
 ### Fungsionalitas
 
-- [ ] Migration berhasil — semua 10 tabel terbuat
+- [ ] Migration berhasil - semua 10 tabel terbuat
 - [ ] Health check `GET /health` mengembalikan `200 OK`
 - [ ] Register akun baru berhasil
 - [ ] Login berhasil dan mendapatkan JWT
@@ -320,7 +321,7 @@ sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 ## 4. Troubleshooting Umum
 
 | Masalah | Kemungkinan Penyebab | Solusi |
-|---|---|---|
+| --- | --- | --- |
 | `CORS error` di browser | `FRONTEND_ORIGIN` di `.env` tidak cocok | Pastikan isinya persis sama dengan URL frontend (termasuk port) |
 | `PDOException: could not find driver` | Ekstensi `pdo_mysql` PHP belum aktif | Aktifkan di `php.ini`: `extension=pdo_mysql` |
 | `Access denied for user` MySQL | User / password salah | Cek `.env` dan cocokkan dengan user MySQL |
@@ -330,7 +331,7 @@ sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 
 ---
 
-## 5. Environment Variables — Referensi Lengkap
+## 5. Environment Variables - Referensi Lengkap
 
 | Variable          | Default                        | Keterangan                                    |
 |-------------------|--------------------------------|-----------------------------------------------|
@@ -343,7 +344,6 @@ sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 | `FRONTEND_ORIGIN` | `http://localhost:5173`        | Origin yang diizinkan CORS                    |
 | `JWT_SECRET`      | *(wajib diganti)*              | Secret key untuk signing JWT                  |
 | `JWT_EXPIRE`      | `3600`                         | Durasi token JWT dalam detik                  |
-
 
 ## 6. Deploy Desktop (Tauri)
 
@@ -364,19 +364,18 @@ Folder `backend/` ikut ter-bundle di installer sebagai resource.
 Output installer ada di `frontend/src-tauri/target/release/bundle/`.
 
 | Tambahan Troubleshoot Desktop | Penyebab | Solusi |
-|---|---|---|
+| --- | --- | --- |
 | `error: linker 'link.exe' not found` | Build Tools belum terinstall | Install Microsoft C++ Build Tools |
 | "Tidak dapat terhubung ke server" | PHP gagal spawn / error backend / MySQL mati | Cek `%LOCALAPPDATA%\com.truecount.app\logs\truecount.log` + `php.log`; pastikan service MySQL jalan |
 | Log: `gagal menjalankan php` | `php` tidak ada di PATH mesin user | Install PHP 8.1+, verifikasi `where php` |
 | Log: `Failed opening required '\\?\C:\...'` | Extended path `\\?\` tidak di-strip | Sudah ditangani di `lib.rs` (`clean_path`); jangan hapus |
 | `Entry Point Not Found: TaskDialogIndirect` | Fitur `dialog` Tauri butuh Windows baru | Sudah ditangani: `default-features = false` di `Cargo.toml` |
 | Build gagal `transformWithEsbuild` | Vite 8 tidak bundle esbuild | `npm install -D esbuild terser` di `frontend/` |
-| Window putih / blank | PHP server tidak jalan | Sekarang auto-spawn — cek `php.log` di folder log di atas |
+| Window putih / blank | PHP server tidak jalan | Sekarang auto-spawn - cek `php.log` di folder log di atas |
 | `tauri: command not found` | `@tauri-apps/cli` belum terinstall | `npm install` di folder `frontend/` |
 | Build gagal `icons not found` | Folder `src-tauri/icons/` kosong | `npx tauri icon public/raise_hand.jpg --fit cover` |
 
 ---
-
 
 ---
 

@@ -3,7 +3,7 @@
 /**
  * POST /auth/register
  *
- * Pendaftaran TIDAK terbuka untuk publik — hanya lewat undangan
+ * Pendaftaran TIDAK terbuka untuk publik - hanya lewat undangan
  * yang dibuat admin (POST /invites). Tanpa token undangan yang valid,
  * request ini ditolak.
  *
@@ -115,7 +115,7 @@ $stmt = $db->prepare(
 $stmt->execute([$username, $email, $hash, $invite['role']]);
 $userId = (int)$db->lastInsertId();
 
-// UPDATE bersyarat — cegah undangan dipakai dua kali bersamaan
+// UPDATE bersyarat - cegah undangan dipakai dua kali bersamaan
 $upd = $db->prepare(
     "UPDATE invites
         SET status = 'accepted', used_by = ?, used_at = UTC_TIMESTAMP()

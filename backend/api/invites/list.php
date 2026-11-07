@@ -1,7 +1,7 @@
 <?php
 
 /**
- * GET /invites — daftar semua undangan (khusus admin)
+ * GET /invites - daftar semua undangan (khusus admin)
  *
  * Headers:
  *   Authorization: Bearer <token admin>
@@ -32,9 +32,11 @@ $db   = getDB();
 $stmt = $db->query(
     'SELECT i.id, i.token, i.email, i.role, i.status,
             i.expires_at, i.created_at, i.used_at,
-            u.username AS used_by_username
+            u.username AS used_by_username,
+            c.username AS created_by_username
        FROM invites i
        LEFT JOIN users u ON u.id = i.used_by
+       LEFT JOIN users c ON c.id = i.created_by
       ORDER BY i.created_at DESC, i.id DESC'
 );
 $rows = $stmt->fetchAll();
@@ -54,16 +56,17 @@ foreach ($rows as $r) {
     }
 
     $invites[] = [
-        'id'               => (int)$r['id'],
-        'token'            => $r['token'],
-        'email'            => $r['email'],
-        'role'             => $r['role'],
-        'status'           => $status,
-        'created_at'       => toIso8601($r['created_at']),
-        'expires_at'       => toIso8601($r['expires_at']),
-        'used_at'          => toIso8601($r['used_at']),
-        'used_by_username' => $r['used_by_username'],
-        'link'             => '/daftar?undangan=' . $r['token'],
+        'id'                   => (int)$r['id'],
+        'token'                => $r['token'],
+        'email'                => $r['email'],
+        'role'                 => $r['role'],
+        'status'               => $status,
+        'created_at'           => toIso8601($r['created_at']),
+        'expires_at'           => toIso8601($r['expires_at']),
+        'used_at'              => toIso8601($r['used_at']),
+        'used_by_username'     => $r['used_by_username'],
+        'created_by_username'  => $r['created_by_username'],
+        'link'                 => '/daftar?undangan=' . $r['token'],
     ];
 
     $stats[$status] = ($stats[$status] ?? 0) + 1;

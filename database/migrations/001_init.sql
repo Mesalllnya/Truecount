@@ -1,5 +1,5 @@
 -- =============================================================
--- TrueCount — Database Migration (Sprint 1)
+-- TrueCount - Database Migration (Sprint 1)
 -- Database: truecount_db
 --
 -- Jalankan:  mysql -u root -p < database/migrations/001_init.sql
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
--- 2. biometric_credentials  (WebAuthn / FIDO2 — Sprint 4)
+-- 2. biometric_credentials  (WebAuthn / FIDO2 - Sprint 4)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `biometric_credentials` (
     `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS `biometric_credentials` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
--- 3. usb_tokens  (USB Dongle — Sprint 4)
+-- 3. usb_tokens  (USB Dongle - Sprint 4)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `usb_tokens` (
     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS `candidates` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
--- 6. voters  (partisipasi — TIDAK menyimpan pilihan)
+-- 6. voters  (partisipasi - TIDAK menyimpan pilihan)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `voters` (
     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS `voters` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
--- 7. ballots  (isi suara — TIDAK ada FK ke users/voters)
+-- 7. ballots  (isi suara - TIDAK ada FK ke users/voters)
 -- Privacy by design: suara dan identitas pemilih terpisah.
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `ballots` (
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS `ballots` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
--- 8. encrypted_messages  (Cryptography Module — Sprint 3)
+-- 8. encrypted_messages  (Cryptography Module - Sprint 3)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `encrypted_messages` (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS `encrypted_messages` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
--- 9. encrypted_files  (Cryptography Module — Sprint 3)
+-- 9. encrypted_files  (Cryptography Module - Sprint 3)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `encrypted_files` (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS `encrypted_files` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------
--- 10. blocks  (Simple Blockchain — Sprint 3)
+-- 10. blocks  (Simple Blockchain - Sprint 3)
 -- -------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `blocks` (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,

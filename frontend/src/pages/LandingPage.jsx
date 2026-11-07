@@ -100,7 +100,7 @@ export default function LandingPage() {
   const [secRef,  secVis]  = useReveal()
 
   const features = [
-    { icon: 'lock',   title: 'Kata Sandi Argon2id',      body: 'Kata sandi di-hash dengan Argon2id — tahan terhadap serangan GPU dan side-channel.' },
+    { icon: 'lock',   title: 'Kata Sandi Argon2id',      body: 'Kata sandi di-hash dengan Argon2id - tahan terhadap serangan GPU dan side-channel.' },
     { icon: 'ballot', title: 'Surat Suara Terenkripsi',   body: 'Enkripsi AES-256-GCM memastikan tidak ada yang bisa membaca suara Anda, bahkan server.' },
     { icon: 'chain',  title: 'Audit Blockchain',           body: 'Setiap kejadian pemilihan dicatat dan dirantai. Manipulasi dapat dideteksi secara matematis.' },
     { icon: 'eye',    title: 'Privasi by Design',          body: 'Partisipasi pemilih dan isi suara disimpan di tabel terpisah yang tidak terhubung.' },
@@ -119,6 +119,7 @@ export default function LandingPage() {
           <a href="#cara-kerja" onClick={() => setMenuOpen(false)}>Cara Kerja</a>
           <a href="#fitur"      onClick={() => setMenuOpen(false)}>Fitur</a>
           <a href="#keamanan"   onClick={() => setMenuOpen(false)}>Keamanan</a>
+          <Link to="/tentang" onClick={() => setMenuOpen(false)}>Tentang</Link>
         </nav>
 
         <div className="nav-right">
@@ -141,16 +142,16 @@ export default function LandingPage() {
       {/* ══ HERO ═════════════════════════════════════════════ */}
       <main className="hero">
 
-        {/* Left — text */}
+        {/* Left - text */}
         <div className="hero-text">
-          <p className="hero-eyebrow">Platform E-Voting Akademik</p>
+          <p className="hero-eyebrow">Platform E-Voting</p>
           <h1>
             Suara<br />
             <em>kamu</em><br />
             terhitung.
           </h1>
           <p className="hero-sub">
-            TrueCount adalah platform e-voting yang aman dan transparan —
+            TrueCount adalah platform e-voting yang aman dan transparan -
             dibangun dengan enkripsi ujung-ke-ujung dan integritas surat suara
             yang dapat diverifikasi.
           </p>
@@ -180,14 +181,14 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Right — artsy image panel */}
+        {/* Right - artsy image panel */}
         <div className="hero-visual" aria-hidden="true">
           {/* accent bar */}
           <div className="hero-visual-accent" />
           <div className="hero-visual-frame">
             <img
               src={raiseHand}
-              alt="Tangan terangkat — simbol partisipasi demokratis"
+              alt="Tangan terangkat - simbol partisipasi demokratis"
               className="hero-img"
             />
             {/* floating label */}
@@ -212,7 +213,7 @@ export default function LandingPage() {
           className={`steps${stepVis ? ' steps--visible' : ''}`}
         >
           {[
-            { n: '01', icon: 'check',  title: 'Terima undangan',    body: 'Admin mengirim tautan undangan. Klaim akun Anda — identitas diverifikasi sekali, lalu dipisahkan dari suara.' },
+            { n: '01', icon: 'check',  title: 'Terima undangan',    body: 'Admin mengirim tautan undangan. Klaim akun Anda - identitas diverifikasi sekali, lalu dipisahkan dari suara.' },
             { n: '02', icon: 'ballot', title: 'Berikan suara',      body: 'Pilih kandidat Anda. Suara dienkripsi di sisi klien sebelum meninggalkan perangkat Anda.' },
             { n: '03', icon: 'chain',  title: 'Verifikasi hasil',   body: 'Setiap surat suara dicatat di blockchain. Rekapitulasi bersifat publik dan dapat diaudit.' },
           ].map((s, i) => (
@@ -257,7 +258,7 @@ export default function LandingPage() {
           <h2>Dirancang aman<br />sejak awal.</h2>
           <p>
             TrueCount adalah simulasi akademik dari sistem e-voting tingkat produksi.
-            Setiap keputusan desain — dari anonimitas suara hingga manajemen kunci —
+            Setiap keputusan desain - dari anonimitas suara hingga manajemen kunci -
             mengikuti prinsip keamanan yang ketat.
           </p>
           <Link to="/masuk" className="btn-solid btn-lg">
@@ -272,7 +273,10 @@ export default function LandingPage() {
       {/* ══ FOOTER ═══════════════════════════════════════════ */}
       <footer className="footer">
         <Link to="/" className="nav-brand">TrueCount</Link>
-        <p>Sistem E-Voting Aman — Proyek Akademik</p>
+        <nav className="footer-links">
+          <Link to="/tentang">Tentang Kami</Link>
+        </nav>
+        <p>Sistem E-Voting Aman</p>
         <p className="footer-copy">© 2026</p>
       </footer>
 

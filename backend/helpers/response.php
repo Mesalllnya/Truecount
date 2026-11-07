@@ -17,7 +17,7 @@ $allowedOrigins = [
 ];
 $origin = rtrim($_SERVER['HTTP_ORIGIN'] ?? '', '/');
 
-// Origin lokal (localhost / 127.0.0.1 / [::1]) diizinkan dengan PORT BERAPA PUN —
+// Origin lokal (localhost / 127.0.0.1 / [::1]) diizinkan dengan PORT BERAPA PUN -
 // Vite dev server pakai host 127.0.0.1:5173, jangan diblokir hanya karena
 // port/host penulisannya beda dari FRONTEND_ORIGIN.
 $isLocalOrigin = (bool) preg_match(

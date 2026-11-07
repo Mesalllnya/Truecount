@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   AuthPage.css — TrueCount Login & Register
+   AuthPage.css - TrueCount Login & Register
    Font: Plus Jakarta Sans · Palette: #F13C35
    ═══════════════════════════════════════════════════════ */
 
@@ -408,7 +408,7 @@
 ::selection { background: #d4d4d0; color: var(--black); }
 
 /* ═════════════════════════════════════════════════════════
-   UNDANGAN — state panel (register via invite)
+   UNDANGAN - state panel (register via invite)
    ═════════════════════════════════════════════════════════ */
 .auth-state {
   flex: 1;

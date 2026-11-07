@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import './AuthPage.css'
 
-/** Baca response server sebagai JSON — kalau bukan JSON (error HTML PHP dsb),
+/** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
  *  jangan pernah tampilkan mentah ke user. */
 async function readJson(res) {
   const text = await res.text()
@@ -14,7 +14,7 @@ async function readJson(res) {
   }
 }
 
-/* ── Ikon dongle — SVG stroke konsisten ──────────────────── */
+/* ── Ikon dongle - SVG stroke konsisten ──────────────────── */
 function KeyIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -43,7 +43,7 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── Dongle status (dummy — nanti diganti deteksi WebAuthn/USB real) ────────
+  // ── Dongle status (dummy - nanti diganti deteksi WebAuthn/USB real) ────────
   const [dongleStatus, setDongleStatus] = useState({
     connected: false,           // true kalau dongle terdeteksi
     name: 'TrueCount Key',      // nama dongle
@@ -56,7 +56,7 @@ export default function LoginPage() {
   }
 
   function handleBack() {
-    // Selalu ke landing — jangan pakai history.back()/navigate(-1):
+    // Selalu ke landing - jangan pakai history.back()/navigate(-1):
     // setelah logout, riwayat masih berisi /dasbor dan user bisa "masuk" lagi tanpa token.
     navigate('/')
   }
@@ -124,7 +124,7 @@ export default function LoginPage() {
           </p>
         )}
 
-        {/* ── Status Dongle (dummy — Sprint 4: deteksi USB/WebAuthn asli) ── */}
+        {/* ── Status Dongle (dummy - Sprint 4: deteksi USB/WebAuthn asli) ── */}
         <div
           className={`dongle-status${dongleStatus.connected ? ' dongle-status--ok' : ''}`}
           role="status"
@@ -194,7 +194,7 @@ export default function LoginPage() {
 
         <p className="auth-footer-text">
           Butuh akun?{' '}
-          <span className="auth-footer-note">Minta tautan undangan dari admin TrueCount.</span>
+          <span className="auth-footer-note">Minta tautan undangan dari Panitia</span>
         </p>
       </div>
 

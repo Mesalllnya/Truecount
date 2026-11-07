@@ -1,6 +1,6 @@
-# TrueCount — Panduan Desktop (Tauri)
+# TrueCount - Panduan Desktop (Tauri)
 
-Dokumen ini menjelaskan cara mengkonversi TrueCount dari web app menjadi aplikasi desktop native menggunakan **Tauri v2** (pembungkus Rust ringan — jauh lebih kecil dari Electron).
+Dokumen ini menjelaskan cara mengkonversi TrueCount dari web app menjadi aplikasi desktop native menggunakan **Tauri v2** (pembungkus Rust ringan - jauh lebih kecil dari Electron).
 
 ---
 
@@ -41,10 +41,10 @@ rustup update stable
 ### 2. Build Tools per Platform
 
 | Platform | Kebutuhan |
-|---|---|
+| --- | --- |
 | **Windows** | [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) atau Visual Studio dengan "Desktop development with C++" |
-| **macOS**   | `xcode-select --install` |
-| **Linux**   | `sudo apt install libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-appindicator3-dev librsvg2-dev` |
+| **macOS** | `xcode-select --install` |
+| **Linux** | `sudo apt install libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-appindicator3-dev librsvg2-dev` |
 
 Panduan resmi: [https://v2.tauri.app/start/prerequisites/](https://v2.tauri.app/start/prerequisites/)
 
@@ -53,7 +53,7 @@ Panduan resmi: [https://v2.tauri.app/start/prerequisites/](https://v2.tauri.app/
 ```bash
 rustc --version
 cargo --version
-php --version     # wajib — dipakai untuk spawn backend otomatis
+php --version     # wajib - dipakai untuk spawn backend otomatis
 ```
 
 ---
@@ -78,7 +78,7 @@ frontend/
 ## Cara Menjalankan (Dev Mode)
 
 ```bash
-# Cukup satu terminal — PHP backend di-spawn otomatis oleh app
+# Cukup satu terminal - PHP backend di-spawn otomatis oleh app
 cd frontend
 npm run desktop:dev
 ```
@@ -114,7 +114,7 @@ Output ada di `frontend/src-tauri/target/release/bundle/`:
 ```json
 "app": {
   "windows": [{
-    "title": "TrueCount — Secure E-Voting",
+    "title": "TrueCount - Secure E-Voting",
     "width": 1280,
     "height": 800,
     "minWidth": 900,
@@ -131,7 +131,7 @@ Untuk mengubah ukuran default, edit nilai `width`/`height` di [`frontend/src-tau
 
 ## Menambahkan Icon Aplikasi
 
-> ✅ **Sudah selesai** — icons sudah di-generate dari `frontend/public/raise_hand.jpg`
+> ✅ **Sudah selesai** - icons sudah di-generate dari `frontend/public/raise_hand.jpg`
 > dengan perintah di bawah. Skip seksi ini kecuali mau ganti logo.
 
 File di `frontend/src-tauri/icons/` dengan nama persis:
@@ -145,7 +145,7 @@ icons/
 └── icon.ico      (Windows)
 ```
 
-Cara generate ulang — gunakan CLI Tauri:
+Cara generate ulang - gunakan CLI Tauri:
 
 ```bash
 # Siapkan satu file PNG 1024×1024 sebagai source.
@@ -157,17 +157,17 @@ npx tauri icon public/raise_hand.jpg --fit cover
 
 ---
 
-## Auto-start PHP dari Tauri — ✅ Sudah Diimplementasi
+## Auto-start PHP dari Tauri - ✅ Sudah Diimplementasi
 
 PHP backend sekarang di-spawn otomatis di `lib.rs` (bukan lagi rencana Sprint 4+).
 Ringkasan perilaku:
 
-1. **Cek port** — kalau `127.0.0.1:8000` sudah ada server, spawn di-skip.
-2. **Cari folder backend** — urutan: resource dir (installer) → relatif lokasi exe → cwd (dev).
-3. **Spawn** — `php -S 127.0.0.1:8000 -t <backend> <backend>/index.php` dengan
+1. **Cek port** - kalau `127.0.0.1:8000` sudah ada server, spawn di-skip.
+2. **Cari folder backend** - urutan: resource dir (installer) → relatif lokasi exe → cwd (dev).
+3. **Spawn** - `php -S 127.0.0.1:8000 -t <backend> <backend>/index.php` dengan
    `CREATE_NO_WINDOW` (Windows) sehingga tidak muncul konsol.
-4. **Cleanup** — saat app keluar (`RunEvent::Exit`), child PHP di-kill.
-5. **Path `\\?\`** — Tauri mengembalikan extended-length path; prefix `\\?\`
+4. **Cleanup** - saat app keluar (`RunEvent::Exit`), child PHP di-kill.
+5. **Path `\\?\`** - Tauri mengembalikan extended-length path; prefix `\\?\`
    di-strip dulu, karena PHP tidak bisa membuka file dengan prefix itu.
 6. **Output PHP** diarahkan ke `php.log` (lihat bawah).
 
@@ -188,7 +188,7 @@ Command::new("php")
 ### Konfigurasi penting yang sudah diterapkan
 
 | File | Setting | Alasan |
-|---|---|---|
+| --- | --- | --- |
 | `Cargo.toml` | `tauri = { features = ["wry"], default-features = false }` | Fitur `dialog` Tauri butuh `TaskDialogIndirect` yang tidak ada di Windows lama → error "Entry Point Not Found" |
 | `main.rs` | `windows_subsystem = "windows"` | Release build tanpa window konsol |
 | `lib.rs` | `tauri::Builder::<tauri::Wry>::default()` | Type runtime explicit karena `default-features = false` |
@@ -199,11 +199,11 @@ Command::new("php")
 ### Logging
 
 | File | Lokasi | Isi |
-|---|---|---|
+| --- | --- | --- |
 | `truecount.log` | `%LOCALAPPDATA%\com.truecount.app\logs\` (Windows) | Log app: exe path, kandidat folder backend, hasil spawn |
-| `php.log` | `%LOCALAPPDATA%\com.truecount.app\logs\` (Windows) | Output PHP server — error DB, PHP warning, fatal error |
+| `php.log` | `%LOCALAPPDATA%\com.truecount.app\logs\` (Windows) | Output PHP server - error DB, PHP warning, fatal error |
 
-Kalau muncul "Tidak dapat terhubung ke server", cek kedua file ini — biasanya penyebabnya
+Kalau muncul "Tidak dapat terhubung ke server", cek kedua file ini - biasanya penyebabnya
 langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 
 ---
@@ -211,11 +211,11 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 ## Perbedaan Web vs Desktop
 
 | Aspek | Web | Desktop (Tauri) |
-|---|---|---|
+| --- | --- | --- |
 | Distribusi | URL | Installer .exe/.dmg/.deb |
 | Offline | Perlu server | ✅ Auto-spawn PHP (syarat: `php` ada di PATH user) |
 | Update | Deploy ulang | Tauri Updater plugin |
-| Ukuran binary | — | ~6–15 MB (jauh lebih kecil dari Electron ~120 MB) |
+| Ukuran binary | - | ~6–15 MB (jauh lebih kecil dari Electron ~120 MB) |
 | Performance | Browser | WebView native OS |
 | `window.localStorage` | ✅ | ✅ |
 | Native dialog/file | ❌ | ✅ via Tauri plugins |
@@ -236,7 +236,7 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 ## Troubleshooting Desktop
 
 | Masalah | Penyebab umum | Solusi |
-|---|---|---|
+| --- | --- | --- |
 | "Tidak dapat terhubung ke server" | PHP gagal spawn / error backend | Cek `%LOCALAPPDATA%\com.truecount.app\logs\truecount.log` dan `php.log` |
 | Log: "gagal menjalankan `php`" | `php` tidak ada di PATH | Install PHP 8.1+ dan pastikan `where php` ditemukan |
 | Log: `Failed opening required '\\?\C:\...'` | Extended path belum di-strip | Pastikan `clean_path()` dipanggil sebelum spawn (sudah di `lib.rs`) |

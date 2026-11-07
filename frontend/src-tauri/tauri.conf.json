@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "TrueCount — Secure E-Voting",
+        "title": "TrueCount - Secure E-Voting",
         "width": 1280,
         "height": 800,
         "minWidth": 900,

@@ -3,7 +3,7 @@
 /**
  * POST /auth/logout
  *
- * JWT adalah stateless — invalidasi sisi klien cukup (hapus token).
+ * JWT adalah stateless - invalidasi sisi klien cukup (hapus token).
  * Endpoint ini hanya memberi konfirmasi agar frontend punya pola yang konsisten.
  *
  * Response 200:

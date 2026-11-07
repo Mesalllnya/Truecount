@@ -4,7 +4,7 @@ import './DashboardPage.css'   // reuse .dash-nav / .dash-brand / .dash-logout
 import './VotePage.css'
 
 /* ═══════════════════════════════════════════════════════════
-   DATA DEMO — backend Sprint 2 (GET /elections, POST /vote)
+   DATA DEMO - backend Sprint 2 (GET /elections, POST /vote)
    belum ada, jadi kandidat masih contoh.
    ═══════════════════════════════════════════════════════════ */
 const ELECTION = {
@@ -19,7 +19,7 @@ const CANDIDATES = [
   { id: 4, name: 'Nadia Rahma',     tagline: 'Transparansi anggaran',        color: '#b45309', icon: 'sun'  },
 ]
 
-/* ── Ikon kandidat — SVG satu stroke konsisten ───────────── */
+/* ── Ikon kandidat - SVG satu stroke konsisten ───────────── */
 function CandidateIcon({ type }) {
   const common = {
     width: '30', height: '30', viewBox: '0 0 24 24', fill: 'none',
@@ -82,7 +82,7 @@ export default function VotePage() {
   const [selected, setSelected] = useState(null)
   const [submitted, setSubmitted] = useState(false)
 
-  // Auth guard — tanpa token langsung ke halaman login
+  // Auth guard - tanpa token langsung ke halaman login
   if (!localStorage.getItem('tc_token')) {
     return <Navigate to="/masuk" replace />
   }
@@ -140,7 +140,7 @@ export default function VotePage() {
             {ELECTION.period} · Pilih satu kandidat, lalu tekan kirim.
             Suara tidak dapat diubah setelah dikirim.
           </p>
-          <span className="vote-demo-tag">Mode demo — data kandidat contoh</span>
+          <span className="vote-demo-tag">Mode demo - data kandidat contoh</span>
         </header>
 
         <div className="vote-grid">
@@ -154,7 +154,7 @@ export default function VotePage() {
                 style={{ '--c': c.color }}
                 onClick={() => setSelected(c.id)}
                 aria-pressed={isSelected}
-                aria-label={`Kandidat ${c.name} — ${c.tagline}`}
+                aria-label={`Kandidat ${c.name} - ${c.tagline}`}
               >
                 <span className="vote-card-num" aria-hidden="true">
                   {String(i + 1).padStart(2, '0')}

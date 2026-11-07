@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import './DashboardPage.css'
 
@@ -52,6 +52,16 @@ function CheckIcon() {
   )
 }
 
+function RevokeIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="15" y1="9" x2="9" y2="15"/>
+      <line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
+  )
+}
+
 /* ── Web Audio beep ──────────────────────────────────────── */
 function playBeep() {
   try {
@@ -69,7 +79,7 @@ function playBeep() {
     osc.stop(ctx.currentTime + 0.6)
     osc.onended = () => ctx.close()
   } catch {
-    // AudioContext tidak tersedia — skip
+    // AudioContext tidak tersedia - skip
   }
 }
 
@@ -81,7 +91,7 @@ function EasterEgg({ username, onClose }) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Easter egg — tutup dengan klik di mana saja"
+      aria-label="Easter egg - tutup dengan klik di mana saja"
     >
       {/* ripple circles */}
       <span className="egg-ripple egg-ripple--1" aria-hidden="true" />
@@ -113,9 +123,9 @@ async function readJson(res) {
 }
 
 function formatDate(iso) {
-  if (!iso) return '—'
+  if (!iso) return '-'
   const d = new Date(String(iso).replace(' ', 'T'))
-  if (Number.isNaN(d.getTime())) return '—'
+  if (Number.isNaN(d.getTime())) return '-'
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
@@ -159,6 +169,11 @@ function InvitesPanel() {
 
   const [freshLink, setFreshLink] = useState('')
   const [copiedId, setCopiedId]   = useState(null)
+  const [revokingId, setRevokingId] = useState(null)
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('semua')
 
   const loadInvites = useCallback(async () => {
     setLoading(true)
@@ -184,6 +199,20 @@ function InvitesPanel() {
   }, [])
 
   useEffect(() => { loadInvites() }, [loadInvites])
+
+  // Filter invites based on search & status
+  const filteredInvites = useMemo(() => {
+    return invites.filter(inv => {
+      const matchesSearch = searchQuery === '' ||
+        (inv.email && inv.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        inv.token.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (inv.created_by_username && inv.created_by_username.toLowerCase().includes(searchQuery.toLowerCase()))
+
+      const matchesStatus = statusFilter === 'semua' || inv.status === statusFilter
+
+      return matchesSearch && matchesStatus
+    })
+  }, [invites, searchQuery, statusFilter])
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -225,11 +254,46 @@ function InvitesPanel() {
     }
   }
 
+  async function handleRevoke(invite) {
+    if (!window.confirm(`Batalkan undangan untuk ${invite.email ?? '(siapapun)'}?\nTautan undangan akan tidak bisa dipakai lagi.`)) {
+      return
+    }
+    setRevokingId(invite.id)
+    try {
+      const token = localStorage.getItem('tc_token')
+      const res = await fetch(`http://localhost:8000/invites/${invite.id}/revoke`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await readJson(res)
+      if (!res.ok) {
+        alert(data.error || 'Gagal membatalkan undangan.')
+        return
+      }
+      loadInvites()
+    } catch (err) {
+      alert(err?.message === 'Failed to fetch'
+        ? 'Tidak dapat terhubung ke server.'
+        : (err?.message || 'Gagal membatalkan undangan.'))
+    } finally {
+      setRevokingId(null)
+    }
+  }
+
   const statCards = [
     { key: 'total',       label: 'Total undangan' },
     { key: 'menunggu',    label: 'Menunggu' },
     { key: 'diterima',    label: 'Diterima' },
     { key: 'kedaluwarsa', label: 'Kedaluwarsa' },
+    { key: 'dibatalkan',  label: 'Dibatalkan' },
+  ]
+
+  const statusOptions = [
+    { value: 'semua',      label: 'Semua status' },
+    { value: 'menunggu',   label: 'Menunggu' },
+    { value: 'diterima',   label: 'Diterima' },
+    { value: 'kedaluwarsa', label: 'Kedaluwarsa' },
+    { value: 'dibatalkan', label: 'Dibatalkan' },
   ]
 
   return (
@@ -237,7 +301,7 @@ function InvitesPanel() {
       <div className="admin-head">
         <div className="admin-title">
           <h1>Undangan</h1>
-          <p>Pendaftaran ditutup untuk publik — buat undangan untuk calon pengguna.</p>
+          <p>Pendaftaran ditutup untuk publik - buat undangan untuk calon pengguna.</p>
         </div>
         <button
           className="admin-create-btn"
@@ -293,7 +357,7 @@ function InvitesPanel() {
       {/* ── Tautan undangan baru ── */}
       {freshLink && (
         <div className="link-box" role="status">
-          <span className="link-box-label">Undangan dibuat — bagikan tautan ini:</span>
+          <span className="link-box-label">Undangan dibuat - bagikan tautan ini:</span>
           <code>{freshLink}</code>
           <button
             className="copy-btn"
@@ -320,12 +384,44 @@ function InvitesPanel() {
         </div>
       )}
 
+      {/* ── Search & Filter ── */}
+      <div className="invite-toolbar">
+        <div className="toolbar-search">
+          <label htmlFor="invite-search" className="visually-hidden">Cari undangan</label>
+          <input
+            id="invite-search"
+            type="search"
+            placeholder="Cari email, token, atau pembuat…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+        </div>
+        <div className="toolbar-filter">
+          <label htmlFor="invite-filter" className="visually-hidden">Filter status</label>
+          <select
+            id="invite-filter"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="filter-select"
+          >
+            {statusOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <span className="toolbar-count">
+          {filteredInvites.length} dari {invites.length} undangan
+        </span>
+      </div>
+
       {/* ── Daftar undangan ── */}
       <div className="invite-card">
         <div className="invite-list-head" aria-hidden="true">
           <span>Email</span>
           <span>Peran</span>
           <span>Status</span>
+          <span>Pembuat</span>
           <span>Dibuat</span>
           <span>Kedaluwarsa</span>
           <span />
@@ -335,15 +431,19 @@ function InvitesPanel() {
           <p className="invite-list-note">Memuat undangan…</p>
         )}
 
-        {!loading && !listError && invites.length === 0 && (
-          <p className="invite-list-note">Belum ada undangan. Buat yang pertama untuk mengundang pengguna.</p>
+        {!loading && !listError && filteredInvites.length === 0 && (
+          <p className="invite-list-note">
+            {invites.length === 0
+              ? 'Belum ada undangan. Buat yang pertama untuk mengundang pengguna.'
+              : 'Tidak ada undangan yang cocok dengan pencarian/filter.'}
+          </p>
         )}
 
-        {!loading && invites.map(inv => (
+        {!loading && filteredInvites.map(inv => (
           <div className="invite-row" key={inv.id}>
             <div className="invite-cell invite-cell--email">
               <span className="invite-cell-label">Email</span>
-              <span className="invite-email">{inv.email ?? '—'}</span>
+              <span className="invite-email">{inv.email ?? '-'}</span>
             </div>
             <div className="invite-cell">
               <span className="invite-cell-label">Peran</span>
@@ -356,6 +456,10 @@ function InvitesPanel() {
               </span>
             </div>
             <div className="invite-cell">
+              <span className="invite-cell-label">Pembuat</span>
+              <span className="invite-creator">{inv.created_by_username ?? '-'}</span>
+            </div>
+            <div className="invite-cell">
               <span className="invite-cell-label">Dibuat</span>
               <span className="invite-date">{formatDate(inv.created_at)}</span>
             </div>
@@ -365,15 +469,27 @@ function InvitesPanel() {
             </div>
             <div className="invite-cell invite-cell--action">
               <span className="invite-cell-label">Aksi</span>
-              <button
-                className="copy-btn"
-                onClick={() => handleCopy(inv, inv.id)}
-                title="Salin tautan undangan"
-                disabled={inv.status === 'diterima' || inv.status === 'kedaluwarsa'}
-              >
-                {copiedId === inv.id ? <CheckIcon /> : <CopyIcon />}
-                {copiedId === inv.id ? 'Tersalin' : 'Salin'}
-              </button>
+              <div className="invite-actions">
+                <button
+                  className="copy-btn"
+                  onClick={() => handleCopy(inv, inv.id)}
+                  title="Salin tautan undangan"
+                  disabled={inv.status === 'diterima' || inv.status === 'kedaluwarsa' || inv.status === 'dibatalkan'}
+                >
+                  {copiedId === inv.id ? <CheckIcon /> : <CopyIcon />}
+                  {copiedId === inv.id ? 'Tersalin' : 'Salin'}
+                </button>
+                {inv.status === 'menunggu' && (
+                  <button
+                    className="revoke-btn"
+                    onClick={() => handleRevoke(inv)}
+                    title="Batalkan undangan"
+                    disabled={revokingId === inv.id}
+                  >
+                    {revokingId === inv.id ? 'Membatalkan…' : <RevokeIcon />}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -411,7 +527,7 @@ export default function DashboardPage() {
   const [user]  = useState(getUser)
   const isAdmin = user?.role === 'admin'
 
-  // Auth guard — tanpa token langsung ke halaman login
+  // Auth guard - tanpa token langsung ke halaman login
   // (letakkan SETELAH semua hooks agar urutan hooks tetap konsisten)
   if (!localStorage.getItem('tc_token')) {
     return <Navigate to="/masuk" replace />
@@ -446,11 +562,11 @@ export default function DashboardPage() {
       )}
 
       <header className="dash-nav">
-        {/* Brand — klik 5x untuk easter egg */}
+        {/* Brand - klik 5x untuk easter egg */}
         <button
           className="dash-brand"
           onClick={handleBrandClick}
-          aria-label={`TrueCount — klik ${5 - clicks} kali lagi`}
+          aria-label={`TrueCount - klik ${5 - clicks} kali lagi`}
           title="TrueCount"
         >
           TrueCount
@@ -469,7 +585,7 @@ export default function DashboardPage() {
           <span className="dash-nav-item">Surat Suara Saya</span>
         </nav>
 
-        {/* ── Server status sudah dihapus dari UI — HealthMonitor global
+        {/* ── Server status sudah dihapus dari UI - HealthMonitor global
                mencatat kondisi server/DB ke error log (console + app.log) ── */}
 
         <button className="dash-logout" onClick={handleLogout}>

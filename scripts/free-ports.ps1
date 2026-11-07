@@ -1,4 +1,4 @@
-# free-ports.ps1 — Bebaskan port TrueCount (5173 Vite, 5183 HMR, 8000 PHP)
+# free-ports.ps1 - Bebaskan port TrueCount (5173 Vite, 5183 HMR, 8000 PHP)
 # Jalankan:  powershell -ExecutionPolicy Bypass -File scripts/free-ports.ps1
 # Berguna saat "Port X is already in use" padahal tidak ada terminal yang aktif.
 

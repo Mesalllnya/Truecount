@@ -1,6 +1,6 @@
 -- =============================================================
--- TrueCount — Database Migration (Sprint 2)
--- Pendaftaran via Undangan (Invite) — admin-only registration
+-- TrueCount - Database Migration (Sprint 2)
+-- Pendaftaran via Undangan (Invite) - admin-only registration
 --
 -- Akun tidak lagi bisa dibuat bebas oleh publik.
 -- Admin membuat undangan (token), lalu calon pengguna

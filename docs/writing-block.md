@@ -806,7 +806,7 @@ Pisahkan logic ke dalam `services/` agar kode lebih mudah dipelihara dan diuji.
 
 Pengembangan dilakukan secara bertahap. Jangan langsung membuat semua fitur dalam satu waktu.
 
-## Phase 1 — Project Initialization
+## Phase 1 - Project Initialization
 
 **Tujuan:** Menyiapkan fondasi aplikasi.
 
@@ -822,7 +822,7 @@ Task:
 
 **Output:** Aplikasi Flask dapat dijalankan dan terhubung ke MySQL.
 
-## Phase 2 — Authentication System
+## Phase 2 - Authentication System
 
 **Tujuan:** Membuat sistem akun dan login.
 
@@ -838,7 +838,7 @@ Task:
 
 **Output:** Pengguna dapat login dengan mekanisme autentikasi yang telah ditentukan.
 
-## Phase 3 — Election Management
+## Phase 3 - Election Management
 
 **Tujuan:** Membuat sistem pengelolaan pemilihan.
 
@@ -854,7 +854,7 @@ Task:
 
 **Output:** Administrator dapat mengelola kegiatan pemilihan.
 
-## Phase 4 — Voting System
+## Phase 4 - Voting System
 
 **Tujuan:** Mengimplementasikan proses pemungutan suara.
 
@@ -870,7 +870,7 @@ Task:
 
 **Output:** Pemilih dapat memberikan suara dengan mekanisme keamanan yang telah ditentukan.
 
-## Phase 5 — Cryptography Integration
+## Phase 5 - Cryptography Integration
 
 **Tujuan:** Mengintegrasikan seluruh mekanisme kriptografi.
 
@@ -887,7 +887,7 @@ Task:
 
 **Output:** Modul kriptografi dapat digunakan oleh aplikasi.
 
-## Phase 6 — Steganography Integration
+## Phase 6 - Steganography Integration
 
 **Tujuan:** Membuat fitur penyembunyian pesan dalam gambar.
 
@@ -903,7 +903,7 @@ Task:
 
 **Output:** Pengguna dapat menyisipkan dan mengekstrak pesan dari gambar.
 
-## Phase 7 — Blockchain Integration
+## Phase 7 - Blockchain Integration
 
 **Tujuan:** Membuat sistem pencatatan integritas aktivitas.
 
@@ -919,7 +919,7 @@ Task:
 
 **Output:** Aktivitas penting dapat diperiksa menggunakan mekanisme hash chain.
 
-## Phase 8 — Testing & Evaluation
+## Phase 8 - Testing & Evaluation
 
 **Tujuan:** Memastikan seluruh fitur bekerja sesuai kebutuhan.
 
@@ -1063,4 +1063,4 @@ Dokumentasi resmi yang dapat digunakan selama pengembangan:
 
 **END OF DOCUMENT**
 
-_Secure E-Voting System — Development Documentation_
+_Secure E-Voting System - Development Documentation_

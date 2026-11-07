@@ -4,7 +4,7 @@ const API = 'http://localhost:8000'
 const POLL_MS = 15000
 
 /**
- * HealthMonitor — TIDAK menampilkan apa pun di UI (render null).
+ * HealthMonitor - TIDAK menampilkan apa pun di UI (render null).
  * Hanya memantau /health di background dan menulis ke error log:
  *   - Server tidak bisa dijangkau  → console.error
  *   - Database terputus            → console.warn (backend juga mencatat di app.log)
@@ -47,7 +47,7 @@ export default function HealthMonitor() {
         if (prevRef.current !== 'down') {
           prevRef.current = 'down'
           console.error(
-            '[TrueCount] Health check: server tidak dapat dijangkau di ' + API + ' — pastikan backend PHP berjalan.'
+            '[TrueCount] Health check: server tidak dapat dijangkau di ' + API + ' - pastikan backend PHP berjalan.'
           )
         }
       }

@@ -6,7 +6,7 @@ import { defineConfig } from 'vite'
 export default defineConfig(({ command }) => ({
   plugins: [react()],
 
-  // Tauri butuh file:// protocol untuk dev — disable HMR overlay di mode desktop
+  // Tauri butuh file:// protocol untuk dev - disable HMR overlay di mode desktop
   clearScreen: false,
 
   server: {
@@ -34,7 +34,7 @@ export default defineConfig(({ command }) => ({
       command === 'build'
         ? ['es2020', 'chrome90', 'safari13']
         : undefined,
-    // Jangan minify pada dev — mempercepat iterasi
+    // Jangan minify pada dev - mempercepat iterasi
     // Terser adalah default Vite 8+, lebih stabil untuk syntax modern
     minify: command === 'build' ? 'terser' : false,
     // Tingkatkan batas chunk warning ke 1.5 MB

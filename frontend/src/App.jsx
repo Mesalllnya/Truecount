@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import VotePage from './pages/VotePage'
+import AboutPage from './pages/AboutPage'
 import HealthMonitor from './components/HealthMonitor'
 
 /** Alias lama /register → /daftar, dengan query (?undangan=...) tetap dibawa */
@@ -18,6 +19,7 @@ function App() {
       <HealthMonitor />
       <Routes>
         <Route path="/"           element={<LandingPage />} />
+        <Route path="/tentang"    element={<AboutPage />} />
         <Route path="/masuk"      element={<LoginPage />} />
         <Route path="/login"      element={<Navigate to="/masuk" replace />} />
         <Route path="/daftar"     element={<RegisterPage />} />

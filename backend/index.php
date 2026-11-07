@@ -1,7 +1,7 @@
 <?php
 
 /**
- * TrueCount API — Entry Point
+ * TrueCount API - Entry Point
  *
  * Semua request ke backend PHP masuk ke sini.
  * PHP built-in server: php -S localhost:8000 -t backend backend/index.php
@@ -9,7 +9,7 @@
 
 require_once __DIR__ . '/helpers/logger.php';     // File logger → storage/logs/
 
-// Access log — SEMUA request tercatat, termasuk preflight OPTIONS
+// Access log - SEMUA request tercatat, termasuk preflight OPTIONS
 // (harus sebelum response.php yang meng-exit OPTIONS lebih awal)
 tc_log_info(sprintf(
     '%s %s | origin=%s | ip=%s',
@@ -58,13 +58,13 @@ match (true) {
         } catch (Throwable $e) {
             $dbOk = false;
             // Catat ke error log file (storage/logs/app.log)
-            tc_log_warn('Health check: database tidak tersambung — ' . $e->getMessage());
+            tc_log_warn('Health check: database tidak tersambung - ' . $e->getMessage());
         }
         jsonResponse([
             'status'   => $dbOk ? 'ok' : 'degraded',
             'app'      => 'TrueCount',
             'database' => $dbOk ? 'connected' : 'disconnected',
-            'ip'       => $_SERVER['REMOTE_ADDR'] ?? '—',
+            'ip'       => $_SERVER['REMOTE_ADDR'] ?? '-',
         ]);
     })(),
 
@@ -82,7 +82,7 @@ match (true) {
         require_once __DIR__ . '/api/auth/me.php';
     })(),
 
-    // Undangan pendaftaran (invite) — buat/list khusus admin, verify publik
+    // Undangan pendaftaran (invite) - buat/list khusus admin, verify publik
     $uri === '/invites' && $method === 'GET' => (function () {
         require_once __DIR__ . '/api/invites/list.php';
     })(),
@@ -96,6 +96,15 @@ match (true) {
         require_once __DIR__ . '/api/invites/verify.php';
     })(),
     $uri === '/invites/verify' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Revoke undangan: POST /invites/{id}/revoke
+    preg_match('#^/invites/(\d+)/revoke$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/invites/' . $m[1] . '/revoke';
+        require_once __DIR__ . '/api/invites/revoke.php';
+    })(),
+    preg_match('#^/invites/(\d+)/revoke$#', $uri) => (function () {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 

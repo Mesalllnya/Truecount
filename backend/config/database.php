@@ -2,7 +2,7 @@
 
 /**
  * Database Configuration
- * TrueCount — Secure E-Voting System
+ * TrueCount - Secure E-Voting System
  *
  * Copy .env.example ke .env dan sesuaikan nilai-nilainya.
  * Pastikan file .env tidak di-commit ke repository.

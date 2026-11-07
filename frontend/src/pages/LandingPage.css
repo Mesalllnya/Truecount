@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   LandingPage.css — TrueCount
+   LandingPage.css - TrueCount
    Font: Plus Jakarta Sans
    Palette: #F13C35 red · #0D0D0D black · #FAFAF8 cream
    Scale: monitor-first (large breakpoint as primary)
@@ -70,7 +70,7 @@
 }
 .nav-brand:hover { color: var(--black); opacity: 0.75; }
 
-/* Tombol aksi — di kanan */
+/* Tombol aksi - di kanan */
 .nav-right {
   display: flex;
   align-items: center;
@@ -381,7 +381,7 @@
 }
 
 /* ══════════════════════════════════════════════════════════
-   SECTIONS — shared
+   SECTIONS - shared
    ══════════════════════════════════════════════════════════ */
 .section { padding: 5rem 2rem; }
 @media (min-width: 768px)  { .section { padding: 7rem 4rem; } }
@@ -649,6 +649,19 @@
 }
 
 .footer-copy { color: var(--gray-300); }
+
+.footer-links {
+  display: flex;
+  gap: 1.5rem;
+  margin: 0.5rem 0;
+}
+.footer-links a {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  transition: color 150ms;
+}
+.footer-links a:hover { color: var(--red); }
 
 /* ── Text selection ─────────────────────────────────────── */
 ::selection { background: var(--red); color: var(--white); }

@@ -2,14 +2,14 @@
 <?php
 
 /**
- * TrueCount — API Test Runner
+ * TrueCount - API Test Runner
  *
  * Penggunaan:
  *   php tests/api_test.php
  *   php tests/api_test.php --verbose
  *
  * Menguji Auth API + Invite API (pendaftaran via undangan) secara otomatis.
- * Tidak butuh library eksternal — murni PHP + cURL (+ PDO untuk fixture).
+ * Tidak butuh library eksternal - murni PHP + cURL (+ PDO untuk fixture).
  */
 
 define('BASE_URL', 'http://localhost:8000');
@@ -83,7 +83,7 @@ function assert_equals(mixed $expected, mixed $actual, string $msg = ''): void
     if ($expected !== $actual) {
         throw new \RuntimeException(
             ($msg ?: 'Nilai tidak sesuai') .
-            " — diharapkan: " . json_encode($expected) .
+            " - diharapkan: " . json_encode($expected) .
             ", didapat: " . json_encode($actual)
         );
     }
@@ -94,7 +94,7 @@ function assert_has(array $data, string $key, string $msg = ''): void
     if (!array_key_exists($key, $data)) {
         throw new \RuntimeException(
             ($msg ?: "Key '{$key}' tidak ditemukan di response") .
-            " — response: " . json_encode($data)
+            " - response: " . json_encode($data)
         );
     }
 }
@@ -139,7 +139,7 @@ $testUser = [
 ];
 
 // ══════════════════════════════════════════════════════════
-echo bold("\nTrueCount — API Test Runner\n");
+echo bold("\nTrueCount - API Test Runner\n");
 echo dim(str_repeat('─', 42) . "\n\n");
 
 // ── 1. Health check ───────────────────────────────────────
@@ -348,7 +348,7 @@ test('POST /auth/register (email terikat undangan) → 201 & email mengikuti und
     $fixture = createDbInvite(['email' => "bound_{$suffix}@truecount.test"]);
     $r = request('POST', '/auth/register', [
         'username'     => "bound_{$suffix}",
-        'email'        => 'email_lain@test.com',   // diabaikan — undangan terikat
+        'email'        => 'email_lain@test.com',   // diabaikan - undangan terikat
         'password'     => 'ValidPass@1',
         'invite_token' => $fixture['token'],
     ]);
@@ -491,7 +491,7 @@ echo "\n" . dim(str_repeat('─', 42)) . "\n";
 echo bold("Hasil: ");
 
 if ($fail === 0) {
-    echo green("{$pass}/{$total} passed") . " — " . green("Semua test berhasil!") . "\n\n";
+    echo green("{$pass}/{$total} passed") . " - " . green("Semua test berhasil!") . "\n\n";
     exit(0);
 } else {
     echo red("{$fail} gagal") . ", " . green("{$pass} berhasil") . " dari {$total} test.\n\n";

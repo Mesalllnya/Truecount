@@ -1,7 +1,7 @@
 <?php
 
 /**
- * JWT helper — HS256 tanpa library eksternal.
+ * JWT helper - HS256 tanpa library eksternal.
  *
  * generateJwt(array $payload): string
  * verifyJwt(string $token): array|false

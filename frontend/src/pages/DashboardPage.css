@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   DashboardPage.css — TrueCount
+   DashboardPage.css - TrueCount
    Font: Plus Jakarta Sans · Palette: #F13C35
    ═══════════════════════════════════════════════════════════ */
 
@@ -42,7 +42,7 @@
   z-index: 100;
 }
 
-/* Brand — button untuk easter egg, tapi visually like a wordmark */
+/* Brand - button untuk easter egg, tapi visually like a wordmark */
 .dash-brand {
   background: none;
   border: none;
@@ -107,7 +107,7 @@
 .dash-nav-item:hover  { color: var(--black); }
 .dash-nav-active      { color: var(--black); border-bottom-color: var(--red); }
 
-/* Logout button — merah dengan icon pintu */
+/* Logout button - merah dengan icon pintu */
 .dash-logout {
   margin-left: auto;
   display: inline-flex;
@@ -225,7 +225,7 @@
   to   { opacity: 1; }
 }
 
-/* Ripple circles — expand dari tengah ke tepi */
+/* Ripple circles - expand dari tengah ke tepi */
 .egg-ripple {
   position: absolute;
   border-radius: 50%;
@@ -273,7 +273,7 @@
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Avatar — initial huruf pertama username */
+/* Avatar - initial huruf pertama username */
 .egg-avatar {
   width: 64px; height: 64px;
   border-radius: 50%;
@@ -330,7 +330,7 @@
 .egg-close:active { transform: scale(0.98); }
 
 /* ══════════════════════════════════════════════════════════
-   ADMIN — PANEL UNDANGAN
+   ADMIN - PANEL UNDANGAN
    ══════════════════════════════════════════════════════════ */
 .dash-main--admin {
   display: block;
@@ -576,8 +576,17 @@
 .invite-email { font-size: 0.88rem; font-weight: 600; color: var(--black); overflow-wrap: anywhere; }
 .invite-role  { font-size: 0.85rem; color: var(--black); }
 .invite-date  { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.invite-cell--action { align-items: flex-start; }
-@media (min-width: 860px) { .invite-cell--action { align-items: center; } }
+.invite-creator { font-size: 0.85rem; color: var(--muted); }
+.invite-cell--action { 
+  display: flex; 
+  justify-content: flex-end; 
+  align-items: center; 
+}
+@media (min-width: 860px) { 
+  .invite-cell--action { 
+    justify-content: flex-end; 
+  } 
+}
 
 .invite-list-note {
   padding: 2rem 1.25rem;
@@ -604,6 +613,79 @@
 .badge--kedaluwarsa { color: #c0392b; background: #fdeceb; border-color: #f3c6c3; }
 .badge--dibatalkan  { color: #6a6a67; background: #f1f1ee; border-color: #e0e0dc; }
 
+/* ── Toolbar: Search & Filter ────────────────────────────── */
+.invite-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.toolbar-search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 400px;
+}
+.search-input {
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.88rem;
+  font-family: inherit;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--cream);
+  color: var(--black);
+  transition: border-color 160ms, box-shadow 160ms, background 160ms;
+}
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus {
+  outline: none;
+  border-color: var(--black);
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(13,13,13,0.07);
+}
+
+.toolbar-filter { flex-shrink: 0; }
+.filter-select {
+  padding: 0.55rem 2.2rem 0.55rem 0.85rem;
+  font-size: 0.88rem;
+  font-family: inherit;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--cream) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236a6a67' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 0.7rem center;
+  background-size: 16px;
+  color: var(--black);
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 160ms, background 160ms;
+}
+.filter-select:focus {
+  outline: none;
+  border-color: var(--black);
+  background-color: var(--white);
+  box-shadow: 0 0 0 3px rgba(13,13,13,0.07);
+}
+
+.toolbar-count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}
+
 /* ── Tombol salin ───────────────────────────────────────── */
 .copy-btn {
   display: inline-flex;
@@ -623,6 +705,58 @@
 .copy-btn:hover:not(:disabled) { border-color: var(--black); background: var(--cream); }
 .copy-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .copy-btn:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+/* ── Container aksi (copy + revoke) ──────────────────────── */
+.invite-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+@media (min-width: 860px) { .invite-actions { gap: 0.5rem; } }
+
+/* On desktop: icon-only buttons with tooltip */
+@media (min-width: 640px) {
+  .invite-actions .copy-btn span,
+  .invite-actions .revoke-btn span {
+    display: none;
+  }
+  .invite-actions .copy-btn,
+  .invite-actions .revoke-btn {
+    padding: 0.45rem;
+    min-width: 38px;
+    height: 38px;
+    border-radius: 8px;
+  }
+  .invite-actions .copy-btn:hover:not(:disabled),
+  .invite-actions .revoke-btn:hover:not(:disabled) {
+    background: var(--cream);
+  }
+  .invite-actions .revoke-btn:hover:not(:disabled) {
+    background: var(--red);
+    color: var(--white);
+  }
+}
+
+/* ── Tombol batalkan undangan ───────────────────────────── */
+.revoke-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: var(--font);
+  border: 1.5px solid var(--red);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--red);
+  transition: background 150ms, color 150ms, border-color 150ms;
+  white-space: nowrap;
+}
+.revoke-btn:hover:not(:disabled) { background: var(--red); color: var(--white); }
+.revoke-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.revoke-btn:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
 /* ── Footnote + tautan demo ─────────────────────────────── */
 .admin-footnote {

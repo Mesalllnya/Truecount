@@ -1,7 +1,7 @@
 <?php
 
 /**
- * TrueCount — File Logger
+ * TrueCount - File Logger
  *
  * Semua log ditulis ke: backend/storage/logs/
  *   - app.log        → request access log + error yang ditangkap handler

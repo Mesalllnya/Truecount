@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './AuthPage.css'
 
-/** Baca response server sebagai JSON — kalau bukan JSON (error HTML PHP dsb),
+/** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
  *  jangan pernah tampilkan mentah ke user. */
 async function readJson(res) {
   const text = await res.text()
@@ -14,7 +14,7 @@ async function readJson(res) {
   }
 }
 
-/* ── Ikon kunci — SVG stroke konsisten ───────────────────── */
+/* ── Ikon kunci - SVG stroke konsisten ───────────────────── */
 function LockIcon({ size = 22 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

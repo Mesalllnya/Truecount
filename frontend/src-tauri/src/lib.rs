@@ -7,7 +7,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{Manager, RunEvent};
 
-/// Child process PHP server — di-kill saat aplikasi ditutup.
+/// Child process PHP server - di-kill saat aplikasi ditutup.
 struct PhpServer(Mutex<Option<Child>>);
 
 /// Log file app (bukan log PHP).
@@ -110,10 +110,10 @@ fn spawn_php_backend(app: &tauri::AppHandle) {
 
     // Jangan spawn kalau backend sudah jalan
     if port_in_use(8000) {
-        note("[spawn] Port 8000 sudah dipakai — backend sudah jalan, skip spawn.");
+        note("[spawn] Port 8000 sudah dipakai - backend sudah jalan, skip spawn.");
         return;
     }
-    note("[spawn] Port 8000 bebas — mencoba spawn PHP...");
+    note("[spawn] Port 8000 bebas - mencoba spawn PHP...");
 
     let backend_dir = clean_path(&resolve_backend_dir(app));
     note(&format!("[spawn] backend_dir terpilih: {}", backend_dir.display()));

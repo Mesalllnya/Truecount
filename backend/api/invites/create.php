@@ -1,7 +1,7 @@
 <?php
 
 /**
- * POST /invites — buat undangan pendaftaran (khusus admin)
+ * POST /invites - buat undangan pendaftaran (khusus admin)
  *
  * Headers:
  *   Authorization: Bearer <token admin>

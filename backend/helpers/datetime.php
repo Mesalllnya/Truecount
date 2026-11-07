@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Helper datetime — semua DATETIME MySQL di modul invites disimpan dalam UTC.
+ * Helper datetime - semua DATETIME MySQL di modul invites disimpan dalam UTC.
  *
  * Nilai DATETIME MySQL dikonversi ke epoch dengan asumsi UTC, supaya
  * perbandingan dengan PHP time() konsisten di mesin mana pun.

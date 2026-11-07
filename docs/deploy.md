@@ -341,6 +341,32 @@ sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 | `JWT_SECRET`      | *(wajib diganti)*              | Secret key untuk signing JWT                  |
 | `JWT_EXPIRE`      | `3600`                         | Durasi token JWT dalam detik                  |
 
+
+## 6. Deploy Desktop (Tauri)
+
+Untuk panduan lengkap konversi ke aplikasi desktop, lihat [`desktop.md`](desktop.md).
+
+Ringkasan cepat:
+
+```bash
+# Prasyarat: Rust + Build Tools (lihat desktop.md)
+cd frontend
+npm run desktop:dev      # dev mode dengan window desktop
+npm run desktop:build    # build installer (.exe / .dmg / .deb)
+```
+
+Output installer ada di `frontend/src-tauri/target/release/bundle/`.
+
+| Tambahan Troubleshoot Desktop | Penyebab | Solusi |
+|---|---|---|
+| `error: linker 'link.exe' not found` | Build Tools belum terinstall | Install Microsoft C++ Build Tools |
+| Window putih / blank | PHP server belum jalan | Jalankan `php -S localhost:8000` dulu |
+| `tauri: command not found` | `@tauri-apps/cli` belum terinstall | `npm install` di folder `frontend/` |
+| Build gagal `icons not found` | Folder `src-tauri/icons/` kosong | Jalankan `npx tauri icon icon.png` |
+
+---
+
+
 ---
 
 > Dokumen ini akan diperbarui setiap sprint baru menambahkan endpoint atau konfigurasi baru.

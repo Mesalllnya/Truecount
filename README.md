@@ -1,103 +1,161 @@
 # TrueCount — Secure E-Voting System
 
-Aplikasi web pemungutan suara yang aman untuk keperluan akademik.
+Aplikasi web **dan desktop** pemungutan suara yang aman untuk keperluan akademik.
 
 ## Tech Stack
 
-| Layer    | Teknologi                     |
-|----------|-------------------------------|
-| Frontend | React.js (Vite)               |
-| Backend  | PHP (Native, no framework)    |
-| Database | MySQL                         |
+| Layer      | Teknologi                                    |
+|------------|----------------------------------------------|
+| Frontend   | React 19 + Vite 8                            |
+| Desktop    | Tauri v2 (Rust) — opsional, wrap React       |
+| Backend    | PHP 8.1+ (Native, no framework)              |
+| Database   | MySQL 8 / MariaDB 10.6                       |
+| Auth       | JWT HS256 + Argon2id                         |
+| Font       | Plus Jakarta Sans                            |
 
 ## Struktur Proyek
 
 ```
 Truecount/
-├── backend/            # PHP API
+├── backend/                # PHP API
 │   ├── api/
-│   │   ├── auth/       # Register, Login, Logout, Me
-│   │   └── election/   # Election endpoints (Sprint 2)
-│   ├── config/         # database.php, app.php
-│   ├── helpers/        # response.php (CORS + JSON)
-│   ├── middleware/     # JWT auth middleware
-│   ├── models/         # DB query classes
-│   ├── services/       # Business logic
-│   └── index.php       # Entry point
+│   │   ├── auth/           # register.php · login.php · logout.php · me.php
+│   │   └── election/       # Sprint 2
+│   ├── config/             # database.php · app.php
+│   ├── helpers/            # response.php · jwt.php
+│   ├── middleware/         # auth.php (requireAuth)
+│   ├── models/             # Sprint 2+
+│   ├── services/           # Sprint 2+
+│   └── index.php           # Entry point + router
 │
 ├── database/
-│   ├── migrations/     # SQL schema files
-│   ├── seeds/          # SQL seed files
-│   └── migrate.php     # Migration runner CLI
+│   ├── migrations/
+│   │   └── 001_init.sql    # 10 tabel lengkap
+│   ├── seeds/
+│   │   └── 001_admin.sql   # Akun admin default
+│   └── migrate.php         # CLI runner (--seed, --fresh)
 │
-├── frontend/           # React + Vite
-│   └── src/
-│       ├── pages/      # LandingPage, Login, Register, Dashboard
-│       ├── components/ # Layout, UI components
-│       ├── services/   # API calls (axios)
-│       ├── context/    # AuthContext
-│       └── hooks/      # useAuth, dll.
+├── frontend/               # React + Vite
+│   ├── public/             # Aset statis (gambar artsy)
+│   ├── src/
+│   │   ├── pages/          # LandingPage · LoginPage · RegisterPage · DashboardPage
+│   │   ├── components/     # Sprint 2+
+│   │   ├── services/       # Sprint 2+
+│   │   ├── context/        # Sprint 2+
+│   │   └── hooks/          # Sprint 2+
+│   ├── src-tauri/          # Tauri (desktop wrapper)
+│   │   ├── src/            # main.rs · lib.rs
+│   │   ├── tauri.conf.json
+│   │   └── Cargo.toml
+│   ├── package.json
+│   └── vite.config.js
 │
-├── docs/               # Dokumentasi teknis
-├── .env.example        # Template environment variables
+├── tests/
+│   └── api_test.php        # Test otomatis 20 kasus
+│
+├── docs/
+│   ├── deploy.md           # Panduan deploy web + desktop
+│   ├── desktop.md          # Panduan konversi ke desktop app
+│   ├── knowledge_transfer.md  # Konteks proyek untuk AI
+│   └── pembagian_jobdesk_secure_e_voting.md
+│
+├── .env.example
 └── README.md
 ```
 
-## Quick Start
+## Quick Start — Web
 
-### 1. Setup Database
+### 1. Setup
 
 ```bash
-# Copy dan sesuaikan .env
-cp .env.example .env
+cp .env.example .env        # isi DB_PASS, JWT_SECRET
+```
 
-# Jalankan migration
-php database/migrate.php
+### 2. Database
 
-# (Opsional) Jalankan migration + seeding admin default
+```bash
 php database/migrate.php --seed
 ```
 
-### 2. Jalankan Backend
+Akun admin default: `admin` / `Admin@1234`
+
+### 3. Backend
 
 ```bash
 php -S localhost:8000 -t backend backend/index.php
 ```
 
-API tersedia di: `http://localhost:8000`
-
-Health check: `GET http://localhost:8000/health`
-
-### 3. Jalankan Frontend
+### 4. Frontend
 
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev     # http://localhost:5173
 ```
 
-Frontend tersedia di: `http://localhost:5173`
+## Quick Start — Desktop (Tauri)
+
+> Prasyarat tambahan: [Rust](https://rustup.rs/) + [Build Tools](https://v2.tauri.app/start/prerequisites/)
+
+```bash
+# Backend tetap harus jalan di localhost:8000
+php -S localhost:8000 -t backend backend/index.php
+
+# Jalankan React + Tauri window sekaligus
+cd frontend
+npm run desktop:dev
+
+# Build installer (.exe / .dmg / .deb)
+npm run desktop:build
+```
+
+Lihat [`docs/desktop.md`](docs/desktop.md) untuk panduan lengkap.
 
 ## API Endpoints (Sprint 1)
 
-| Method | Endpoint          | Keterangan              |
-|--------|-------------------|-------------------------|
-| GET    | /health           | Health check            |
-| POST   | /auth/register    | Daftar akun baru        |
-| POST   | /auth/login       | Login, dapat JWT        |
-| POST   | /auth/logout      | Logout (invalidate JWT) |
-| GET    | /auth/me          | Info user dari JWT      |
+| Method | Endpoint          | Auth | Keterangan              |
+|--------|-------------------|------|-------------------------|
+| GET    | /health           | —    | Health check            |
+| POST   | /auth/register    | —    | Daftar akun baru        |
+| POST   | /auth/login       | —    | Login, dapat JWT        |
+| POST   | /auth/logout      | —    | Logout                  |
+| GET    | /auth/me          | JWT  | Info user dari token    |
+
+## Test Otomatis
+
+```bash
+# Backend harus jalan di localhost:8000
+php tests/api_test.php
+```
+
+Output: 20 test case — register, login, auth/me, logout, validasi, method check.
+
+## URL Routing
+
+| Path       | Halaman         |
+|------------|-----------------|
+| `/`        | Landing Page    |
+| `/masuk`   | Login           |
+| `/daftar`  | Register        |
+| `/dasbor`  | Dashboard       |
+
+Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis.
 
 ## Deploy
 
-Panduan lengkap untuk setup lokal, konfigurasi server production, Nginx/Apache, HTTPS, dan checklist sebelum demo tersedia di:
+Panduan lengkap (web + desktop): [`docs/deploy.md`](docs/deploy.md)
 
-👉 [`docs/deploy.md`](docs/deploy.md)
+## Dokumentasi
+
+| Dokumen | Isi |
+|---|---|
+| [`docs/deploy.md`](docs/deploy.md) | Setup lokal, server, Nginx, HTTPS, checklist |
+| [`docs/desktop.md`](docs/desktop.md) | Konversi ke .exe / .dmg / .deb via Tauri |
+| [`docs/knowledge_transfer.md`](docs/knowledge_transfer.md) | Konteks lengkap untuk AI / onboarding |
+| [`docs/pembagian_jobdesk_secure_e_voting.md`](docs/pembagian_jobdesk_secure_e_voting.md) | Pembagian tugas tim |
 
 ## Pembagian Jobdesk
 
-- **Orang 1** — Authentication & User Management
-- **Orang 2** — Election Management & Voting System
-- **Orang 3** — Cryptography & Advanced Security
-
-Lihat [`docs/pembagian_jobdesk_secure_e_voting.md`](docs/pembagian_jobdesk_secure_e_voting.md) untuk detail lengkap.
+- **Orang 1** — Authentication & User Management *(Sprint 1 selesai)*
+- **Orang 2** — Election Management & Voting System *(Sprint 2)*
+- **Orang 3** — Cryptography & Advanced Security *(Sprint 3)*

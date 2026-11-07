@@ -81,8 +81,14 @@ match (true) {
     $uri === '/auth/me' => (function () {
         require_once __DIR__ . '/api/auth/me.php';
     })(),
+    $uri === '/auth/change-password' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/change_password.php';
+    })(),
+    $uri === '/auth/change-password' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
 
-    // WebAuthn (Windows Hello)
+    // WebAuthn (Windows Hello) - Login
     $uri === '/auth/webauthn/login/start' && $method === 'POST' => (function () {
         require_once __DIR__ . '/api/auth/webauthn_login_start.php';
     })(),
@@ -93,6 +99,33 @@ match (true) {
         require_once __DIR__ . '/api/auth/webauthn_login_verify.php';
     })(),
     $uri === '/auth/webauthn/login/verify' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // WebAuthn (Windows Hello) - Register & Manage
+    $uri === '/auth/webauthn/register/start' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/webauthn_register_start.php';
+    })(),
+    $uri === '/auth/webauthn/register/start' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+    $uri === '/auth/webauthn/register/verify' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/webauthn_register_verify.php';
+    })(),
+    $uri === '/auth/webauthn/register/verify' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+    $uri === '/auth/webauthn/list' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/auth/webauthn_list.php';
+    })(),
+    $uri === '/auth/webauthn/list' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+    preg_match('#^/auth/webauthn/(\d+)/revoke$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/auth/webauthn/' . $m[1] . '/revoke';
+        require_once __DIR__ . '/api/auth/webauthn_revoke.php';
+    })(),
+    preg_match('#^/auth/webauthn/(\d+)/revoke$#', $uri) => (function () {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
@@ -136,6 +169,22 @@ match (true) {
         require_once __DIR__ . '/api/mfa/usb/register_verify.php';
     })(),
     $uri === '/mfa/usb/register/verify' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Authenticate (Login MFA): start challenge
+    $uri === '/mfa/usb/authenticate/start' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/mfa/usb/authenticate_start.php';
+    })(),
+    $uri === '/mfa/usb/authenticate/start' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Authenticate (Login MFA): verify signature
+    $uri === '/mfa/usb/authenticate/verify' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/mfa/usb/authenticate_verify.php';
+    })(),
+    $uri === '/mfa/usb/authenticate/verify' => (function () {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 

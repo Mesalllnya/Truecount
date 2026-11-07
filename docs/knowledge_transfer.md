@@ -109,6 +109,13 @@ backend/api/auth/register.php   - invite-gated (wajib invite_token valid)
 backend/api/auth/login.php
 backend/api/auth/logout.php
 backend/api/auth/me.php
+backend/api/auth/change_password.php     - POST /auth/change-password - ganti password
+backend/api/auth/webauthn_login_start.php  - POST /auth/webauthn/login/start - login Windows Hello
+backend/api/auth/webauthn_login_verify.php - POST /auth/webauthn/login/verify - verify Windows Hello
+backend/api/auth/webauthn_register_start.php - POST /auth/webauthn/register/start - register Windows Hello
+backend/api/auth/webauthn_register_verify.php - POST /auth/webauthn/register/verify - verify register WebAuthn
+backend/api/auth/webauthn_list.php       - GET /auth/webauthn/list - daftar Windows Hello
+backend/api/auth/webauthn_revoke.php     - POST /auth/webauthn/{id}/revoke - hapus Windows Hello
 backend/api/invites/create.php  - POST /invites (admin) buat undangan
 backend/api/invites/list.php    - GET /invites (admin) daftar + stats status
 backend/api/invites/verify.php  - GET /invites/verify?token= (publik)
@@ -123,18 +130,22 @@ backend/api/mfa/usb/label.php   - POST /mfa/usb/{id}/label - update label
 
 ```
 frontend/src/App.jsx            - BrowserRouter + Routes
-frontend/src/hooks/useUsbToken.ts - Hook USB token: listen event Tauri, decrypt, sign, register API
+frontend/src/hooks/
+  useUsbToken.ts          - Hook USB token: listen event Tauri, decrypt, sign, register API
+  useWebAuthn.ts          - Hook WebAuthn (Windows Hello): login & register flow
+  useAuth.ts              - Hook auth umum: changePassword, webauthn register/list/revoke
 frontend/src/pages/
   LandingPage.jsx + .css        - Hero dengan raise_hand.jpg + nav link tengah, tombol Masuk (ikon) di kanan
   LoginPage.jsx                 - Form login (card center), fetch ke /auth/login + status dongle (DETEKSI USB ASLI via scanForTokens, polling 2 detik - hanya deteksi, TIDAK mengubah flow login) + banner sukses registrasi
   RegisterPage.jsx              - Form register INVITE-ONLY: verifikasi ?undangan=<token> via GET /invites/verify, state "pendaftaran ditutup" tanpa token
   AuthPage.css                  - Shared CSS untuk Login + Register + state panel undangan
-  DashboardPage.jsx + .css      - Dasbor + easter egg 5-klik + auth guard; admin lihat panel undangan (stats + tabel status + form buat undangan + salin tautan) + panel USB token (semua user)
+  DashboardPage.jsx + .css      - Dasbor + easter egg 5-klik + auth guard; admin lihat panel undangan (stats + tabel status + form buat undangan + salin tautan)
   VotePage.jsx + .css          - Halaman pemilihan (/pilih): kandidat demo, tombol besar berwarna + ikon SVG + auth guard
+  ProfileSettingsPage.jsx + .css - Halaman pengaturan (/pengaturan): change password, Windows Hello, USB token management
   UsbTokenTestPage.jsx + .css  - Halaman test USB token (/usb-token-test): deteksi, decrypt, challenge-response
 frontend/src/components/
   HealthMonitor.jsx             - Render null; polling /health di background, error → console (bukan UI)
-  UsbTokenPanel.jsx + .css      - Panel kelola USB token di dasbor: daftar, register (modal flow), revoke, label
+  UsbTokenPanel.jsx + .css      - Panel kelola USB token (digunakan di ProfileSettingsPage): daftar, register (modal flow), revoke, label
 frontend/src/index.css          - Reset global + font family
 frontend/src/main.jsx           - ReactDOM.createRoot - tidak diubah
 ```
@@ -175,6 +186,7 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | `/daftar` | `RegisterPage` | Pendaftaran - invite-only, wajib query `?undangan=<token>`; tanpa token tampil state "hanya melalui undangan" |
 | `/dasbor` | `DashboardPage` | Dasbor (blank + easter egg, ada auth guard) |
 | `/pilih` | `VotePage` | Halaman pemilihan - demo kandidat, tombol besar berwarna (Sprint 2, ada auth guard) |
+| `/pengaturan` | `ProfileSettingsPage` | Pengaturan profil: change password, Windows Hello, USB token |
 | `/login` | Redirect → `/masuk` | Alias lama |
 | `/register` | Redirect → `/daftar` | Alias lama |
 | `/dashboard` | Redirect → `/dasbor` | Alias lama |
@@ -193,11 +205,18 @@ Base URL: `http://localhost:8000`
 | POST | `/auth/login` | - | `{identifier, password}` | `200 {message, token, user}` |
 | POST | `/auth/logout` | - | - | `200 {message}` |
 | GET | `/auth/me` | Bearer JWT | - | `200 {user}` |
+| POST | `/auth/change-password` | Bearer JWT | `{current_password, new_password}` | `200 {message}` - ganti password (Argon2id) |
+| POST | `/auth/webauthn/register/start` | Bearer JWT | `{display_name?}` | `200 {challenge, challenge_id, user, rp}` - mulai register Windows Hello |
+| POST | `/auth/webauthn/register/verify` | Bearer JWT | `{challenge_id, credential_id, attestation_object, client_data_json}` | `201 {message, credential_id}` - verifikasi registrasi WebAuthn |
+| GET | `/auth/webauthn/list` | Bearer JWT | - | `200 {credentials}` - daftar Windows Hello user |
+| POST | `/auth/webauthn/{id}/revoke` | Bearer JWT | - | `200 {message}` - hapus Windows Hello |
 | GET | `/invites` | Bearer JWT (admin) | - | `200 {stats, invites}` - status: `menunggu`/`diterima`/`kedaluwarsa`/`dibatalkan` |
 | POST | `/invites` | Bearer JWT (admin) | `{email?, role?}` | `201 {message, invite}` - `invite.link` = `/daftar?undangan=<token>` |
 | GET | `/invites/verify` | - | query `?token=` | `200 {valid, invite}` / `400` / `404` |
 | POST | `/mfa/usb/register/start` | Bearer JWT | - | `200 {challenge_id, challenge}` - challenge 32 byte random, TTL 5 menit |
 | POST | `/mfa/usb/register/verify` | Bearer JWT | `{challenge_id, signature, public_key, label?}` | `201 {message, credential}` - verifikasi ECDSA P-256 |
+| POST | `/mfa/usb/authenticate/start` | - (identifier-based) | `{identifier}` | `200 {challenge_id, challenge, allowCredentials[], user}` - mulai MFA login USB token |
+| POST | `/mfa/usb/authenticate/verify` | - | `{challenge_id, credential_id, signature}` | `200 {message, token, user}` - verifikasi MFA login USB token, return JWT |
 | GET | `/mfa/usb/list` | Bearer JWT | - | `200 {credentials}` - daftar USB token user |
 | POST | `/mfa/usb/{id}/revoke` | Bearer JWT | - | `200 {message}` - nonaktifkan token |
 | POST | `/mfa/usb/{id}/label` | Bearer JWT | `{label}` | `200 {message, label}` - update label |
@@ -218,16 +237,17 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 - `422` - Unprocessable Entity (validasi gagal)
 
 ---
-
+ 
 ## 7. Database Schema
-
-11 tabel total - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` (1 tabel):
-
+ 
+12 tabel total - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql`:
+ 
 | Tabel | Sprint | Keterangan |
 | --- | --- | --- |
 | `users` | 1 ✅ | id, username, email, password_hash, role (admin/voter), is_active |
 | `invites` | 2 ✅ | Undangan pendaftaran - token, email (nullable), role, status (pending/accepted/revoked), expires_at, created_by, used_by |
-| `biometric_credentials` | 4 | WebAuthn/FIDO2 - FK ke users |
+| `biometric_credentials` | 4 | WebAuthn/FIDO2 - FK ke users (termasuk last_used_at) |
+| `webauthn_challenges` | 4 | Challenge WebAuthn (TTL 5 menit, single-use) - registration & authentication |
 | `usb_token_credentials` | 4 | **USB Token (software token di flashdisk) - ECDSA P-256 public key storage** |
 | `usb_challenges` | 4 | **Challenge sementara untuk register/authenticate USB token (TTL 5 menit, single-use)** |
 | `elections` | 2 | Pemilihan - FK ke users (created_by) |
@@ -237,7 +257,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | `encrypted_messages` | 3 | Modul kriptografi |
 | `encrypted_files` | 3 | File terenkripsi |
 | `blocks` | 3 | Blockchain sederhana |
-
+ 
 **Penting:** `ballots` tidak punya FK ke `users` atau `voters` secara sengaja - suara dan identitas pemilih terpisah.
 
 ---
@@ -594,9 +614,14 @@ Endpoints yang perlu dibangun:
 
 ### Sprint 4 - MFA (Rio Meidi Ataurrahman)
 
-- WebAuthn biometrics
-- **USB Token Test System ✅** (deteksi auto, decrypt, challenge-response test di `/usb-token-test` — **belum terintegrasi ke auth**)
-- **USB Token Management ✅** (daftar/revoke/label token di dasbor via `/mfa/usb/*` - register flow sudah end-to-end: challenge → sign → verify)
+- WebAuthn biometrics (Windows Hello) ✅ — register, list, revoke via `/auth/webauthn/*`
+- **Profile Settings Page ✅** (`/pengaturan`) — halaman terpusat untuk:
+  - Change Password (Argon2id)
+  - Windows Hello management (WebAuthn)
+  - USB Token management (dipindahkan dari dasbor)
+- **USB Token Test System ✅** (deteksi auto, decrypt, challenge-response test di `/usb-token-test`)
+- **USB Token Login MFA ✅** (login pakai USB token via `/mfa/usb/authenticate/*` - identifier-based challenge → sign → verify → JWT)
+- **USB Token Management ✅** (daftar/revoke/label token di halaman pengaturan via `/mfa/usb/*` - register flow sudah end-to-end: challenge → sign → verify)
 - **USB Token Creation ✅** (User bikin token sendiri via UI "＋ Buat Token di USB" — generate keypair + encrypt + tulis file — **tanpa registrasi**, registrasi terpisah via "Daftarkan USB Baru")
 - Auto-spawn PHP dari Tauri untuk standalone desktop ✅ (selesai - catatan: masih butuh PHP terinstall di sistem user; bundling `php.exe` sebagai sidecar belum dilakukan)
 

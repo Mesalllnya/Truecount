@@ -568,6 +568,219 @@
 /* ── Selection ──────────────────────────────────────────── */
 ::selection { background: #d4d4d0; color: var(--black); }
 
+/* ═══════════════════════════════════════════════════════════
+   USB TOKEN AUTH FLOW (Login MFA)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Password Input Wrapper ── */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 8px;
+  transition: background 150ms, color 150ms;
+}
+
+.password-toggle:hover:not(:disabled) {
+  background: var(--off-white);
+  color: var(--black);
+}
+
+.password-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* ── Dongle Button Variants ── */
+.btn-submit--dongle {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+}
+
+.btn-submit--dongle:hover:not(:disabled) {
+  background: #222;
+  border-color: #222;
+}
+
+.btn-submit--secondary {
+  background: transparent;
+  color: var(--black);
+  border: 1.5px solid var(--border);
+}
+
+.btn-submit--secondary:hover:not(:disabled) {
+  background: var(--off-white);
+  border-color: var(--black);
+}
+
+/* ── USB Auth Waiting State ── */
+.usb-auth-waiting {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  animation: cardReveal 400ms var(--ease-out) both;
+}
+
+.usb-waiting-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(13, 13, 13, 0.08) 0%, rgba(13, 13, 13, 0.04) 100%);
+  margin-bottom: 1rem;
+}
+
+.usb-pulse {
+  color: var(--black);
+  animation: usbPulse 2s ease-in-out infinite;
+}
+
+@keyframes usbPulse {
+  0%, 100% { transform: scale(1) rotate(-5deg); }
+  50% { transform: scale(1.1) rotate(5deg); }
+}
+
+.usb-auth-waiting h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--black);
+  margin: 0 0 0.5rem;
+}
+
+.usb-auth-waiting p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0 0 1rem;
+  line-height: 1.6;
+}
+
+.usb-drive-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--off-white);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--black);
+}
+
+.usb-drive-badge svg {
+  color: var(--red);
+}
+
+.detected-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--white);
+  background: #2a7a3b;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inline-error {
+  margin-top: 1rem;
+  padding: 0.65rem 0.85rem;
+  background: #fdf0ef;
+  border: 1px solid #f5c6c3;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--error);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ── USB Auth PIN Entry ── */
+.usb-auth-pin {
+  animation: cardReveal 400ms var(--ease-out) both;
+}
+
+.usb-auth-pin .field {
+  margin-bottom: 1rem;
+}
+
+/* ── USB Auth Error State ── */
+.usb-auth-error {
+  text-align: center;
+  padding: 2rem 1rem;
+  animation: cardReveal 400ms var(--ease-out) both;
+}
+
+.usb-auth-error .error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--red-dark) 0%, var(--red) 100%);
+  color: var(--white);
+  margin-bottom: 1rem;
+}
+
+.usb-auth-error h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--black);
+  margin: 0 0 0.5rem;
+}
+
+.usb-auth-error p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+  line-height: 1.6;
+}
+
+.usb-auth-error .form-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.usb-auth-error .btn-submit {
+  flex: 1;
+  max-width: 180px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UNDANGAN - state panel (register via invite)
+   ═══════════════════════════════════════════════════════════ */
+
 /* ═════════════════════════════════════════════════════════
    UNDANGAN - state panel (register via invite)
    ═════════════════════════════════════════════════════════ */

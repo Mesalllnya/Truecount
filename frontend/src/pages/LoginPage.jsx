@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useUsbToken } from '../hooks/useUsbToken'
+import { useUsbToken, startUsbAuthenticate, verifyUsbAuthenticate, base64urlToBytes, bytesToBase64url } from '../hooks/useUsbToken'
 import { useWebAuthnLogin } from '../hooks/useWebAuthn'
 import './AuthPage.css'
 
@@ -68,6 +68,24 @@ function AlertIcon() {
       <circle cx="12" cy="12" r="10" />
       <line x1="12" y1="8" x2="12" y2="12" />
       <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  )
+}
+
+function EyeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  )
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
     </svg>
   )
 }
@@ -189,6 +207,140 @@ export default function LoginPage() {
       navigate('/dasbor')
     }
     setLoading(false)
+  }
+
+  // ── USB Token Auth (MFA Login) ───────────────────────────────
+  // scanForTokens sudah di-destructuring di atas (line ~116)
+  const {
+    decryptPrivateKey,
+    importPrivateKey,
+    signChallenge,
+    isDecrypting: usbDecrypting,
+    error: usbHookError,
+  } = useUsbToken()
+
+  const [usbAuthStep, setUsbAuthStep] = useState('idle') // idle | waiting-usb | waiting-pin | signing | done | error
+  const [usbAuthError, setUsbAuthError] = useState('')
+  const [usbAuthChallengeData, setUsbAuthChallengeData] = useState(null)
+  const [usbAuthPin, setUsbAuthPin] = useState('')
+  const [usbAuthSelectedDrive, setUsbAuthSelectedDrive] = useState('')
+  const [usbAuthPinShow, setUsbAuthPinShow] = useState(false)
+
+  // Auto-detect USB saat step waiting-usb
+  useEffect(() => {
+    if (usbAuthStep !== 'waiting-usb') return
+    let cancelled = false
+    const poll = async () => {
+      const tokens = await scanForTokens()
+      if (!cancelled && tokens.length > 0) {
+        setUsbAuthSelectedDrive(tokens[0].drive)
+        setUsbAuthStep('waiting-pin')
+      }
+    }
+    poll()
+    const intervalId = window.setInterval(poll, 2000)
+    return () => { cancelled = true; window.clearInterval(intervalId) }
+  }, [usbAuthStep, scanForTokens])
+
+  // Detect USB removal
+  useEffect(() => {
+    if (usbAuthStep !== 'waiting-pin' && usbAuthStep !== 'signing') return
+    let cancelled = false
+    const poll = async () => {
+      const tokens = await scanForTokens()
+      if (!cancelled) {
+        const stillThere = tokens.some(t => t.drive === usbAuthSelectedDrive)
+        if (!stillThere) {
+          setUsbAuthSelectedDrive('')
+          setUsbAuthPin('')
+          setUsbAuthError('USB dicabut. Colokkan kembali untuk melanjutkan.')
+          setUsbAuthStep('waiting-usb')
+        }
+      }
+    }
+    const intervalId = window.setInterval(poll, 2000)
+    return () => { cancelled = true; window.clearInterval(intervalId) }
+  }, [usbAuthStep, usbAuthSelectedDrive, scanForTokens])
+
+  const handleUsbAuthStart = async () => {
+    if (!form.identifier.trim()) {
+      setError('Masukkan username atau email terlebih dahulu')
+      return
+    }
+    setUsbAuthStep('idle')
+    setUsbAuthError('')
+    setUsbAuthPin('')
+    setUsbAuthSelectedDrive('')
+    setUsbAuthChallengeData(null)
+
+    const data = await startUsbAuthenticate(form.identifier.trim())
+    if (!data) {
+      setUsbAuthStep('error')
+      setUsbAuthError('Gagal memulai autentikasi. Coba lagi.')
+      return
+    }
+    setUsbAuthChallengeData(data)
+    setUsbAuthStep('waiting-usb')
+  }
+
+  const handleUsbAuthSubmitPin = async () => {
+    if (!usbAuthSelectedDrive || !usbAuthPin || !usbAuthChallengeData) return
+    setUsbAuthStep('signing')
+    setUsbAuthError('')
+
+    try {
+      // 1. Decrypt private key dari USB
+      const decryptResult = await decryptPrivateKey(usbAuthSelectedDrive, usbAuthPin)
+      if (!decryptResult) {
+        const msg = usbHookError || ''
+        if (msg.includes('not found') || msg.includes('tidak ditemukan') || msg.includes('Read file')) {
+          setUsbAuthSelectedDrive('')
+          setUsbAuthPin('')
+          setUsbAuthError('USB dicabut. Colokkan kembali untuk melanjutkan.')
+          setUsbAuthStep('waiting-usb')
+        } else {
+          setUsbAuthStep('error')
+          setUsbAuthError(msg || 'Gagal mendekripsi. PIN salah?')
+        }
+        return
+      }
+
+      // 2. Import private key ke Web Crypto
+      const privateKey = await importPrivateKey(decryptResult.private_key_jwk)
+
+      // 3. Sign challenge
+      const challengeBytes = base64urlToBytes(usbAuthChallengeData.challenge)
+      const signature = await signChallenge(privateKey, challengeBytes)
+      const signatureB64 = bytesToBase64url(signature)
+
+      // 4. Kirim ke backend untuk verifikasi
+      const result = await verifyUsbAuthenticate(
+        usbAuthChallengeData.challenge_id,
+        usbAuthChallengeData.allowCredentials[0]?.id || '', // credential_id dari allowCredentials
+        signatureB64
+      )
+
+      if (!result) {
+        setUsbAuthStep('error')
+        setUsbAuthError('Verifikasi gagal di server.')
+        return
+      }
+
+      // Success!
+      localStorage.setItem('tc_token', result.token)
+      navigate('/dasbor')
+    } catch (err) {
+      setUsbAuthStep('error')
+      setUsbAuthError(err?.message || 'Terjadi kesalahan.')
+    }
+  }
+
+  const handleUsbAuthCancel = () => {
+    setUsbAuthStep('idle')
+    setUsbAuthError('')
+    setUsbAuthPin('')
+    setUsbAuthSelectedDrive('')
+    setUsbAuthChallengeData(null)
   }
 
   // ── Konfigurasi metode auth ─────────────────────────────────
@@ -394,7 +546,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* ── Form Dongle ────────────────────────────────────── */}
+        {/* ── Form Dongle (USB Token MFA) ────────────────────────────── */}
         {selectedMethod === 'dongle' && (
           <div className="dongle-form">
             <div className="field">
@@ -408,42 +560,149 @@ export default function LoginPage() {
                 value={form.identifier}
                 onChange={handleChange}
                 required
+                disabled={usbAuthStep !== 'idle' && usbAuthStep !== 'error'}
               />
             </div>
 
-            <div className="field">
-              <label htmlFor="dongle-pin">PIN Dongle</label>
-              <input
-                id="dongle-pin"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Masukkan PIN dongle"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
-            </div>
+            {usbAuthStep === 'idle' && (
+              <>
+                <div className="field">
+                  <label htmlFor="dongle-pin">PIN Dongle</label>
+                  <div className="password-input-wrapper">
+                    <input
+                      id="dongle-pin"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      placeholder="Masukkan PIN dongle (opsional untuk memulai)"
+                      value={form.password}
+                      onChange={handleChange}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setUsbAuthPinShow(p => !p)}
+                      aria-label={usbAuthPinShow ? 'Sembunyikan PIN' : 'Tampilkan PIN'}
+                    >
+                      {usbAuthPinShow ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
+                  </div>
+                </div>
 
-            {error && <p className="field-error" role="alert"><AlertIcon />{error}</p>}
+                {error && <p className="field-error" role="alert"><AlertIcon />{error}</p>}
+                {usbAuthError && <p className="field-error" role="alert"><AlertIcon />{usbAuthError}</p>}
 
-            <button type="button" className="btn-submit" onClick={handlePasswordSubmit} disabled={loading || !dongleStatus.connected}>
-              {loading
-                ? <span className="btn-loading"><span className="spinner" />Memproses…</span>
-                : 'Masuk dengan Dongle'}
-            </button>
+                <button
+                  type="button"
+                  className="btn-submit btn-submit--dongle"
+                  onClick={handleUsbAuthStart}
+                  disabled={loading || !form.identifier.trim()}
+                >
+                  {loading ? (
+                    <span className="btn-loading"><span className="spinner" />Memulai…</span>
+                  ) : (
+                    <>
+                      <KeyIcon />
+                      Mulai Autentikasi Dongle
+                    </>
+                  )}
+                </button>
 
-            {!dongleStatus.connected && (
-              <p className="dongle-hint">
-                <span className="hint-icon" aria-hidden="true"><AlertIcon /></span>
-                Dongle tidak terdeteksi. Colokkan dongle TrueCount ke port USB.
-              </p>
+                {!dongleStatus.connected && (
+                  <p className="dongle-hint">
+                    <span className="hint-icon" aria-hidden="true"><AlertIcon /></span>
+                    Dongle tidak terdeteksi. Colokkan dongle TrueCount ke port USB.
+                  </p>
+                )}
+                {dongleStatus.connected && dongleStatus.formatValid === false && (
+                  <p className="dongle-hint dongle-hint--warn">
+                    <span className="hint-icon" aria-hidden="true"><AlertIcon /></span>
+                    Format token tidak valid. Gunakan dongle TrueCount yang benar.
+                  </p>
+                )}
+              </>
             )}
-            {dongleStatus.connected && dongleStatus.formatValid === false && (
-              <p className="dongle-hint dongle-hint--warn">
-                <span className="hint-icon" aria-hidden="true"><AlertIcon /></span>
-                Format token tidak valid. Gunakan dongle TrueCount yang benar.
-              </p>
+
+            {usbAuthStep === 'waiting-usb' && (
+              <div className="usb-auth-waiting">
+                <div className="usb-waiting-icon">
+                  <KeyIcon className="usb-pulse" />
+                </div>
+                <h3>Menunggu Dongle…</h3>
+                <p>Colokkan dongle TrueCount ke port USB. Sistem akan mendeteksi otomatis.</p>
+                {dongleStatus.connected && dongleStatus.formatValid !== false && (
+                  <div className="usb-drive-badge">
+                    <KeyIcon /> {dongleStatus.drive} <span className="detected-badge">Terdeteksi</span>
+                  </div>
+                )}
+                {usbAuthError && <p className="field-error inline-error"><AlertIcon />{usbAuthError}</p>}
+                <button type="button" className="btn-submit btn-submit--secondary" onClick={handleUsbAuthCancel}>
+                  Batal
+                </button>
+              </div>
+            )}
+
+            {(usbAuthStep === 'waiting-pin' || usbAuthStep === 'signing') && (
+              <div className="usb-auth-pin">
+                <div className="field">
+                  <label htmlFor="dongle-auth-pin">PIN Dongle</label>
+                  <div className="password-input-wrapper">
+                    <input
+                      id="dongle-auth-pin"
+                      type="password"
+                      value={usbAuthPin}
+                      onChange={e => setUsbAuthPin(e.target.value)}
+                      placeholder="Masukkan PIN untuk dekripsi"
+                      autoFocus
+                      disabled={usbAuthStep === 'signing'}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle"
+                      onClick={() => setUsbAuthPinShow(p => !p)}
+                      aria-label={usbAuthPinShow ? 'Sembunyikan PIN' : 'Tampilkan PIN'}
+                      disabled={usbAuthStep === 'signing'}
+                    >
+                      {usbAuthPinShow ? <EyeOffIcon /> : <EyeIcon />}
+                    </button>
+                  </div>
+                </div>
+
+                {usbAuthError && <p className="field-error" role="alert"><AlertIcon />{usbAuthError}</p>}
+
+                <button
+                  type="button"
+                  className="btn-submit btn-submit--dongle"
+                  onClick={handleUsbAuthSubmitPin}
+                  disabled={!usbAuthPin || usbAuthStep === 'signing' || usbDecrypting}
+                >
+                  {usbAuthStep === 'signing' || usbDecrypting ? (
+                    <span className="btn-loading"><span className="spinner" />Memverifikasi…</span>
+                  ) : (
+                    <>
+                      <KeyIcon />
+                      Verifikasi & Masuk
+                    </>
+                  )}
+                </button>
+                <button type="button" className="btn-submit btn-submit--secondary" onClick={handleUsbAuthCancel} disabled={usbAuthStep === 'signing'}>
+                  Batal
+                </button>
+              </div>
+            )}
+
+            {usbAuthStep === 'error' && (
+              <div className="usb-auth-error">
+                <div className="error-icon"><AlertIcon /></div>
+                <h3>Autentikasi Gagal</h3>
+                <p>{usbAuthError || 'Terjadi kesalahan saat autentikasi dongle.'}</p>
+                <button type="button" className="btn-submit btn-submit--dongle" onClick={handleUsbAuthStart}>
+                  <KeyIcon /> Coba Lagi
+                </button>
+                <button type="button" className="btn-submit btn-submit--secondary" onClick={handleUsbAuthCancel}>
+                  Kembali
+                </button>
+              </div>
             )}
           </div>
         )}

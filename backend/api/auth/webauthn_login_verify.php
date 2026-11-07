@@ -60,7 +60,7 @@ if (strtotime($challengeRow['expires_at']) < time()) {
     jsonResponse(['error' => 'Challenge sudah kedaluwarsa. Silakan coba lagi.'], 400);
 }
 
-$challengeBytes = base64_decode($challengeRow['challenge']);
+$challengeBytes = $challengeRow['challenge']; // sudah binary dari DB (VARBINARY)
 $userId = (int)$challengeRow['user_id'];
 
 // ── 2. Ambil credential dari database ──────────────────────────────

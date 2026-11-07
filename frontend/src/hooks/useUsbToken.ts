@@ -66,7 +66,7 @@ export async function createTokenFile(
 }
 
 /** Convert base64url string ke Uint8Array (module-level, tanpa state) */
-function base64urlToBytes(str: string): Uint8Array {
+export function base64urlToBytes(str: string): Uint8Array {
   const base64 = str.replace(/-/g, '+').replace(/_/g, '/')
   const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
   const binary = atob(padded)
@@ -74,7 +74,7 @@ function base64urlToBytes(str: string): Uint8Array {
 }
 
 /** Convert Uint8Array ke base64url (module-level, tanpa state) */
-function bytesToBase64url(bytes: Uint8Array): string {
+export function bytesToBase64url(bytes: Uint8Array): string {
   let binary = ''
   bytes.forEach((b) => (binary += String.fromCharCode(b)))
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
@@ -423,5 +423,56 @@ export async function updateUsbLabel(id: number, label: string): Promise<boolean
   } catch (err) {
     console.error('[TrueCount] updateUsbLabel error:', err)
     return false
+  }
+}
+
+/* ── API Helpers untuk authenticate (login MFA) flow ───────── */
+
+export interface AuthenticateStartResponse {
+  challenge_id: number
+  challenge: string // base64url
+  allowCredentials: Array<{ type: 'public-key'; id: string }>
+  user: { id: number; username: string; email: string; role: string }
+}
+
+/** Mulai autentikasi USB token (MFA login) - identifier-based */
+export async function startUsbAuthenticate(identifier: string): Promise<AuthenticateStartResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}/mfa/usb/authenticate/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Gagal memulai autentikasi USB.')
+    return data
+  } catch (err) {
+    console.error('[TrueCount] startUsbAuthenticate error:', err)
+    return null
+  }
+}
+
+/** Verifikasi autentikasi USB token (MFA login) */
+export async function verifyUsbAuthenticate(
+  challengeId: number,
+  credentialId: string,
+  signatureB64: string
+): Promise<{ message: string; token: string; user: { id: number; username: string; email: string; role: string } } | null> {
+  try {
+    const res = await fetch(`${API_BASE}/mfa/usb/authenticate/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        challenge_id: challengeId,
+        credential_id: credentialId,
+        signature: signatureB64,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Verifikasi USB token gagal.')
+    return data
+  } catch (err) {
+    console.error('[TrueCount] verifyUsbAuthenticate error:', err)
+    return null
   }
 }

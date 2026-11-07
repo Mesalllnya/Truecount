@@ -82,6 +82,20 @@ match (true) {
         require_once __DIR__ . '/api/auth/me.php';
     })(),
 
+    // WebAuthn (Windows Hello)
+    $uri === '/auth/webauthn/login/start' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/webauthn_login_start.php';
+    })(),
+    $uri === '/auth/webauthn/login/start' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+    $uri === '/auth/webauthn/login/verify' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/webauthn_login_verify.php';
+    })(),
+    $uri === '/auth/webauthn/login/verify' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
     // Undangan pendaftaran (invite) - buat/list khusus admin, verify publik
     $uri === '/invites' && $method === 'GET' => (function () {
         require_once __DIR__ . '/api/invites/list.php';

@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import raiseHand from '/raise_hand.jpg'
 import './LandingPage.css'
 
-/* ── SVG Icon system ─────────────────────────────────────── */
+/* ── SVG Icons ───────────────────────────────────────────── */
 function Icon({ name, size = 20 }) {
   const icons = {
     lock: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2"/>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
       </svg>
     ),
     ballot: (
@@ -27,8 +27,7 @@ function Icon({ name, size = 20 }) {
     ),
     eye: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-        <circle cx="12" cy="12" r="3"/>
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
       </svg>
     ),
     shield: (
@@ -45,8 +44,7 @@ function Icon({ name, size = 20 }) {
     ),
     arrow: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="5" y1="12" x2="19" y2="12"/>
-        <polyline points="12 5 19 12 12 19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
       </svg>
     ),
     check: (
@@ -63,139 +61,62 @@ function Icon({ name, size = 20 }) {
     ),
     close: (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="6" x2="6" y2="18"/>
-        <line x1="6" y1="6" x2="18" y2="18"/>
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
       </svg>
     ),
   }
   return icons[name] ?? null
 }
 
-/* ── Generative mosaic (animasi fade-in per sel) ─────────── */
-const COLORS = ['#e8231a','#2a7a3b','#3468b0','#d4c4a0','#7a4a2a','#0d0d0d']
-const COLS = 20
-const ROWS = 13
-
-function seedRng(seed) {
-  let s = seed
-  return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff }
-}
-
-function MosaicCanvas() {
-  const canvasRef = useRef(null)
-  const rafRef    = useRef(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    const dpr = window.devicePixelRatio || 1
-
-    function resize() {
-      const W = canvas.offsetWidth
-      const H = canvas.offsetHeight
-      canvas.width  = W * dpr
-      canvas.height = H * dpr
-      ctx.scale(dpr, dpr)
-    }
-    resize()
-
-    const W = canvas.offsetWidth
-    const H = canvas.offsetHeight
-    const cellW = W / COLS
-    const cellH = H / ROWS
-    const GAP   = 3
-
-    const rng   = seedRng(73)
-    const cells = []
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const vis = rng() > 0.3
-        if (!vis) continue
-        cells.push({
-          x: c * cellW + GAP / 2,
-          y: r * cellH + GAP / 2,
-          w: cellW * (rng() > 0.6 ? 2 : 1) - GAP,
-          h: cellH * (rng() > 0.5 ? 2 : 1) - GAP,
-          color: COLORS[Math.floor(rng() * COLORS.length)],
-          delay: rng() * 1800,   // ms
-          alpha: 0,
-        })
-      }
-    }
-
-    let start = null
-    function draw(ts) {
-      if (!start) start = ts
-      const elapsed = ts - start
-      ctx.clearRect(0, 0, W, H)
-      cells.forEach(cell => {
-        const t = Math.min(1, Math.max(0, (elapsed - cell.delay) / 600))
-        cell.alpha = t * t * (3 - 2 * t)          // smoothstep
-        ctx.globalAlpha = cell.alpha * 0.92
-        ctx.fillStyle   = cell.color
-        ctx.fillRect(cell.x, cell.y, cell.w, cell.h)
-      })
-      ctx.globalAlpha = 1
-      rafRef.current = requestAnimationFrame(draw)
-    }
-    rafRef.current = requestAnimationFrame(draw)
-
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [])
-
-  return <canvas ref={canvasRef} className="mosaic-canvas" aria-hidden="true" />
-}
-
 /* ── Scroll-reveal hook ─────────────────────────────────── */
-function useReveal() {
+function useReveal(threshold = 0.12) {
   const ref = useRef(null)
   const [visible, setVisible] = useState(false)
   useEffect(() => {
     const el = ref.current
     if (!el) return
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
-      { threshold: 0.15 }
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } },
+      { threshold }
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [])
+  }, [threshold])
   return [ref, visible]
 }
 
-/* ── Main component ─────────────────────────────────────── */
+/* ── Main ────────────────────────────────────────────────── */
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [stepRef, stepVis]   = useReveal()
-  const [featRef, featVis]   = useReveal()
-  const [secRef,  secVis]    = useReveal()
+  const [stepRef, stepVis] = useReveal()
+  const [featRef, featVis] = useReveal()
+  const [secRef,  secVis]  = useReveal()
 
   const features = [
-    { icon: 'lock',   title: 'Kata Sandi Argon2id',    body: 'Kata sandi di-hash dengan Argon2id — tahan terhadap serangan GPU dan side-channel.' },
-    { icon: 'ballot', title: 'Surat Suara Terenkripsi', body: 'Enkripsi AES-256-GCM memastikan tidak ada yang bisa membaca suara Anda, bahkan server.' },
-    { icon: 'chain',  title: 'Audit Blockchain',        body: 'Setiap kejadian pemilihan dicatat dan dirantai. Manipulasi dapat dideteksi secara matematis.' },
-    { icon: 'eye',    title: 'Privasi by Design',       body: 'Partisipasi pemilih dan isi suara disimpan di tabel terpisah yang tidak terhubung.' },
-    { icon: 'shield', title: 'Autentikasi Multi-Faktor', body: 'Dukungan biometrik WebAuthn dan token USB untuk identitas berkeamanan tinggi.' },
-    { icon: 'chart',  title: 'Hasil Real-Time',         body: 'Admin dapat mempublikasikan hasil secara instan setelah pemilihan ditutup.' },
+    { icon: 'lock',   title: 'Kata Sandi Argon2id',      body: 'Kata sandi di-hash dengan Argon2id — tahan terhadap serangan GPU dan side-channel.' },
+    { icon: 'ballot', title: 'Surat Suara Terenkripsi',   body: 'Enkripsi AES-256-GCM memastikan tidak ada yang bisa membaca suara Anda, bahkan server.' },
+    { icon: 'chain',  title: 'Audit Blockchain',           body: 'Setiap kejadian pemilihan dicatat dan dirantai. Manipulasi dapat dideteksi secara matematis.' },
+    { icon: 'eye',    title: 'Privasi by Design',          body: 'Partisipasi pemilih dan isi suara disimpan di tabel terpisah yang tidak terhubung.' },
+    { icon: 'shield', title: 'Autentikasi Multi-Faktor',   body: 'Dukungan biometrik WebAuthn dan token USB untuk identitas berkeamanan tinggi.' },
+    { icon: 'chart',  title: 'Hasil Real-Time',            body: 'Admin dapat mempublikasikan hasil secara instan setelah pemilihan ditutup.' },
   ]
 
   return (
     <div className="landing">
 
-      {/* ── Nav ── */}
+      {/* ══ NAV ══════════════════════════════════════════════ */}
       <header className="nav">
         <span className="nav-brand">TrueCount</span>
 
-        <nav className={`nav-links ${menuOpen ? 'nav-links--open' : ''}`} aria-label="Navigasi utama">
-          <a href="#cara-kerja"  onClick={() => setMenuOpen(false)}>Cara Kerja</a>
-          <a href="#fitur"       onClick={() => setMenuOpen(false)}>Fitur</a>
-          <a href="#keamanan"    onClick={() => setMenuOpen(false)}>Keamanan</a>
+        <nav className={`nav-links${menuOpen ? ' nav-links--open' : ''}`} aria-label="Navigasi utama">
+          <a href="#cara-kerja" onClick={() => setMenuOpen(false)}>Cara Kerja</a>
+          <a href="#fitur"      onClick={() => setMenuOpen(false)}>Fitur</a>
+          <a href="#keamanan"   onClick={() => setMenuOpen(false)}>Keamanan</a>
         </nav>
 
         <div className="nav-actions">
-          <Link to="/masuk"   className="btn-ghost">Masuk</Link>
-          <Link to="/daftar"  className="btn-solid">Daftar</Link>
+          <Link to="/masuk"  className="btn-ghost">Masuk</Link>
+          <Link to="/daftar" className="btn-solid">Daftar</Link>
         </div>
 
         <button
@@ -208,12 +129,16 @@ export default function LandingPage() {
         </button>
       </header>
 
-      {/* ── Hero ── */}
+      {/* ══ HERO ═════════════════════════════════════════════ */}
       <main className="hero">
-        <div className="hero-text reveal-hero">
+
+        {/* Left — text */}
+        <div className="hero-text">
           <p className="hero-eyebrow">Platform E-Voting Akademik</p>
           <h1>
-            Pemilihan yang<br />bisa dipercaya.
+            Suara<br />
+            <em>kamu</em><br />
+            terhitung.
           </h1>
           <p className="hero-sub">
             TrueCount adalah platform e-voting yang aman dan transparan —
@@ -226,44 +151,65 @@ export default function LandingPage() {
             </Link>
             <a href="#cara-kerja" className="btn-ghost btn-lg">Pelajari caranya</a>
           </div>
+
+          {/* stat bar */}
+          <div className="hero-stats">
+            <div className="hero-stat">
+              <span className="hero-stat-num">100%</span>
+              <span className="hero-stat-label">Terenkripsi</span>
+            </div>
+            <div className="hero-stat-divider" aria-hidden="true" />
+            <div className="hero-stat">
+              <span className="hero-stat-num">0</span>
+              <span className="hero-stat-label">Data bocor</span>
+            </div>
+            <div className="hero-stat-divider" aria-hidden="true" />
+            <div className="hero-stat">
+              <span className="hero-stat-num">3×</span>
+              <span className="hero-stat-label">Verifikasi berlapis</span>
+            </div>
+          </div>
         </div>
-        <div className="hero-mosaic" aria-hidden="true">
-          <MosaicCanvas />
+
+        {/* Right — artsy image panel */}
+        <div className="hero-visual" aria-hidden="true">
+          {/* accent bar */}
+          <div className="hero-visual-accent" />
+          <div className="hero-visual-frame">
+            <img
+              src={raiseHand}
+              alt="Tangan terangkat — simbol partisipasi demokratis"
+              className="hero-img"
+            />
+            {/* floating label */}
+            <div className="hero-img-tag">
+              <Icon name="check" size={12} />
+              <span>Suara terverifikasi</span>
+            </div>
+          </div>
+          {/* decorative type */}
+          <p className="hero-deco-text" aria-hidden="true">VOTE · SECURE · TRUST</p>
         </div>
       </main>
 
-      {/* ── Cara Kerja ── */}
+      {/* ══ CARA KERJA ═══════════════════════════════════════ */}
       <section id="cara-kerja" className="section">
-        <p className="section-label">Cara Kerja</p>
+        <div className="section-head">
+          <p className="section-label">Cara Kerja</p>
+          <h2 className="section-title">Tiga langkah<br />sederhana.</h2>
+        </div>
         <div
           ref={stepRef}
-          className={`steps ${stepVis ? 'steps--visible' : ''}`}
+          className={`steps${stepVis ? ' steps--visible' : ''}`}
         >
           {[
-            {
-              n: '01',
-              title: 'Daftarkan akun',
-              body:  'Buat akun dengan email institusi Anda. Identitas diverifikasi sekali — lalu dipisahkan dari suara Anda.',
-              icon:  'check',
-            },
-            {
-              n: '02',
-              title: 'Berikan suara',
-              body:  'Pilih kandidat Anda. Suara dienkripsi di sisi klien sebelum meninggalkan perangkat Anda.',
-              icon:  'ballot',
-            },
-            {
-              n: '03',
-              title: 'Verifikasi hasil',
-              body:  'Setiap surat suara dicatat di blockchain. Rekapitulasi bersifat publik dan dapat diaudit.',
-              icon:  'chain',
-            },
+            { n: '01', icon: 'check',  title: 'Daftarkan akun',    body: 'Buat akun dengan email institusi Anda. Identitas diverifikasi sekali — lalu dipisahkan dari suara Anda.' },
+            { n: '02', icon: 'ballot', title: 'Berikan suara',      body: 'Pilih kandidat Anda. Suara dienkripsi di sisi klien sebelum meninggalkan perangkat Anda.' },
+            { n: '03', icon: 'chain',  title: 'Verifikasi hasil',   body: 'Setiap surat suara dicatat di blockchain. Rekapitulasi bersifat publik dan dapat diaudit.' },
           ].map((s, i) => (
-            <div className="step" key={s.n} style={{ '--delay': `${i * 120}ms` }}>
+            <div className="step" key={s.n} style={{ '--delay': `${i * 140}ms` }}>
               <span className="step-num">{s.n}</span>
-              <div className="step-icon-wrap" aria-hidden="true">
-                <Icon name={s.icon} size={18} />
-              </div>
+              <div className="step-icon-wrap"><Icon name={s.icon} size={18} /></div>
               <h3>{s.title}</h3>
               <p>{s.body}</p>
             </div>
@@ -271,18 +217,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Fitur ── */}
-      <section id="fitur" className="section section-alt">
-        <p className="section-label">Fitur Unggulan</p>
+      {/* ══ FITUR ════════════════════════════════════════════ */}
+      <section id="fitur" className="section section-dark">
+        <div className="section-head section-head--light">
+          <p className="section-label">Fitur Unggulan</p>
+          <h2 className="section-title">Keamanan berlapis,<br />bukan sekadar klaim.</h2>
+        </div>
         <div
           ref={featRef}
-          className={`feature-grid ${featVis ? 'feature-grid--visible' : ''}`}
+          className={`feature-grid${featVis ? ' feature-grid--visible' : ''}`}
         >
           {features.map((f, i) => (
             <div className="feature-card" key={f.title} style={{ '--delay': `${i * 80}ms` }}>
-              <div className="feature-icon-wrap" aria-hidden="true">
-                <Icon name={f.icon} size={20} />
-              </div>
+              <div className="feature-icon-wrap"><Icon name={f.icon} size={20} /></div>
               <h3>{f.title}</h3>
               <p>{f.body}</p>
             </div>
@@ -290,17 +237,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Keamanan ── */}
+      {/* ══ KEAMANAN ═════════════════════════════════════════ */}
       <section
         id="keamanan"
-        className={`section security-strip ${secVis ? 'security-strip--visible' : ''}`}
         ref={secRef}
+        className={`section security-strip${secVis ? ' security-strip--visible' : ''}`}
       >
         <div className="security-inner">
-          <div className="security-badge" aria-hidden="true">
-            <Icon name="shield" size={28} />
-          </div>
-          <h2>Dirancang aman sejak awal.</h2>
+          <div className="security-badge"><Icon name="shield" size={24} /></div>
+          <h2>Dirancang aman<br />sejak awal.</h2>
           <p>
             TrueCount adalah simulasi akademik dari sistem e-voting tingkat produksi.
             Setiap keputusan desain — dari anonimitas suara hingga manajemen kunci —
@@ -310,13 +255,18 @@ export default function LandingPage() {
             Buat akun gratis <Icon name="arrow" size={16} />
           </Link>
         </div>
+        <div className="security-visual" aria-hidden="true">
+          <img src={raiseHand} alt="" className="security-img" />
+        </div>
       </section>
 
-      {/* ── Footer ── */}
+      {/* ══ FOOTER ═══════════════════════════════════════════ */}
       <footer className="footer">
         <span className="nav-brand">TrueCount</span>
         <p>Sistem E-Voting Aman — Proyek Akademik</p>
+        <p className="footer-copy">© 2026</p>
       </footer>
+
     </div>
   )
 }

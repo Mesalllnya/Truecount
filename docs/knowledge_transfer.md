@@ -24,6 +24,8 @@
 |---|---|---|
 | React | 19.x | Pakai function components + hooks |
 | Vite | 8.x | Dev server port **5173**, HMR port 5183 |
+| esbuild | 0.28.x | DevDependency — Vite 8 TIDAK lagi bundle esbuild, harus diinstall terpisah |
+| terser | 5.x | Minifier production build (esbuild minify tidak kompatibel dengan target lama) |
 | react-router-dom | 7.x | URL Bahasa Indonesia: `/masuk`, `/daftar`, `/dasbor` |
 | axios | 1.x | Diinstall tapi belum dipakai — fetch native dipakai di Sprint 1 |
 | @tauri-apps/cli | 2.x | Desktop wrapper, opsional |
@@ -70,7 +72,7 @@
 ### Backend
 ```
 backend/index.php           — Router utama, match() berdasarkan $uri
-backend/helpers/response.php — jsonResponse() + CORS headers (di-include pertama)
+backend/helpers/response.php — jsonResponse() + CORS multi-origin (FRONTEND_ORIGIN + origin Tauri)
 backend/helpers/jwt.php      — generateJwt() + verifyJwt() — HS256 manual
 backend/config/database.php  — getDB() singleton PDO
 backend/config/app.php       — Konstanta JWT_SECRET, JWT_EXPIRE, ARGON2_*
@@ -226,12 +228,40 @@ Brand "TrueCount" di dashboard adalah `<button>` (bukan teks). Klik 5x:
 
 ## 11. Desktop (Tauri)
 
-Setup sudah lengkap tapi **Rust belum terinstall** di mesin developer saat ini:
-- `frontend/src-tauri/` sudah ada dengan `Cargo.toml`, `tauri.conf.json`, `main.rs`, `lib.rs`
-- Script: `npm run desktop:dev` dan `npm run desktop:build`
-- `vite.config.js` sudah dikonfigurasi untuk Tauri (port tetap, HMR WS, build target)
-- Yang belum: folder `icons/` kosong (butuh `npx tauri icon <sumber.png>`)
-- Backend PHP **tetap dijalankan terpisah** — belum di-spawn otomatis dari Rust
+Desktop app **sudah bisa di-build dan berjalan** — installer `.msi` + `.exe` (NSIS) sukses dihasilkan:
+- Rust + Cargo sudah terinstall di mesin developer.
+- Icons: sudah di-generate dari `frontend/public/raise_hand.jpg` via
+  `npx tauri icon public/raise_hand.jpg --fit cover`.
+- Backend PHP **di-spawn otomatis** oleh Rust saat app start (bukan lagi proses terpisah).
+- Folder `backend/` di-bundle ke installer sebagai resource
+  (`"resources": { "../../backend": "backend" }` di `tauri.conf.json`).
+
+### Auto-spawn PHP — sudah diimplementasi di `src-tauri/src/lib.rs`
+1. Startup: cek port 8000 — kalau sudah ada server lain, skip spawn.
+2. Cari folder backend: resource dir (production) → relatif lokasi exe → cwd (dev).
+3. Spawn `php -S 127.0.0.1:8000 -t <backend> <backend>/index.php` dengan
+   `CREATE_NO_WINDOW` (tanpa konsol) di Windows.
+4. Saat app ditutup (`RunEvent::Exit`): child process PHP di-kill.
+5. Path `\\?\` (Windows extended-length path dari Tauri) di-strip dulu —
+   PHP tidak bisa membuka file dengan prefix itu.
+6. **PHP harus terinstall di mesin user & ada di PATH** — belum di-bundle
+   sebagai sidecar binary (masih rencana Sprint 4).
+
+### Konfigurasi penting `src-tauri/`
+- `Cargo.toml`: `tauri = { version = "2", features = ["wry"], default-features = false }`
+  — fitur `dialog` di-disable karena butuh `TaskDialogIndirect` yang tidak ada
+  di Windows lama (error "Entry Point Not Found").
+- `main.rs`: `windows_subsystem = "windows"` — release build tanpa window konsol.
+- `lib.rs`: `tauri::Builder::<tauri::Wry>::default()` — type runtime explicit
+  karena `default-features = false`.
+- `vite.config.js`: minifier **terser**, target `['es2020', 'chrome90', 'safari13']`
+  — kombinasi yang kompatibel dengan Vite 8 (esbuild & terser keduanya devDependency).
+
+### Logging (untuk debugging)
+| File | Lokasi (Windows) |
+|---|---|
+| Log app (spawn, path, error) | `%LOCALAPPDATA%\com.truecount.app\logs\truecount.log` |
+| Log PHP server | `%LOCALAPPDATA%\com.truecount.app\logs\php.log` |
 
 ---
 
@@ -262,7 +292,7 @@ Endpoints yang perlu dibangun:
 ### Sprint 4 — MFA (Orang 1 lanjutan)
 - WebAuthn biometrics
 - USB token
-- Auto-spawn PHP dari Tauri untuk standalone desktop
+- Auto-spawn PHP dari Tauri untuk standalone desktop ✅ (selesai — catatan: masih butuh PHP terinstall di sistem user; bundling `php.exe` sebagai sidecar belum dilakukan)
 
 ---
 
@@ -278,10 +308,13 @@ Saat menambahkan endpoint baru, selalu update:
 
 ## 14. Hal-hal yang Perlu Diperhatikan
 
-1. **CORS** — origin dikunci di `.env` key `FRONTEND_ORIGIN`. Kalau port frontend berubah, update ini.
+1. **CORS** — origin web dikunci di `.env` key `FRONTEND_ORIGIN`. Kalau port frontend berubah, update ini. Origin Tauri (`http://tauri.localhost`, `tauri://localhost`, `http://localhost`, `http://127.0.0.1`) sudah diizinkan otomatis di `helpers/response.php` untuk desktop app.
 2. **JWT Secret** — ada di `.env` key `JWT_SECRET`. Nilai default di `.env.example` JANGAN dipakai di production.
 3. **Password admin default** — `Admin@1234`. Hash-nya di-generate ulang setiap `php database/migrate.php --seed` dijalankan.
 4. **`ballots` tidak punya FK ke users** — ini by design, jangan ditambahkan.
-5. **Tauri icons kosong** — build desktop akan gagal sampai folder `src-tauri/icons/` diisi.
+5. **Tauri icons** — sudah di-generate dari `frontend/public/raise_hand.jpg`. Kalau ganti desain logo: `npx tauri icon public/raise_hand.jpg --fit cover` (source harus square atau pakai `--fit`).
 6. **axios belum dipakai** — diinstall tapi Sprint 1 pakai `fetch` native. Sprint 2 boleh migrasi ke axios atau tetap pakai fetch.
 7. **`draft_user` belum ada** — reset password, email verification, dan roles lanjutan belum diimplementasi.
+8. **Vite 8 + minifier** — jangan set `minify: 'esbuild'`; pakai `terser`. Target build jangan lebih tinggi dari `es2020`/`chrome90`/`safari13` atau transform destructuring akan gagal.
+9. **Tauri `default-features = false`** — jangan enable fitur `dialog` Tauri (butuh `TaskDialogIndirect`, error di Windows lama). Kalau butuh dialog native, pakai plugin terpisah.
+10. **Path `\\?\`** — Tauri resource dir mengembalikan Windows extended path; selalu strip prefix `\\?\` sebelum dipakai sebagai argumen proses PHP.

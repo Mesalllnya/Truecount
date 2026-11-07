@@ -27,8 +27,8 @@ export default function LoginPage() {
       if (!res.ok) { setError(data.error || 'Login gagal.'); return }
       localStorage.setItem('tc_token', data.token)
       navigate('/dasbor')
-    } catch {
-      setError('Tidak dapat terhubung ke server.')
+    } catch (err) {
+      setError('Tidak dapat terhubung ke server. (' + (err?.message || 'network error') + ')')
     } finally {
       setLoading(false)
     }

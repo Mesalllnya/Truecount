@@ -96,18 +96,23 @@ npm run dev     # http://localhost:5173
 ## Quick Start — Desktop (Tauri)
 
 > Prasyarat tambahan: [Rust](https://rustup.rs/) + [Build Tools](https://v2.tauri.app/start/prerequisites/)
+> + **PHP terinstall di PATH** (backend di-spawn otomatis oleh app, port 8000).
 
 ```bash
-# Backend tetap harus jalan di localhost:8000
-php -S localhost:8000 -t backend backend/index.php
-
-# Jalankan React + Tauri window sekaligus
 cd frontend
+npm install
+
+# Jalankan React + Tauri window sekaligus (PHP di-spawn otomatis)
 npm run desktop:dev
 
 # Build installer (.exe / .dmg / .deb)
 npm run desktop:build
 ```
+
+Backend PHP di-spawn otomatis saat app start (tanpa konsol) dan di-kill saat app ditutup.
+Kalau port 8000 sudah dipakai server lain, app akan memakai server yang sudah ada.
+
+Log aplikasi (jika troubleshooting): `%LOCALAPPDATA%\com.truecount.app\logs\` (Windows) — berisi `truecount.log` dan `php.log`.
 
 Lihat [`docs/desktop.md`](docs/desktop.md) untuk panduan lengkap.
 

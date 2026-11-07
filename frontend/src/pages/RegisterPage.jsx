@@ -38,8 +38,8 @@ export default function RegisterPage() {
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Pendaftaran gagal.'); return }
       navigate('/masuk')
-    } catch {
-      setError('Tidak dapat terhubung ke server.')
+    } catch (err) {
+      setError('Tidak dapat terhubung ke server. (' + (err?.message || 'network error') + ')')
     } finally {
       setLoading(false)
     }

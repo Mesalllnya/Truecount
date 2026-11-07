@@ -108,6 +108,49 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    // ── MFA USB Token ───────────────────────────────────────
+    // Register: start challenge
+    $uri === '/mfa/usb/register/start' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/mfa/usb/register_start.php';
+    })(),
+    $uri === '/mfa/usb/register/start' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Register: verify signature + simpan credential
+    $uri === '/mfa/usb/register/verify' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/mfa/usb/register_verify.php';
+    })(),
+    $uri === '/mfa/usb/register/verify' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // List token user
+    $uri === '/mfa/usb/list' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/mfa/usb/list.php';
+    })(),
+    $uri === '/mfa/usb/list' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Revoke token: POST /mfa/usb/{id}/revoke
+    preg_match('#^/mfa/usb/(\d+)/revoke$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/mfa/usb/' . $m[1] . '/revoke';
+        require_once __DIR__ . '/api/mfa/usb/revoke.php';
+    })(),
+    preg_match('#^/mfa/usb/(\d+)/revoke$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Update label: POST /mfa/usb/{id}/label
+    preg_match('#^/mfa/usb/(\d+)/label$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/mfa/usb/' . $m[1] . '/label';
+        require_once __DIR__ . '/api/mfa/usb/label.php';
+    })(),
+    preg_match('#^/mfa/usb/(\d+)/label$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
     // 404
     default => jsonResponse(['error' => 'Endpoint tidak ditemukan.'], 404),
 };

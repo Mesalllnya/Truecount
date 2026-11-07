@@ -77,7 +77,14 @@ cp .env.example .env        # isi DB_PASS, JWT_SECRET
 php database/migrate.php --seed
 ```
 
-Akun admin default: `admin` / `Admin@1234`
+### Akun Default & Dummy
+
+| Username | Password | Role | Keterangan |
+| --- | --- | --- | --- |
+| `admin` | `Admin@1234` | admin | Akun utama |
+| `rio` | `Rio@12345` | voter | Testing MFA USB token |
+| `pemilih1` | `Pemilih@123` | voter | Testing pemilihan |
+| `pemilih2` | `Pemilih@123` | voter | Testing pemilihan |
 
 ### 3. Backend + Frontend
 
@@ -172,6 +179,7 @@ Panduan lengkap (web + desktop): [`docs/deploy.md`](docs/deploy.md)
 
 | Dokumen | Isi |
 | --- | --- |
+| [`docs/PANDUAN_ADMIN.md`](docs/PANDUAN_ADMIN.md) | **Panduan operasional admin/panitia** (undangan, USB token, troubleshooting) |
 | [`docs/deploy.md`](docs/deploy.md) | Setup lokal, server, Nginx, HTTPS, checklist |
 | [`docs/desktop.md`](docs/desktop.md) | Konversi ke .exe / .dmg / .deb via Tauri |
 | [`docs/knowledge_transfer.md`](docs/knowledge_transfer.md) | Konteks lengkap untuk AI / onboarding |

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import UsbTokenPanel from '../components/UsbTokenPanel'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
@@ -598,6 +599,9 @@ export default function DashboardPage() {
         <main className="dash-main dash-main--admin">
           <InvitesPanel />
 
+          {/* Panel kelola USB token MFA */}
+          <UsbTokenPanel />
+
           <p className="admin-demo-link">
             <Link to="/pilih">Lihat halaman pemilihan (demo) →</Link>
           </p>
@@ -617,6 +621,9 @@ export default function DashboardPage() {
               Lihat halaman pemilihan (demo)
             </button>
           </div>
+
+          {/* Panel kelola USB token MFA */}
+          <UsbTokenPanel />
         </main>
       )}
     </div>

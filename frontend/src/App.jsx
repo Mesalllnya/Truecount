@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import VotePage from './pages/VotePage'
 import AboutPage from './pages/AboutPage'
+import UsbTokenTestPage from './pages/UsbTokenTestPage'
 import HealthMonitor from './components/HealthMonitor'
 
 /** Alias lama /register → /daftar, dengan query (?undangan=...) tetap dibawa */
@@ -26,8 +27,9 @@ function App() {
         <Route path="/register"   element={<RegisterRedirect />} />
         <Route path="/dasbor"     element={<DashboardPage />} />
         <Route path="/dashboard"  element={<Navigate to="/dasbor" replace />} />
-        <Route path="/pilih"      element={<VotePage />} />
-        <Route path="*"           element={<Navigate to="/" replace />} />
+        <Route path="/pilih"           element={<VotePage />} />
+        <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
+        <Route path="*"                element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

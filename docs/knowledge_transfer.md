@@ -36,6 +36,7 @@
 - `npm run dev` — hanya frontend Vite (backend PHP HARUS dijalankan manual)
 - `npm run dev:backend` — hanya backend PHP di :8000
 - `npm run dev:full` — PHP + Vite sekaligus dalam satu terminal (pakai concurrently)
+- `npm run free-ports` — bebasin port 5173/5183/8000 kalau kena "Port already in use" (script: `scripts/free-ports.ps1`)
 
 ### Backend
 | Teknologi | Versi | Catatan |
@@ -84,21 +85,27 @@ backend/helpers/jwt.php      — generateJwt() + verifyJwt() — HS256 manual
 backend/config/database.php  — getDB() singleton PDO
 backend/config/app.php       — Konstanta JWT_SECRET, JWT_EXPIRE, ARGON2_*
 backend/middleware/auth.php  — requireAuth() → return payload atau exit 401
-backend/api/auth/register.php
+backend/api/auth/register.php   — invite-gated (wajib invite_token valid)
 backend/api/auth/login.php
 backend/api/auth/logout.php
 backend/api/auth/me.php
+backend/api/invites/create.php  — POST /invites (admin) buat undangan
+backend/api/invites/list.php    — GET /invites (admin) daftar + stats status
+backend/api/invites/verify.php  — GET /invites/verify?token= (publik)
 ```
 
 ### Frontend
 ```
 frontend/src/App.jsx            — BrowserRouter + Routes
 frontend/src/pages/
-  LandingPage.jsx + .css        — Hero dengan raise_hand.jpg, mosaic dihapus
-  LoginPage.jsx                 — Form login, fetch ke /auth/login
-  RegisterPage.jsx              — Form register, fetch ke /auth/register
-  AuthPage.css                  — Shared CSS untuk Login + Register
-  DashboardPage.jsx + .css      — Dasbor blank + easter egg 5-klik
+  LandingPage.jsx + .css        — Hero dengan raise_hand.jpg + nav link tengah, tombol Masuk (ikon) di kanan
+  LoginPage.jsx                 — Form login (card center), fetch ke /auth/login + status dongle (dummy, tombol Demo) + banner sukses registrasi
+  RegisterPage.jsx              — Form register INVITE-ONLY: verifikasi ?undangan=<token> via GET /invites/verify, state "pendaftaran ditutup" tanpa token
+  AuthPage.css                  — Shared CSS untuk Login + Register + state panel undangan
+  DashboardPage.jsx + .css      — Dasbor + easter egg 5-klik + auth guard; admin lihat panel undangan (stats + tabel status + form buat undangan + salin tautan)
+  VotePage.jsx + .css          — Halaman pemilihan (/pilih): kandidat demo, tombol besar berwarna + ikon SVG + auth guard
+frontend/src/components/
+  HealthMonitor.jsx             — Render null; polling /health di background, error → console (bukan UI)
 frontend/src/index.css          — Reset global + font family
 frontend/src/main.jsx           — ReactDOM.createRoot — tidak diubah
 ```
@@ -118,8 +125,9 @@ database/migrate.php              — php database/migrate.php [--seed] [--fresh
 |---|---|---|
 | `/` | `LandingPage` | Halaman utama |
 | `/masuk` | `LoginPage` | Login |
-| `/daftar` | `RegisterPage` | Register |
-| `/dasbor` | `DashboardPage` | Dasbor (blank, Sprint 2) |
+| `/daftar` | `RegisterPage` | Pendaftaran — invite-only, wajib query `?undangan=<token>`; tanpa token tampil state "hanya melalui undangan" |
+| `/dasbor` | `DashboardPage` | Dasbor (blank + easter egg, ada auth guard) |
+| `/pilih` | `VotePage` | Halaman pemilihan — demo kandidat, tombol besar berwarna (Sprint 2, ada auth guard) |
 | `/login` | Redirect → `/masuk` | Alias lama |
 | `/register` | Redirect → `/daftar` | Alias lama |
 | `/dashboard` | Redirect → `/dasbor` | Alias lama |
@@ -133,21 +141,24 @@ Base URL: `http://localhost:8000`
 
 | Method | Path | Auth | Request Body | Response |
 |---|---|---|---|---|
-| GET | `/health` | — | — | `{status, app}` |
-| POST | `/auth/register` | — | `{username, email, password}` | `201 {message, user}` |
+| GET | `/health` | — | — | `{status, app, database, ip}` — status `ok`/`degraded`, dipakai indikator status di frontend |
+| POST | `/auth/register` | Invite token | `{username, email, password, invite_token}` | `201 {message, user}` — publik TIDAK bisa daftar bebas |
 | POST | `/auth/login` | — | `{identifier, password}` | `200 {message, token, user}` |
 | POST | `/auth/logout` | — | — | `200 {message}` |
 | GET | `/auth/me` | Bearer JWT | — | `200 {user}` |
+| GET | `/invites` | Bearer JWT (admin) | — | `200 {stats, invites}` — status: `menunggu`/`diterima`/`kedaluwarsa`/`dibatalkan` |
+| POST | `/invites` | Bearer JWT (admin) | `{email?, role?}` | `201 {message, invite}` — `invite.link` = `/daftar?undangan=<token>` |
+| GET | `/invites/verify` | — | query `?token=` | `200 {valid, invite}` / `400` / `404` |
 
 ### Error Format
 Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia." }`
 
 ### HTTP Status Codes yang dipakai
 - `200` — OK
-- `201` — Created (register berhasil)
+- `201` — Created (register berhasil / undangan dibuat)
 - `401` — Unauthorized (token invalid / credentials salah)
-- `403` — Forbidden (akun nonaktif)
-- `404` — Not found (endpoint tidak ada)
+- `403` — Forbidden (akun nonaktif / bukan admin / daftar tanpa undangan)
+- `404` — Not found (endpoint atau undangan tidak ada)
 - `405` — Method not allowed
 - `409` — Conflict (username/email duplikat)
 - `422` — Unprocessable Entity (validasi gagal)
@@ -156,11 +167,12 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 
 ## 7. Database Schema
 
-10 tabel total — semua ada di `database/migrations/001_init.sql`:
+11 tabel total — `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` (1 tabel):
 
 | Tabel | Sprint | Keterangan |
 |---|---|---|
 | `users` | 1 ✅ | id, username, email, password_hash, role (admin/voter), is_active |
+| `invites` | 2 ✅ | Undangan pendaftaran — token, email (nullable), role, status (pending/accepted/revoked), expires_at, created_by, used_by |
 | `biometric_credentials` | 4 | WebAuthn/FIDO2 — FK ke users |
 | `usb_tokens` | 4 | USB dongle — FK ke users |
 | `elections` | 2 | Pemilihan — FK ke users (created_by) |
@@ -178,13 +190,21 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 ## 8. Auth Flow
 
 ```
-1. User POST /auth/register → password di-hash Argon2id → simpan ke DB
-2. User POST /auth/login → verifikasi Argon2id → generate JWT HS256
-3. Frontend simpan token di localStorage key: 'tc_token'
-4. Request ke endpoint protected → kirim header: Authorization: Bearer <token>
-5. middleware/auth.php → requireAuth() → verifyJwt() → return payload
-6. Logout → frontend hapus 'tc_token' dari localStorage
+1. Admin POST /invites → buat undangan (token random, expiry 7 hari, role + email opsional)
+2. Calon pengguna buka /daftar?undangan=<token> → frontend cek GET /invites/verify
+3. User POST /auth/register dengan invite_token → undangan divalidasi
+   (pending + belum kedaluwarsa) → password di-hash Argon2id → simpan ke DB
+   → undangan ditandai accepted (UPDATE bersyarat, atomik)
+4. User POST /auth/login → verifikasi Argon2id → generate JWT HS256
+5. Frontend simpan token di localStorage key: 'tc_token'
+6. Request ke endpoint protected → kirim header: Authorization: Bearer <token>
+7. middleware/auth.php → requireAuth() / requireAdmin() → verifyJwt() → return payload
+8. Logout → frontend hapus 'tc_token' dari localStorage
 ```
+
+**Tanpa undangan valid, `POST /auth/register` → 403** — pendaftaran publik ditutup.
+Role akun baru mengikuti role di undangan (`voter` default, admin bisa undang admin).
+Undangan terikat email → email akun dipaksa mengikuti email undangan.
 
 **JWT Payload:**
 ```json
@@ -276,12 +296,13 @@ Desktop app **sudah bisa di-build dan berjalan** — installer `.msi` + `.exe` (
 
 ### Sprint 1 — SELESAI ✅
 - Struktur proyek (backend + frontend)
-- Database schema (10 tabel) + migration runner
+- Database schema (11 tabel) + migration runner
 - Auth API: register, login, logout, me
-- Landing Page (artsy, raise_hand.jpg, Jakarta Sans, #F13C35)
+- **Pendaftaran via undangan (invite-only) ✅** — publik ditutup, admin buat undangan via `/invites`, halaman `/daftar` hanya terbuka lewat tautan `?undangan=<token>`, dasbor admin punya panel referal (stats: menunggu/diterima/kedaluwarsa + form buat undangan + salin tautan)
+- Landing Page (artsy, raise_hand.jpg, Jakarta Sans, #F13C35) — tombol Daftar dihapus, hanya Masuk (dengan ikon) di kanan nav
 - Login + Register pages (split layout, animasi)
-- Dashboard blank (easter egg)
-- Test otomatis: `php tests/api_test.php` (20 test, 100% pass)
+- Dashboard (easter egg + panel undangan admin)
+- Test otomatis: `php tests/api_test.php` (41 test, 100% pass)
 
 ### Sprint 2 — Election Management (Orang 2)
 Endpoints yang perlu dibangun:
@@ -307,9 +328,10 @@ Endpoints yang perlu dibangun:
 
 Saat menambahkan endpoint baru, selalu update:
 1. `backend/index.php` — tambah route baru ke match()
-2. `README.md` — seksi API Endpoints
-3. `tests/api_test.php` — tambah test case
-4. `docs/knowledge_transfer.md` — update State Sprint
+2. `database/migrations/` — file SQL baru kalau butuh tabel
+3. `README.md` — seksi API Endpoints
+4. `tests/api_test.php` — tambah test case
+5. `docs/knowledge_transfer.md` — update State Sprint
 
 ---
 
@@ -325,3 +347,4 @@ Saat menambahkan endpoint baru, selalu update:
 8. **Vite 8 + minifier** — jangan set `minify: 'esbuild'`; pakai `terser`. Target build jangan lebih tinggi dari `es2020`/`chrome90`/`safari13` atau transform destructuring akan gagal.
 9. **Tauri `default-features = false`** — jangan enable fitur `dialog` Tauri (butuh `TaskDialogIndirect`, error di Windows lama). Kalau butuh dialog native, pakai plugin terpisah.
 10. **Path `\\?\`** — Tauri resource dir mengembalikan Windows extended path; selalu strip prefix `\\?\` sebelum dipakai sebagai argumen proses PHP.
+11. **Pendaftaran publik ditutup** — akun baru hanya lewat undangan admin (`POST /invites`). Undangan kedaluwarsa otomatis sesuai `INVITE_EXPIRE_DAYS` (default 7 hari, bisa diatur di `.env`). Jangan buka `POST /auth/register` tanpa validasi `invite_token`.

@@ -124,15 +124,21 @@ Log aplikasi (jika troubleshooting): `%LOCALAPPDATA%\com.truecount.app\logs\` (W
 
 Lihat [`docs/desktop.md`](docs/desktop.md) untuk panduan lengkap.
 
-## API Endpoints (Sprint 1)
+## API Endpoints (Sprint 2)
 
-| Method | Endpoint          | Auth | Keterangan              |
-|--------|-------------------|------|-------------------------|
-| GET    | /health           | —    | Health check            |
-| POST   | /auth/register    | —    | Daftar akun baru        |
-| POST   | /auth/login       | —    | Login, dapat JWT        |
-| POST   | /auth/logout      | —    | Logout                  |
-| GET    | /auth/me          | JWT  | Info user dari token    |
+| Method | Endpoint          | Auth  | Keterangan                              |
+|--------|-------------------|-------|-----------------------------------------|
+| GET    | /health           | —     | Health check                            |
+| POST   | /auth/register    | Undangan | Daftar akun — wajib `invite_token`  |
+| POST   | /auth/login       | —     | Login, dapat JWT                        |
+| POST   | /auth/logout      | —     | Logout                                  |
+| GET    | /auth/me          | JWT   | Info user dari token                    |
+| GET    | /invites          | Admin | Daftar undangan + statistik status      |
+| POST   | /invites          | Admin | Buat undangan pendaftaran               |
+| GET    | /invites/verify   | —     | Cek status undangan (`?token=...`)      |
+
+Pendaftaran publik **ditutup** — akun hanya bisa dibuat lewat tautan undangan
+yang dibuat admin (`/daftar?undangan=<token>`).
 
 ## Test Otomatis
 
@@ -141,7 +147,7 @@ Lihat [`docs/desktop.md`](docs/desktop.md) untuk panduan lengkap.
 php tests/api_test.php
 ```
 
-Output: 20 test case — register, login, auth/me, logout, validasi, method check.
+Output: 41 test case — auth, invite (buat/daftar/verifikasi), register via undangan, hak akses, validasi, method check.
 
 ## URL Routing
 
@@ -149,8 +155,9 @@ Output: 20 test case — register, login, auth/me, logout, validasi, method chec
 |------------|-----------------|
 | `/`        | Landing Page    |
 | `/masuk`   | Login           |
-| `/daftar`  | Register        |
-| `/dasbor`  | Dashboard       |
+| `/daftar`  | Register — hanya lewat undangan (`?undangan=<token>`) |
+| `/dasbor`  | Dashboard (panel undangan untuk admin) |
+| `/pilih`   | Halaman Pemilihan (demo kandidat) |
 
 Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis.
 

@@ -50,8 +50,23 @@ $uri = rtrim($uri, '/') ?: '/';
 // ── Routing ──────────────────────────────────────────────────────────────────
 
 match (true) {
-    // Health-check
-    $uri === '/health' => jsonResponse(['status' => 'ok', 'app' => 'TrueCount']),
+    // Health-check (dipakai HealthMonitor di frontend)
+    $uri === '/health' => (function () {
+        $dbOk = true;
+        try {
+            getDB();
+        } catch (Throwable $e) {
+            $dbOk = false;
+            // Catat ke error log file (storage/logs/app.log)
+            tc_log_warn('Health check: database tidak tersambung — ' . $e->getMessage());
+        }
+        jsonResponse([
+            'status'   => $dbOk ? 'ok' : 'degraded',
+            'app'      => 'TrueCount',
+            'database' => $dbOk ? 'connected' : 'disconnected',
+            'ip'       => $_SERVER['REMOTE_ADDR'] ?? '—',
+        ]);
+    })(),
 
     // Auth
     $uri === '/auth/register' => (function () {
@@ -65,6 +80,23 @@ match (true) {
     })(),
     $uri === '/auth/me' => (function () {
         require_once __DIR__ . '/api/auth/me.php';
+    })(),
+
+    // Undangan pendaftaran (invite) — buat/list khusus admin, verify publik
+    $uri === '/invites' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/invites/list.php';
+    })(),
+    $uri === '/invites' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/invites/create.php';
+    })(),
+    $uri === '/invites' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+    $uri === '/invites/verify' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/invites/verify.php';
+    })(),
+    $uri === '/invites/verify' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
     // 404

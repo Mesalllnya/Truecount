@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:backend": "php -S localhost:8000 -t ../backend ../backend/index.php",
     "dev:full": "concurrently -n php,vite -c red,cyan \"npm:dev:backend\" \"npm:dev\"",
+    "free-ports": "powershell -ExecutionPolicy Bypass -File ../scripts/free-ports.ps1",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",

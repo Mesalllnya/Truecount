@@ -347,12 +347,12 @@ sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 
 ## 6. Deploy Desktop (Tauri)
 
-Untuk panduan lengkap konversi ke aplikasi desktop, lihat [`desktop.md`](desktop.md).
+Untuk panduan lengkap konversi ke aplikasi desktop, lihat [`desktop.md`](../desktop/desktop.md).
 
 Ringkasan cepat:
 
 ```bash
-# Prasyarat: Rust + Build Tools + PHP di PATH (lihat desktop.md)
+# Prasyarat: Rust + Build Tools + PHP di PATH (lihat [`desktop.md`](../desktop/desktop.md))
 cd frontend
 npm run desktop:dev      # dev mode dengan window desktop (PHP di-spawn otomatis)
 npm run desktop:build    # build installer (.exe / .dmg / .deb)

@@ -54,10 +54,16 @@ Truecount/
 │   └── api_test.php        # Test otomatis 20 kasus
 │
 ├── docs/
-│   ├── deploy.md           # Panduan deploy web + desktop
-│   ├── desktop.md          # Panduan konversi ke desktop app
-│   ├── knowledge_transfer.md  # Konteks proyek untuk AI
-│   └── pembagian_jobdesk_secure_e_voting.md
+│   ├── deploy/
+│   │   └── deploy.md       # Panduan deploy web + desktop
+│   ├── desktop/
+│   │   └── desktop.md      # Panduan konversi ke desktop app
+│   ├── admin/
+│   │   └── PANDUAN_ADMIN.md # Panduan operasional admin/panitia
+│   ├── dev/
+│   │   └── knowledge_transfer.md  # Konteks proyek untuk AI
+│   └── project/
+│       └── pembagian_jobdesk_secure_e_voting.md  # Pembagian tugas tim
 │
 ├── .env.example
 └── README.md
@@ -132,7 +138,7 @@ Kalau port 8000 sudah dipakai server lain, app akan memakai server yang sudah ad
 
 Log aplikasi (jika troubleshooting): `%LOCALAPPDATA%\com.truecount.app\logs\` (Windows) - berisi `truecount.log` dan `php.log`.
 
-Lihat [`docs/desktop.md`](docs/desktop.md) untuk panduan lengkap.
+Lihat [`docs/desktop/desktop.md`](docs/desktop/desktop.md) untuk panduan lengkap.
 
 ## API Endpoints (Sprint 2)
 
@@ -173,17 +179,17 @@ Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis.
 
 ## Deploy
 
-Panduan lengkap (web + desktop): [`docs/deploy.md`](docs/deploy.md)
+Panduan lengkap (web + desktop): [`docs/deploy/deploy.md`](docs/deploy/deploy.md)
 
 ## Dokumentasi
 
 | Dokumen | Isi |
 | --- | --- |
-| [`docs/PANDUAN_ADMIN.md`](docs/PANDUAN_ADMIN.md) | **Panduan operasional admin/panitia** (undangan, USB token, troubleshooting) |
-| [`docs/deploy.md`](docs/deploy.md) | Setup lokal, server, Nginx, HTTPS, checklist |
-| [`docs/desktop.md`](docs/desktop.md) | Konversi ke .exe / .dmg / .deb via Tauri |
-| [`docs/knowledge_transfer.md`](docs/knowledge_transfer.md) | Konteks lengkap untuk AI / onboarding |
-| [`docs/pembagian_jobdesk_secure_e_voting.md`](docs/pembagian_jobdesk_secure_e_voting.md) | Pembagian tugas tim |
+| [`docs/admin/PANDUAN_ADMIN.md`](docs/admin/PANDUAN_ADMIN.md) | **Panduan operasional admin/panitia** (undangan, USB token, troubleshooting) |
+| [`docs/deploy/deploy.md`](docs/deploy/deploy.md) | Setup lokal, server, Nginx, HTTPS, checklist |
+| [`docs/desktop/desktop.md`](docs/desktop/desktop.md) | Konversi ke .exe / .dmg / .deb via Tauri |
+| [`docs/dev/knowledge_transfer.md`](docs/dev/knowledge_transfer.md) | Konteks lengkap untuk AI / onboarding |
+| [`docs/project/pembagian_jobdesk_secure_e_voting.md`](docs/project/pembagian_jobdesk_secure_e_voting.md) | Pembagian tugas tim |
 
 ## Tim Pengembang
 

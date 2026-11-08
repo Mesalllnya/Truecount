@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
+import navLogoDark from '/logo/TrueCount_navLogo_darkmode.svg'
 import './DashboardPage.css'   // reuse .dash-nav / .dash-brand / .dash-logout
 import './VotePage.css'
 
@@ -143,7 +145,12 @@ export default function VotePage() {
     <div className="vote-shell">
 
       <header className="dash-nav">
-        <Link to="/dasbor" className="dash-brand">TrueCount</Link>
+        <Link to="/dasbor" className="dash-brand" aria-label="TrueCount - Dasbor">
+          <picture className="dash-brand-img">
+            <source srcSet={navLogoDark} media="(prefers-color-scheme: dark)" />
+            <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
+          </picture>
+        </Link>
 
         <nav className="dash-nav-links" aria-label="Navigasi dasbor">
           <Link to="/dasbor" className="dash-nav-item"><DashboardIcon /> Dasbor</Link>

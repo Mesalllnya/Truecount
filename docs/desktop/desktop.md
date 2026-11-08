@@ -244,3 +244,4 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 | Build error `transformWithEsbuild` / `esbuild` | Vite 8 tidak bundle esbuild | `npm install -D esbuild terser` di `frontend/` |
 | Build error transform destructuring | Target build terlalu lama (`es2021`) | Pakai target `['es2020', 'chrome90', 'safari13']` di `vite.config.js` |
 | Build gagal `Couldn't find a .ico icon` | Folder `icons/` kosong | `npx tauri icon public/raise_hand.jpg --fit cover` |
+| Tombol "Dongle Keamanan" disabled di login (desktop) | Deteksi `isTauri` pakai `window.__TAURI__` yang butuh `withGlobalTauri: true` (belum ada di `tauri.conf.json`) | Sudah fix di `LoginPage.jsx` baris 355: ganti ke `'__TAURI_INTERNALS__' in window` (selalu tersedia di Tauri) |

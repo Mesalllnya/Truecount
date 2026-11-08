@@ -68,6 +68,16 @@
   border-radius: 3px;
 }
 
+.dash-brand-img {
+  display: block;
+  line-height: 1;
+}
+.dash-brand-logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
 /* Progress dots saat klik 1–4x */
 .dash-brand-dots {
   display: inline-flex;

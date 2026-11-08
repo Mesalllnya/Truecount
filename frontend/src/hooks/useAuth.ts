@@ -2,6 +2,13 @@ import { useState, useCallback } from 'react';
 
 const API_BASE = 'http://localhost:8000';
 
+/** WebAuthn RP ID harus cocok dengan origin hostname. IP address (127.0.0.1) bukan valid RP ID, fallback ke localhost. */
+function getRpId() {
+  const hostname = window.location.hostname;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return 'localhost';
+  return hostname;
+}
+
 /** Hook untuk change password */
 export function useChangePassword() {
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +83,7 @@ export function useWebAuthnRegister() {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: data.rp.name, id: data.rp.id },
+          rp: { name: data.rp.name, id: getRpId() },
           user: {
             id: userId,
             name: data.user.name,

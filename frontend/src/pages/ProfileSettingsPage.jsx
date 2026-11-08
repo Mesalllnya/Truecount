@@ -21,6 +21,13 @@ function base64urlDecode(str) {
   return Uint8Array.from(binary, c => c.charCodeAt(0))
 }
 
+/** WebAuthn RP ID harus cocok dengan origin hostname. IP address (127.0.0.1) bukan valid RP ID, fallback ke localhost. */
+function getRpId() {
+  const hostname = window.location.hostname
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return 'localhost'
+  return hostname
+}
+
 /* ── Icon components ─────────────────────────────────────── */
 function UserIcon() {
   return (
@@ -304,7 +311,7 @@ export default function ProfileSettingsPage() {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: data.rp.name, id: data.rp.id },
+          rp: { name: data.rp.name, id: getRpId() },
           user: {
             id: userId,
             name: data.user.name,
@@ -348,6 +355,14 @@ export default function ProfileSettingsPage() {
       setWaRegisterError(err instanceof Error ? err.message : 'Registrasi Windows Hello gagal')
     }
   }
+
+  // Saat modal WebAuthn dibuka dan masih di step idle, langsung mulai registrasi
+  // agar navigator.credentials.create() dipanggil dan jendela Windows Hello muncul.
+  useEffect(() => {
+    if (showWaRegister && waRegisterStep === 'idle') {
+      handleWaRegister()
+    }
+  }, [showWaRegister, waRegisterStep, handleWaRegister])
 
   const handleWaRevoke = async (id) => {
     if (!window.confirm('Hapus Windows Hello ini? Anda tidak bisa login dengan Windows Hello yang dihapus.')) return
@@ -1203,10 +1218,12 @@ export default function ProfileSettingsPage() {
             {waRegisterStep === 'idle' && (
               <div className="modal-body">
                 <div className="wa-step-waiting">
-                  <div className="wa-pulse-ring"></div>
-                  <div className="wa-pulse-ring"></div>
-                  <div className="wa-pulse-ring"></div>
-                  <FingerprintIcon className="wa-pulse-center" />
+                  <div className="wa-pulse-rings">
+                    <div className="wa-pulse-ring"></div>
+                    <div className="wa-pulse-ring"></div>
+                    <div className="wa-pulse-ring"></div>
+                    <FingerprintIcon className="wa-pulse-center" />
+                  </div>
                 </div>
                 <p className="wa-step-title">Menyiapkan registrasi…</p>
                 <p className="wa-step-desc">Meminta challenge dari server dan mempersiapkan WebAuthn.</p>
@@ -1244,7 +1261,9 @@ export default function ProfileSettingsPage() {
                   <code>{waRegisterCredId.slice(0, 24)}…</code>
                   <span className="credential-label">Credential ID</span>
                 </div>
-                <button className="btn btn-primary btn-full" onClick={handleCloseWaRegister}>Selesai</button>
+                <div className="form-actions">
+                  <button className="btn btn-primary btn-full" onClick={handleCloseWaRegister}>Selesai</button>
+                </div>
               </div>
             )}
 

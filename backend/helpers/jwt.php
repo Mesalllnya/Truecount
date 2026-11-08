@@ -9,16 +9,20 @@
 
 require_once __DIR__ . '/../config/app.php';
 
-function base64UrlEncode(string $data): string
-{
-    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+if (!function_exists('base64UrlEncode')) {
+    function base64UrlEncode(string $data): string
+    {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
 }
 
-function base64UrlDecode(string $data): string
-{
-    $pad  = strlen($data) % 4;
-    if ($pad) $data .= str_repeat('=', 4 - $pad);
-    return base64_decode(strtr($data, '-_', '+/'));
+if (!function_exists('base64UrlDecode')) {
+    function base64UrlDecode(string $data): string
+    {
+        $pad  = strlen($data) % 4;
+        if ($pad) $data .= str_repeat('=', 4 - $pad);
+        return base64_decode(strtr($data, '-_', '+/'));
+    }
 }
 
 /**

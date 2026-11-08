@@ -47,7 +47,9 @@ if ($challengeId <= 0 || $credentialIdB64 === '' || $attestationObjectB64 === ''
 
 $db = getDB();
 
-// ── 1. Validasi challenge ──────────────────────────────────────────
+// ── Temporary debug: capture any exception and log actual error ──
+try {
+    // ── 1. Validasi challenge ──────────────────────────────────────────
 $stmt = $db->prepare(
     'SELECT id, user_id, challenge, expires_at
        FROM webauthn_challenges
@@ -141,6 +143,11 @@ jsonResponse([
     'message' => 'Windows Hello berhasil didaftarkan.',
     'credential_id' => $credentialIdB64,
 ], 201);
+} catch (Throwable $e) {
+    error_log("[WebAuthn Register Verify] " . get_class($e) . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+    tc_log_error("[WebAuthn Register Verify] " . get_class($e) . ': ' . $e->getMessage());
+    jsonResponse(['error' => 'Terjadi kesalahan pada server: ' . $e->getMessage()], 500);
+}
 
 /**
  * Parse attestation object (CBOR format sederhana).
@@ -195,11 +202,30 @@ function parseAttestationObject(string $data): ?array
             $fmt = substr($data, $offset, $valLen);
             $offset += $valLen;
         } elseif ($key === 'authData') {
-            // authData = byte string
+            // authData = byte string (CBOR major type 2)
+            // Baca length dengan support multi-byte (info 24=uint8, 25=uint16, 26=uint32)
             if (($valByte & 0xE0) !== 0x40) return false;
-            $valLen = $valByte & 0x1F;
-            if ($valLen === 31) return false;
+            $valInfo = $valByte & 0x1F;
             $offset++;
+            
+            if ($valInfo < 24) {
+                $valLen = $valInfo;
+            } elseif ($valInfo === 24) { // uint8
+                if ($offset >= $len) return false;
+                $valLen = ord($data[$offset++]);
+            } elseif ($valInfo === 25) { // uint16
+                if ($offset + 1 >= $len) return false;
+                $valLen = (ord($data[$offset]) << 8) | ord($data[$offset + 1]);
+                $offset += 2;
+            } elseif ($valInfo === 26) { // uint32
+                if ($offset + 3 >= $len) return false;
+                $valLen = (ord($data[$offset]) << 24) | (ord($data[$offset + 1]) << 16) | (ord($data[$offset + 2]) << 8) | ord($data[$offset + 3]);
+                $offset += 4;
+            } else {
+                return false; // indefinite length tidak didukung
+            }
+            
+            if ($offset + $valLen > $len) return false;
             $authData = substr($data, $offset, $valLen);
             $offset += $valLen;
         } elseif ($key === 'attStmt') {
@@ -244,46 +270,57 @@ function skipCborValue(string $data, int $offset, int $len): int|false
     $major = ($byte & 0xE0) >> 5;
     $info = $byte & 0x1F;
     
-    if ($info < 24) {
-        return $offset + 1;
-    } elseif ($info === 24) { // uint8
-        return $offset + 2;
-    } elseif ($info === 25) { // uint16
-        return $offset + 3;
-    } elseif ($info === 26) { // uint32
-        return $offset + 5;
-    } elseif ($info === 27) { // uint64
-        return $offset + 9;
-    } elseif ($info === 28 || $info === 29 || $info === 30) {
-        return false; // Reserved
-    } elseif ($info === 31) { // Indefinite
-        // Untuk simplicity, kita tidak handle indefinite length
-        return false;
+    // Major types 0/1 (unsigned/negative int): no payload beyond length encoding
+    if ($major === 0 || $major === 1) {
+        if ($info < 24) return $offset + 1;
+        if ($info === 24) return $offset + 2;   // +1 length byte
+        if ($info === 25) return $offset + 3;   // +2 length bytes
+        if ($info === 26) return $offset + 5;   // +4 length bytes
+        if ($info === 27) return $offset + 9;   // +8 length bytes
+        return false; // 28-31 reserved/indefinite
     }
     
-    // Untuk major types dengan payload length (0-2, 3, 4, 5, 6, 7)
-    // major 0/1: unsigned/negative integer - sudah di-handle di atas
-    // major 2: byte string
-    // major 3: text string
-    // major 4: array
-    // major 5: map
-    // major 6: tag
-    // major 7: simple/float
+    // Major types 2 (byte string) and 3 (text string): have payload
+    if ($major === 2 || $major === 3) {
+        if ($info < 24) {
+            $payloadLen = $info;
+            return $offset + 1 + $payloadLen;
+        }
+        if ($info === 24) { // uint8 length
+            if ($offset + 1 >= $len) return false;
+            $payloadLen = ord($data[$offset + 1]);
+            return $offset + 2 + $payloadLen;
+        }
+        if ($info === 25) { // uint16 length
+            if ($offset + 2 >= $len) return false;
+            $payloadLen = (ord($data[$offset + 1]) << 8) | ord($data[$offset + 2]);
+            return $offset + 3 + $payloadLen;
+        }
+        if ($info === 26) { // uint32 length
+            if ($offset + 4 >= $len) return false;
+            $payloadLen = (ord($data[$offset + 1]) << 24) | (ord($data[$offset + 2]) << 16) | (ord($data[$offset + 3]) << 8) | ord($data[$offset + 4]);
+            return $offset + 5 + $payloadLen;
+        }
+        return false; // 27-31 reserved/indefinite
+    }
     
-    if ($major === 2 || $major === 3) { // byte string / text string
-        $payloadLen = 0;
-        if ($info < 24) $payloadLen = $info;
-        elseif ($info === 24) { if ($offset + 1 >= $len) return false; $payloadLen = ord($data[$offset + 1]); return $offset + 2 + $payloadLen; }
-        elseif ($info === 25) { if ($offset + 2 >= $len) return false; $payloadLen = unpack('n', substr($data, $offset + 1, 2))[1]; return $offset + 3 + $payloadLen; }
-        elseif ($info === 26) { if ($offset + 4 >= $len) return false; $payloadLen = unpack('N', substr($data, $offset + 1, 4))[1]; return $offset + 5 + $payloadLen; }
-        return false;
-    } elseif ($major === 4) { // array
-        // Skip array elements recursively (simplified)
-        return false;
-    } elseif ($major === 5) { // map
-        return false;
-    } elseif ($major === 7) { // simple/float
+    // Major type 4 (array) and 5 (map): recursive, skip for simplicity
+    if ($major === 4 || $major === 5) {
+        return false; // Not handling nested structures in skip
+    }
+    
+    // Major type 6 (tag) and 7 (simple/float)
+    if ($major === 6) {
+        // Tag wraps another value - skip the tag and then the value
+        // For simplicity, just skip 1 byte and hope the next call handles it
         return $offset + 1;
+    }
+    if ($major === 7) {
+        if ($info < 24) return $offset + 1; // simple values
+        if ($info === 25) return $offset + 3; // half-precision float (2 bytes)
+        if ($info === 26) return $offset + 5; // single-precision float (4 bytes)
+        if ($info === 27) return $offset + 9; // double-precision float (8 bytes)
+        return false;
     }
     
     return false;
@@ -342,13 +379,84 @@ function parseAuthData(string $authData): ?array
 }
 
 /**
+ * Baca integer CBOR (major type 0 unsigned, atau major type 1 negative).
+ * Mengembalikan nilai int PHP, dan memperbarui $offset melalui referensi.
+ * Return false jika gagal.
+ */
+function cborReadInt(string $data, int &$offset, int $len): int|false
+{
+    if ($offset >= $len) return false;
+    $byte = ord($data[$offset]);
+    $major = ($byte & 0xE0) >> 5;
+    $info  = $byte & 0x1F;
+    $offset++;
+
+    if ($major === 0) { // unsigned int
+        if ($info < 24) return $info;
+        if ($info === 24) {
+            if ($offset >= $len) return false;
+            return ord($data[$offset++]);
+        }
+        if ($info === 25) {
+            if ($offset + 1 >= $len) return false;
+            return (ord($data[$offset]) << 8) | ord($data[$offset + 1]);
+        }
+        return false;
+    } elseif ($major === 1) { // negative int: value = -1 - info
+        if ($info < 24) return -1 - $info;
+        if ($info === 24) {
+            if ($offset >= $len) return false;
+            return -1 - ord($data[$offset++]);
+        }
+        if ($info === 25) {
+            if ($offset + 1 >= $len) return false;
+            return -1 - ((ord($data[$offset]) << 8) | ord($data[$offset + 1]));
+        }
+        return false;
+    }
+    return false;
+}
+
+/**
+ * Baca byte string CBOR (major type 2).
+ * Mengembalikan string bytes, dan memperbarui $offset melalui referensi.
+ * Return false jika gagal.
+ */
+function cborReadBytes(string $data, int &$offset, int $len): string|false
+{
+    if ($offset >= $len) return false;
+    $byte = ord($data[$offset]);
+    if (($byte & 0xE0) !== 0x40) return false; // bukan byte string
+    $info = $byte & 0x1F;
+    $offset++;
+
+    if ($info < 24) {
+        $valLen = $info;
+    } elseif ($info === 24) {
+        if ($offset >= $len) return false;
+        $valLen = ord($data[$offset++]);
+    } elseif ($info === 25) {
+        if ($offset + 1 >= $len) return false;
+        $valLen = (ord($data[$offset]) << 8) | ord($data[$offset + 1]);
+        $offset += 2;
+    } else {
+        return false;
+    }
+
+    if ($offset + $valLen > $len) return false;
+    $val = substr($data, $offset, $valLen);
+    $offset += $valLen;
+    return $val;
+}
+
+/**
  * Parse COSE key (simplified untuk EC2 P-256)
  */
 function parseCoseKey(string $data): ?array
 {
     $offset = 0;
     $len = strlen($data);
-    
+
     // COSE key adalah map
     if ($len < 1) return false;
     $firstByte = ord($data[0]);
@@ -356,96 +464,75 @@ function parseCoseKey(string $data): ?array
     $mapLen = $firstByte & 0x1F;
     if ($mapLen === 31) return false;
     $offset = 1;
-    
+
     $result = [];
-    
+
     for ($i = 0; $i < $mapLen; $i++) {
+        // --- Baca key (integer label COSE) ---
         if ($offset >= $len) return false;
-        
-        // Key (integer label untuk COSE)
-        $keyByte = ord($data[$offset]);
-        if (($keyByte & 0xE0) !== 0x00) return false; // Bukan unsigned int
-        $keyInfo = $keyByte & 0x1F;
-        if ($keyInfo < 24) {
-            $keyLabel = $keyInfo;
-            $offset++;
-        } elseif ($keyInfo === 24) {
-            if ($offset + 1 >= $len) return false;
-            $keyLabel = ord($data[$offset + 1]);
-            $offset += 2;
-        } else {
-            return false;
-        }
-        
-        // Value
+        $key = cborReadInt($data, $offset, $len);
+        if ($key === false) return false;
+
+        // --- Baca value ---
         if ($offset >= $len) return false;
-        $valByte = ord($data[$offset]);
-        
+
         // COSE key labels:
-        // 1 = kty (key type), 2 = kid, 3 = alg, -1 = crv, -2 = x, -3 = y
-        if ($keyLabel === 1) { // kty
-            if (($valByte & 0xE0) !== 0x00) return false;
-            $result['kty'] = $valByte & 0x1F;
-        } elseif ($keyLabel === 3) { // alg
-            if (($valByte & 0xE0) !== 0x00) return false;
-            $result['alg'] = $valByte & 0x1F;
-        } elseif ($keyLabel === -1 || $keyLabel === 255) { // crv (negative = 0x20-0x3F range)
-            // crv bisa negative integer (major type 1)
-            if (($valByte & 0xE0) === 0x20) { // negative int
-                $info = $valByte & 0x1F;
-                if ($info < 24) {
-                    $result['crv'] = -1 - $info;
-                }
-            }
-        } elseif ($keyLabel === -2 || $keyLabel === 254) { // x coordinate
-            // byte string
-            if (($valByte & 0xE0) !== 0x40) return false;
-            $valInfo = $valByte & 0x1F;
-            $valLen = 0;
-            if ($valInfo < 24) {
-                $valLen = $valInfo;
-                $offset++;
-            } elseif ($valInfo === 24) {
-                if ($offset + 1 >= $len) return false;
-                $valLen = ord($data[$offset + 1]);
-                $offset += 2;
-            } else {
-                return false;
-            }
-            if ($offset + $valLen > $len) return false;
-            $result['x'] = substr($data, $offset, $valLen);
-            $offset += $valLen;
-        } elseif ($keyLabel === -3 || $keyLabel === 253) { // y coordinate
-            if (($valByte & 0xE0) !== 0x40) return false;
-            $valInfo = $valByte & 0x1F;
-            $valLen = 0;
-            if ($valInfo < 24) {
-                $valLen = $valInfo;
-                $offset++;
-            } elseif ($valInfo === 24) {
-                if ($offset + 1 >= $len) return false;
-                $valLen = ord($data[$offset + 1]);
-                $offset += 2;
-            } else {
-                return false;
-            }
-            if ($offset + $valLen > $len) return false;
-            $result['y'] = substr($data, $offset, $valLen);
-            $offset += $valLen;
+        // 1 = kty, 3 = alg, -1 = crv, -2 = x, -3 = y
+        if ($key === 1) { // kty (unsigned int)
+            $val = cborReadInt($data, $offset, $len);
+            if ($val === false) return false;
+            $result['kty'] = $val;
+        } elseif ($key === 3) { // alg (bisa unsigned atau negative int)
+            $val = cborReadInt($data, $offset, $len);
+            if ($val === false) return false;
+            $result['alg'] = $val;
+        } elseif ($key === -1) { // crv (negative int)
+            $val = cborReadInt($data, $offset, $len);
+            if ($val === false) return false;
+            $result['crv'] = $val;
+        } elseif ($key === -2) { // x (byte string)
+            $val = cborReadBytes($data, $offset, $len);
+            if ($val === false) return false;
+            $result['x'] = $val;
+        } elseif ($key === -3) { // y (byte string)
+            $val = cborReadBytes($data, $offset, $len);
+            if ($val === false) return false;
+            $result['y'] = $val;
         } else {
-            // Skip unknown
-            $offset = skipCborValue($data, $offset, $len);
-            if ($offset === false) return false;
-            continue;
+            // Skip nilai yang tidak dikenal (coba baca sebagai CBOR value sederhana)
+            $valByte = ord($data[$offset]);
+            $major = ($valByte & 0xE0) >> 5;
+            $info  = $valByte & 0x1F;
+            $offset++;
+
+            if ($major === 0 || $major === 1) { // int
+                if ($info < 24) { /* already consumed */ }
+                elseif ($info === 24) { if ($offset >= $len) return false; $offset++; }
+                elseif ($info === 25) { if ($offset + 1 >= $len) return false; $offset += 2; }
+                else return false;
+            } elseif ($major === 2) { // byte string
+                $skip = cborReadBytes($data, $offset, $len);
+                if ($skip === false) return false;
+            } elseif ($major === 3) { // text string
+                if ($info < 24) { $offset += $info; }
+                elseif ($info === 24) { if ($offset >= $len) return false; $offset += 1 + ord($data[$offset]); }
+                elseif ($info === 25) { if ($offset + 1 >= $len) return false; $offset += 2 + ((ord($data[$offset]) << 8) | ord($data[$offset+1])); }
+                else return false;
+            } elseif ($major === 7 && $info < 24) { // simple/float 1 byte
+                // already consumed
+            } else {
+                return false;
+            }
         }
     }
-    
+
     // Validate required fields
     if (!isset($result['kty']) || $result['kty'] !== 2) return false; // EC2
     if (!isset($result['alg']) || $result['alg'] !== -7) return false; // ES256
     if (!isset($result['crv']) || $result['crv'] !== 1) return false; // P-256
     if (!isset($result['x']) || !isset($result['y'])) return false;
-    
+    if (strlen($result['x']) !== 32 || strlen($result['y']) !== 32) return false;
+
     return $result;
 }
 

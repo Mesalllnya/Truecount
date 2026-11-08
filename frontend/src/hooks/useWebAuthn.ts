@@ -1,5 +1,12 @@
 import { useState, useCallback, useEffect } from 'react'
 
+/** WebAuthn RP ID harus cocok dengan origin hostname. IP address (127.0.0.1) bukan valid RP ID, fallback ke localhost. */
+function getRpId() {
+  const hostname = window.location.hostname
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return 'localhost'
+  return hostname
+}
+
 /** WebAuthn credential interface */
 export interface WebAuthnCredential {
   id: string              // base64url encoded credential ID
@@ -162,7 +169,7 @@ export function useWebAuthnLogin() {
           challenge,
           allowCredentials,
           timeout: 60000, // 60 detik
-          rpId: window.location.hostname, // localhost
+          rpId: getRpId(),
           userVerification: 'required', // Windows Hello butuh user verification
         },
       }) as PublicKeyCredential & { response: AuthenticatorAssertionResponse }
@@ -287,7 +294,7 @@ export function useWebAuthnRegister() {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: 'TrueCount', id: window.location.hostname },
+          rp: { name: 'TrueCount', id: getRpId() },
           user: {
             id: userId,
             name: username,

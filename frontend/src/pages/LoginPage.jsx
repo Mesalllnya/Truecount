@@ -566,29 +566,6 @@ export default function LoginPage() {
 
             {usbAuthStep === 'idle' && (
               <>
-                <div className="field">
-                  <label htmlFor="dongle-pin">PIN Dongle</label>
-                  <div className="password-input-wrapper">
-                    <input
-                      id="dongle-pin"
-                      name="password"
-                      type="password"
-                      autoComplete="current-password"
-                      placeholder="Masukkan PIN dongle (opsional untuk memulai)"
-                      value={form.password}
-                      onChange={handleChange}
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setUsbAuthPinShow(p => !p)}
-                      aria-label={usbAuthPinShow ? 'Sembunyikan PIN' : 'Tampilkan PIN'}
-                    >
-                      {usbAuthPinShow ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
-                  </div>
-                </div>
-
                 {error && <p className="field-error" role="alert"><AlertIcon />{error}</p>}
                 {usbAuthError && <p className="field-error" role="alert"><AlertIcon />{usbAuthError}</p>}
 
@@ -696,12 +673,14 @@ export default function LoginPage() {
                 <div className="error-icon"><AlertIcon /></div>
                 <h3>Autentikasi Gagal</h3>
                 <p>{usbAuthError || 'Terjadi kesalahan saat autentikasi dongle.'}</p>
-                <button type="button" className="btn-submit btn-submit--dongle" onClick={handleUsbAuthStart}>
-                  <KeyIcon /> Coba Lagi
-                </button>
-                <button type="button" className="btn-submit btn-submit--secondary" onClick={handleUsbAuthCancel}>
-                  Kembali
-                </button>
+                <div className="form-actions">
+                  <button type="button" className="btn-submit btn-submit--dongle" onClick={handleUsbAuthStart}>
+                    <KeyIcon /> Coba Lagi
+                  </button>
+                  <button type="button" className="btn-submit btn-submit--secondary" onClick={handleUsbAuthCancel}>
+                    Kembali
+                  </button>
+                </div>
               </div>
             )}
           </div>

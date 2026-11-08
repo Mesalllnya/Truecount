@@ -1,7 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
-import navLogoDark from '/logo/TrueCount_navLogo_darkmode.svg'
 import './Nav.css'
 
 /* ── SVG Icons ───────────────────────────────────────────── */
@@ -122,10 +121,7 @@ export default function Nav({ className = '' }) {
   return (
     <header className={`nav ${isScrolled ? 'nav--scrolled' : ''} ${className}`} role="banner">
       <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
-        <picture className="nav-logo-img">
-          <source srcSet={navLogoDark} media="(prefers-color-scheme: dark)" />
-          <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
-        </picture>
+        <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
       </Link>
 
       <nav className={`nav-links${menuOpen ? ' nav-links--open' : ''}`} aria-label="Navigasi utama">

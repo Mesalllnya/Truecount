@@ -91,6 +91,17 @@
 - Animasi purposeful: `heroIn` (slide up), `rippleGrow` (easter egg), `tagPop` (spring)
 - Semua section-reveal pakai `IntersectionObserver` dengan threshold 0.12–0.15
 
+### Kursor Kustom (Custom Cursor)
+
+TrueCount pakai kumpulan kursor kustom untuk berbagai state interaksi, agar aplikasi punya identitas visual yang konsisten dan terasa lebih native.
+
+- **Asset:** `frontend/public/assets/CursorTrueCount/TrueCount_cursor_full_set/` (file `.cur` + PNG 32px/64px per state)
+- **Style:** `frontend/src/styles/cursor.css` — diimpor di `frontend/src/main.jsx` sehingga berlaku aplikasi-wide
+- **State yang tersedia:** `normal`, `link`, `tombol`, `pilih`, `text`, `text_v`, `crosshair`, `move`, `resize_ew/ns/nwse/nesw`, `grab`, `grabbing`, `zoom_in/out`, `copy`, `menu`, `wait`, `loading`, `help`, `nope`
+- **Fallback:** Tiap kursor punya PNG 32px (utama) + 64px (layar tinggi DPI), lalu fallback ke cursor bawaan browser (`auto`, `pointer`, `text`, dll.)
+- **Aksesibilitas:** Animasi kursor dimatikan untuk pengguna yang mengaktifkan `prefers-reduced-motion: reduce`
+- **Pemakaian class utility:** `.tc-loading`, `.tc-copy`, `.tc-grab`, `.tc-grabbing`, `.tc-zoom-in`, `.tc-zoom-out`, `.tc-help`, `.tc-not-allowed`, `.tc-text`, `.tc-crosshair`, dll.
+
 ---
 
 ## 4. Struktur File Kunci
@@ -145,9 +156,11 @@ frontend/src/pages/
   UsbTokenTestPage.jsx + .css  - Halaman test USB token (/usb-token-test): deteksi, decrypt, challenge-response
 frontend/src/components/
   HealthMonitor.jsx             - Render null; polling /health di background, error → console (bukan UI)
+  Skeleton.jsx + .css           - Komponen loading placeholder (SkeletonText, SkeletonCircle, SkeletonRow, SkeletonStat, SkeletonPane) - dipakai di Register, Dashboard, dan Vote pages saat fetch data
   UsbTokenPanel.jsx + .css      - Panel kelola USB token (digunakan di ProfileSettingsPage): daftar, register (modal flow), revoke, label
 frontend/src/index.css          - Reset global + font family
-frontend/src/main.jsx           - ReactDOM.createRoot - tidak diubah
+frontend/src/main.jsx           - ReactDOM.createRoot + impor `cursor.css` agar kursor kustom TrueCount berlaku di seluruh aplikasi
+frontend/src/styles/cursor.css  - Kumpulan aturan kursor kustom untuk state normal, link, tombol, teks, resize, grab, grabbing, zoom, copy, menu, wait, loading, help, dan nope (PNG 32/64px + fallback bawaan browser)
 ```
 
 ### Database

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { getRpId } from '../utils/webauthn'
 
 /** WebAuthn credential interface */
 export interface WebAuthnCredential {
@@ -162,7 +163,7 @@ export function useWebAuthnLogin() {
           challenge,
           allowCredentials,
           timeout: 60000, // 60 detik
-          rpId: window.location.hostname, // localhost
+          rpId: getRpId(),
           userVerification: 'required', // Windows Hello butuh user verification
         },
       }) as PublicKeyCredential & { response: AuthenticatorAssertionResponse }
@@ -287,7 +288,7 @@ export function useWebAuthnRegister() {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: 'TrueCount', id: window.location.hostname },
+          rp: { name: 'TrueCount', id: getRpId() },
           user: {
             id: userId,
             name: username,

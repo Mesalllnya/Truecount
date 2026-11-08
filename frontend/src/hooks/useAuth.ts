@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { getRpId } from '../utils/webauthn';
 
 const API_BASE = 'http://localhost:8000';
 
@@ -76,7 +77,7 @@ export function useWebAuthnRegister() {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: data.rp.name, id: data.rp.id },
+          rp: { name: data.rp.name, id: getRpId() },
           user: {
             id: userId,
             name: data.user.name,

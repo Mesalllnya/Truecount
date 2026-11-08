@@ -979,6 +979,7 @@
   animation: modalSlideUp 350ms var(--ease-spring);
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 @keyframes modalSlideUp {
@@ -1065,6 +1066,9 @@
   padding: 1.75rem;
   flex: 1;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* ── Form Fields in Modal ── */
@@ -1234,12 +1238,18 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem;
+  position: relative;
+}
+
+.wa-pulse-rings {
+  position: relative;
+  width: 80px;
+  height: 80px;
 }
 
 .wa-pulse-ring {
   position: absolute;
-  width: 80px;
-  height: 80px;
+  inset: 0;
   border: 2px solid var(--red);
   border-radius: 50%;
   opacity: 0;
@@ -1256,6 +1266,11 @@
 }
 
 .wa-pulse-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1;
   color: var(--red);
   animation: pulseCenter 2s ease-in-out infinite;
@@ -1279,19 +1294,20 @@
   to { transform: rotate(360deg); }
 }
 
-.wa-step-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--black);
-  margin: 0;
-}
-
 .wa-step-desc {
   font-size: 0.875rem;
   color: var(--muted);
   margin: 0;
   text-align: center;
-  max-width: 30ch;
+  max-width: 100%;
+}
+
+.wa-step-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--black);
+  margin: 0;
+  text-align: center;
 }
 
 /* ── USB Waiting Card ── */

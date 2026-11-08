@@ -76,6 +76,22 @@ function Icon({ name, size = 20 }) {
   return icons[name] ?? null
 }
 
+/* Pintu yang terbuka saat tombol sign-in di-hover, tutup saat kursor keluar. */
+function DoorIcon() {
+  return (
+    <svg className="door-signin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {/* pintu (bingkai) */}
+      <rect x="2" y="4" width="20" height="16" rx="1" />
+      {/* daun pintu yang berayun di sisi kiri (scharnir) */}
+      <g className="door-panel">
+        <rect x="3" y="5" width="13" height="14" rx="0.5" fill="currentColor" />
+        {/* knop pintu warna kuning kebr (brass) */}
+        <circle cx="15" cy="12" r="0.8" fill="#d97706" />
+      </g>
+    </svg>
+  )
+}
+
 /* ── Scroll-reveal hook ─────────────────────────────────── */
 function useReveal(threshold = 0.12) {
   const ref = useRef(null)
@@ -129,6 +145,7 @@ export default function LandingPage() {
           </p>
           <div className="hero-cta">
             <Link to="/masuk" className="btn-solid btn-lg">
+              <DoorIcon />
               Masuk sekarang <Icon name="arrow" size={16} />
             </Link>
             <a href="#cara-kerja" className="btn-ghost btn-lg">Pelajari caranya</a>
@@ -234,6 +251,7 @@ export default function LandingPage() {
             mengikuti prinsip keamanan yang ketat.
           </p>
           <Link to="/masuk" className="btn-solid btn-lg">
+            <DoorIcon />
             Masuk ke TrueCount <Icon name="arrow" size={16} />
           </Link>
         </div>

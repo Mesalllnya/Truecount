@@ -245,3 +245,5 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 | Build error transform destructuring | Target build terlalu lama (`es2021`) | Pakai target `['es2020', 'chrome90', 'safari13']` di `vite.config.js` |
 | Build gagal `Couldn't find a .ico icon` | Folder `icons/` kosong | `npx tauri icon public/raise_hand.jpg --fit cover` |
 | Tombol "Dongle Keamanan" disabled di login (desktop) | Deteksi `isTauri` pakai `window.__TAURI__` yang butuh `withGlobalTauri: true` (belum ada di `tauri.conf.json`) | Sudah fix di `LoginPage.jsx` baris 355: ganti ke `'__TAURI_INTERNALS__' in window` (selalu tersedia di Tauri) |
+| Terminal muncul-menutup tiap detik (Windows) | `list_removable_drives()` jalankan PowerShell tanpa `CREATE_NO_WINDOW`, jadi jendela konsol muncul saat scan USB tiap 2 detik | Sudah fix di `usb_token.rs`: tambah `cmd.creation_flags(0x08000000)` |
+| Icon app masih default | Icon di `src-tauri/icons/` masih default Tauri | Copy `public/icon/TrueCount_logo_transparent.png` → `src-tauri/icons/icon.png`, lalu `npx tauri icon src-tauri/icons/icon.png` untuk generate `.ico`/`.icns` dll. |

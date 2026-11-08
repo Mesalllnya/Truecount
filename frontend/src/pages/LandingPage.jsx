@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import raiseHand from '/raise_hand.jpg'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
-import navLogoDark from '/logo/TrueCount_navLogo_darkmode.svg'
 import './LandingPage.css'
 
 /* ── SVG Icons ───────────────────────────────────────────── */
@@ -246,16 +245,12 @@ export default function LandingPage() {
       {/* ══ FOOTER ═══════════════════════════════════════════ */}
       <footer className="footer">
         <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
-          <picture className="nav-logo-img">
-            <source srcSet={navLogoDark} media="(prefers-color-scheme: dark)" />
-            <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
-          </picture>
+          <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
         </Link>
+        <p className="footer-reserve">All right reserve Tim Larisal</p>
         <nav className="footer-links">
           <Link to="/tentang">Tentang Kami</Link>
         </nav>
-        <p>Sistem E-Voting Aman</p>
-        <p className="footer-copy">© 2026</p>
       </footer>
 
     </div>

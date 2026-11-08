@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUsbToken, startUsbAuthenticate, verifyUsbAuthenticate, base64urlToBytes, bytesToBase64url } from '../hooks/useUsbToken'
 import { useWebAuthnLogin } from '../hooks/useWebAuthn'
+import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import './AuthPage.css'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
@@ -406,7 +407,9 @@ export default function LoginPage() {
             />
           </svg>
         </button>
-        <Link to="/" className="brand-link">TrueCount</Link>
+        <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
+          <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
+        </Link>
       </div>
 
       <div className="auth-card">

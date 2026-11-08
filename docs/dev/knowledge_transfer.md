@@ -662,7 +662,7 @@ Saat menambahkan endpoint baru, selalu update:
 2. **JWT Secret** - ada di `.env` key `JWT_SECRET`. Nilai default di `.env.example` JANGAN dipakai di production.
 3. **Password admin default** - `Admin@1234`. Hash-nya di-generate ulang setiap `php database/migrate.php --seed` dijalankan.
 4. **`ballots` tidak punya FK ke users** - ini by design, jangan ditambahkan.
-5. **Tauri icons** - sudah di-generate dari `frontend/public/raise_hand.jpg`. Kalau ganti desain logo: `npx tauri icon public/raise_hand.jpg --fit cover` (source harus square atau pakai `--fit`).
+5. **Tauri icons** - sudah di-generate dari `frontend/public/icon/TrueCount_logo_transparent.png`. Kalau ganti desain logo: copy file PNG baru ke `src-tauri/icons/icon.png`, lalu jalankan `npx tauri icon src-tauri/icons/icon.png` untuk generate semua format platform (`.ico` Windows, `.icns` macOS, PNG, dll.).
 6. **axios belum dipakai** - diinstall tapi Sprint 1 pakai `fetch` native. Sprint 2 boleh migrasi ke axios atau tetap pakai fetch.
 7. **`draft_user` belum ada** - reset password, email verification, dan roles lanjutan belum diimplementasi.
 8. **Vite 8 + minifier** - jangan set `minify: 'esbuild'`; pakai `terser`. Target build jangan lebih tinggi dari `es2020`/`chrome90`/`safari13` atau transform destructuring akan gagal.

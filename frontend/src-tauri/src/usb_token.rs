@@ -55,14 +55,17 @@ fn list_removable_drives() -> Vec<String> {
 
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
         use std::process::Command;
-        let output = Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-Command",
-                "Get-WmiObject Win32_Volume | Where-Object {$_.DriveType -eq 2} | Select-Object -ExpandProperty DriveLetter",
-            ])
-            .output();
+        let mut cmd = Command::new("powershell");
+        cmd.args([
+            "-NoProfile",
+            "-Command",
+            "Get-WmiObject Win32_Volume | Where-Object {$_.DriveType -eq 2} | Select-Object -ExpandProperty DriveLetter",
+        ]);
+        // CREATE_NO_WINDOW agar jendela PowerShell tidak muncul-menutup saat scan drive tiap 2 detik
+        cmd.creation_flags(0x08000000);
+        let output = cmd.output();
         match output {
             Ok(out) => {
                 for line in String::from_utf8_lossy(&out.stdout).lines() {

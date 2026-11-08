@@ -76,6 +76,29 @@ function ExitIcon() {
   )
 }
 
+/* Nav icons */
+function DashboardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  )
+}
+
+function VoteIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2"/>
+      <line x1="8" y1="9"  x2="16" y2="9"/>
+      <line x1="8" y1="13" x2="16" y2="13"/>
+      <line x1="8" y1="17" x2="12" y2="17"/>
+    </svg>
+  )
+}
+
 /* ── Main ────────────────────────────────────────────────── */
 export default function VotePage() {
   const navigate       = useNavigate()
@@ -123,8 +146,8 @@ export default function VotePage() {
         <Link to="/dasbor" className="dash-brand">TrueCount</Link>
 
         <nav className="dash-nav-links" aria-label="Navigasi dasbor">
-          <Link to="/dasbor" className="dash-nav-item">Dasbor</Link>
-          <span className="dash-nav-item dash-nav-active" aria-current="page">Pilih</span>
+          <Link to="/dasbor" className="dash-nav-item"><DashboardIcon /> Dasbor</Link>
+          <span className="dash-nav-item dash-nav-active" aria-current="page"><VoteIcon /> Pilih</span>
         </nav>
 
         <button className="dash-logout" onClick={handleLogout}>

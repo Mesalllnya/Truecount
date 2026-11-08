@@ -62,6 +62,49 @@ function RevokeIcon() {
   )
 }
 
+/* Nav icons */
+function DashboardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  )
+}
+
+function VoteIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2"/>
+      <line x1="8" y1="9"  x2="16" y2="9"/>
+      <line x1="8" y1="13" x2="16" y2="13"/>
+      <line x1="8" y1="17" x2="12" y2="17"/>
+    </svg>
+  )
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  )
+}
+
+function BallotNavIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2"/>
+      <line x1="8" y1="9"  x2="16" y2="9"/>
+      <line x1="8" y1="13" x2="16" y2="13"/>
+      <line x1="8" y1="17" x2="12" y2="17"/>
+    </svg>
+  )
+}
+
 /* ── Web Audio beep ──────────────────────────────────────── */
 function playBeep() {
   try {
@@ -580,10 +623,10 @@ export default function DashboardPage() {
         </button>
 
         <nav className="dash-nav-links" aria-label="Navigasi dasbor">
-          <span className="dash-nav-item dash-nav-active">Dasbor</span>
-          <Link to="/pilih" className="dash-nav-item">Pemilihan</Link>
-          <Link to="/pengaturan" className="dash-nav-item">Pengaturan</Link>
-          <span className="dash-nav-item">Surat Suara Saya</span>
+          <span className="dash-nav-item dash-nav-active"><DashboardIcon /> Dasbor</span>
+          <Link to="/pilih" className="dash-nav-item"><VoteIcon /> Pemilihan</Link>
+          <Link to="/pengaturan" className="dash-nav-item"><SettingsIcon /> Pengaturan</Link>
+          <span className="dash-nav-item"><BallotNavIcon /> Surat Suara Saya</span>
         </nav>
 
         {/* ── Server status sudah dihapus dari UI - HealthMonitor global

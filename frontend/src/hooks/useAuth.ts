@@ -1,13 +1,7 @@
 import { useState, useCallback } from 'react';
+import { getRpId } from '../utils/webauthn';
 
 const API_BASE = 'http://localhost:8000';
-
-/** WebAuthn RP ID harus cocok dengan origin hostname. IP address (127.0.0.1) bukan valid RP ID, fallback ke localhost. */
-function getRpId() {
-  const hostname = window.location.hostname;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return 'localhost';
-  return hostname;
-}
 
 /** Hook untuk change password */
 export function useChangePassword() {

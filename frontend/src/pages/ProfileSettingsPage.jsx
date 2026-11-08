@@ -3,30 +3,11 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useUsbToken, fetchUsbCredentials, revokeUsbCredential, updateUsbLabel, listUsbDrives, createTokenFile, startUsbRegister, verifyUsbRegister } from '../hooks/useUsbToken'
 import { useChangePassword } from '../hooks/useAuth'
 import { useWebAuthnRegister, useWebAuthnList, useWebAuthnRevoke, isPlatformAuthenticatorAvailable } from '../hooks/useAuth'
+import { getRpId, base64urlEncode, base64urlDecode } from '../utils/webauthn'
 import './ProfileSettingsPage.css'
 
 /* ── Constants & Helpers ─────────────────────────────────── */
 const API_BASE = 'http://localhost:8000'
-
-function base64urlEncode(bytes) {
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
-}
-function base64urlDecode(str) {
-  const base64 = str.replace(/-/g, '+').replace(/_/g, '/')
-  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
-  const binary = atob(padded)
-  return Uint8Array.from(binary, c => c.charCodeAt(0))
-}
-
-/** WebAuthn RP ID harus cocok dengan origin hostname. IP address (127.0.0.1) bukan valid RP ID, fallback ke localhost. */
-function getRpId() {
-  const hostname = window.location.hostname
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return 'localhost'
-  return hostname
-}
 
 /* ── Icon components ─────────────────────────────────────── */
 function UserIcon() {
@@ -285,7 +266,7 @@ export default function ProfileSettingsPage() {
     setWaRegisterCredId('')
   }
 
-  const handleWaRegister = async () => {
+  const handleWaRegister = useCallback(async () => {
     setWaRegisterStep('creating')
     clearWaError()
     try {
@@ -354,7 +335,7 @@ export default function ProfileSettingsPage() {
       setWaRegisterStep('error')
       setWaRegisterError(err instanceof Error ? err.message : 'Registrasi Windows Hello gagal')
     }
-  }
+  }, []) // Empty deps: handleWaRegister is stable, only calls setState and API
 
   // Saat modal WebAuthn dibuka dan masih di step idle, langsung mulai registrasi
   // agar navigator.credentials.create() dipanggil dan jendela Windows Hello muncul.
@@ -362,7 +343,7 @@ export default function ProfileSettingsPage() {
     if (showWaRegister && waRegisterStep === 'idle') {
       handleWaRegister()
     }
-  }, [showWaRegister, waRegisterStep, handleWaRegister])
+  }, [showWaRegister, waRegisterStep])
 
   const handleWaRevoke = async (id) => {
     if (!window.confirm('Hapus Windows Hello ini? Anda tidak bisa login dengan Windows Hello yang dihapus.')) return

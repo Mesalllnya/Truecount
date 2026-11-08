@@ -1,11 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-
-/** WebAuthn RP ID harus cocok dengan origin hostname. IP address (127.0.0.1) bukan valid RP ID, fallback ke localhost. */
-function getRpId() {
-  const hostname = window.location.hostname
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return 'localhost'
-  return hostname
-}
+import { getRpId } from '../utils/webauthn'
 
 /** WebAuthn credential interface */
 export interface WebAuthnCredential {

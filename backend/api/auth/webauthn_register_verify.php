@@ -128,8 +128,8 @@ if ($publicKeyDer === false) {
 
 // ── 6. Simpan credential ke database ───────────────────────────────
 $stmt = $db->prepare(
-    'INSERT INTO biometric_credentials (user_id, credential_id, public_key, sign_count, aaguid, created_at)
-     VALUES (?, ?, ?, 0, ?, NOW())'
+    'INSERT INTO biometric_credentials (user_id, credential_id, public_key, sign_count, aaguid, created_at, last_used_at)
+     VALUES (?, ?, ?, 0, ?, NOW(), NULL)'
 );
 $aaguid = $attestation['aaguid'] ?? null;
 $stmt->execute([$userId, $credentialId, $publicKeyDer, $aaguid]);
@@ -146,7 +146,8 @@ jsonResponse([
 } catch (Throwable $e) {
     error_log("[WebAuthn Register Verify] " . get_class($e) . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
     tc_log_error("[WebAuthn Register Verify] " . get_class($e) . ': ' . $e->getMessage());
-    jsonResponse(['error' => 'Terjadi kesalahan pada server: ' . $e->getMessage()], 500);
+    // Generic message for client, detailed error logged server-side
+    jsonResponse(['error' => 'Terjadi kesalahan pada server. Silakan coba lagi.'], 500);
 }
 
 /**

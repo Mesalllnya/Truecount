@@ -196,7 +196,7 @@ export default function ProfileSettingsPage() {
 
   // Toast state
   const [toast, setToast] = useState(null)
-  const toastTimerRef = useState(null)
+  const [toastTimerRef, setToastTimerRef] = useState(null)
 
   const showToast = useCallback((message) => {
     setToast(message)

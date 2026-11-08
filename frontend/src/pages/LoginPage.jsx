@@ -121,6 +121,14 @@ export default function LoginPage() {
     formatValid: null,
   })
 
+  // ── Toast untuk metode login yang tidak tersedia ──
+  const [toast, setToast] = useState(null)
+
+  const showAuthToast = useCallback((message) => {
+    setToast(message)
+    setTimeout(() => setToast(null), 3500)
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     const poll = async () => {
@@ -343,6 +351,13 @@ export default function LoginPage() {
     setUsbAuthChallengeData(null)
   }
 
+  // ── Deteksi lingkungan: Tauri desktop vs browser web ──
+  // window.__TAURI__ butuh withGlobalTauri: true di tauri.conf.json.
+  // window.__TAURI_INTERNALS__ selalu tersedia saat berjalan di Tauri (dev & build),
+  // konsisten dengan deteksi di hooks/useUsbToken.ts.
+  const isTauri =
+    typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+
   // ── Konfigurasi metode auth ─────────────────────────────────
   const authMethods = [
     {
@@ -358,8 +373,8 @@ export default function LoginPage() {
       label: 'Dongle Keamanan',
       description: 'USB token fisik (TrueCount Token)',
       icon: <KeyIcon />,
-      available: true,
-      unavailableReason: undefined,
+      available: isTauri,
+      unavailableReason: isTauri ? undefined : 'Dongle USB hanya tersedia di aplikasi desktop',
     },
     {
       id: 'password',
@@ -407,6 +422,13 @@ export default function LoginPage() {
           </p>
         )}
 
+        {toast && (
+          <p className="auth-warning" role="status">
+            <AlertIcon />
+            {toast}
+          </p>
+        )}
+
         {/* ── Pilihan Metode Auth ────────────────────────────── */}
         <div className="auth-method-selector" role="radiogroup" aria-label="Pilih metode masuk">
           {authMethods.map((method) => (
@@ -414,7 +436,13 @@ export default function LoginPage() {
               key={method.id}
               type="button"
               className={`auth-method-btn ${selectedMethod === method.id ? 'auth-method-btn--active' : ''} ${!method.available ? 'auth-method-btn--disabled' : ''}`}
-              onClick={() => method.available && setSelectedMethod(method.id)}
+              onClick={() => {
+                if (method.available) {
+                  setSelectedMethod(method.id)
+                } else {
+                  showAuthToast(method.unavailableReason || 'Metode ini tidak tersedia di perangkat Anda.')
+                }
+              }}
               disabled={!method.available}
               role="radio"
               aria-checked={selectedMethod === method.id}

@@ -3,7 +3,7 @@
 > **Untuk AI / developer baru:** Baca dokumen ini sebelum menyentuh kode apapun.
 > Berisi semua keputusan desain, konvensi, state proyek saat ini, dan konteks yang tidak terlihat dari kode saja.
 >
-> **Dokumentasi pengguna** (bukan untuk AI): lihat [`PANDUAN_ADMIN.md`](PANDUAN_ADMIN.md) — panduan operasional untuk admin/panitia. Dokumen ini (knowledge_transfer.md) khusus context untuk AI/developer.
+> **Dokumentasi pengguna** (bukan untuk AI): lihat [`PANDUAN_ADMIN.md`](../admin/PANDUAN_ADMIN.md) — panduan operasional untuk admin/panitia. Dokumen ini (knowledge_transfer.md) khusus context untuk AI/developer.
 
 ---
 
@@ -367,6 +367,13 @@ Desktop app **sudah bisa di-build dan berjalan** - installer `.msi` + `.exe` (NS
   karena `default-features = false`.
 - `vite.config.js`: minifier **terser**, target `['es2020', 'chrome90', 'safari13']`
   - kombinasi yang kompatibel dengan Vite 8 (esbuild & terser keduanya devDependency).
+- `frontend/src/pages/LoginPage.jsx` (baris ~355): deteksi lingkungan Tauri pakai
+  `'__TAURI_INTERNALS__' in window` — **bukan** `window.__TAURI__`.
+  `window.__TAURI__` hanya tersedia kalau `app.withGlobalTauri` di `tauri.conf.json`
+  di-set `true` (belum ada di proyek ini). `__TAURI_INTERNALS__` selalu tersedia
+  saat berjalan di Tauri (dev & build), konsisten dengan `hooks/useUsbToken.ts`.
+  Jika pakai `window.__TAURI__`, tombol "Dongle Keamanan" di halaman masuk akan
+  selalu **disabled** di app desktop.
 
 ### Logging (untuk debugging)
 
@@ -645,7 +652,7 @@ Saat menambahkan endpoint baru, selalu update:
 2. `database/migrations/` - file SQL baru kalau butuh tabel
 3. `README.md` - seksi API Endpoints
 4. `tests/api_test.php` - tambah test case
-5. `docs/knowledge_transfer.md` - update State Sprint
+5. `docs/dev/knowledge_transfer.md` - update State Sprint
 
 ---
 

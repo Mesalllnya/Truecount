@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import raiseHand from '/raise_hand.jpg'
+import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
+import navLogoDark from '/logo/TrueCount_navLogo_darkmode.svg'
 import './LandingPage.css'
 
 /* ── SVG Icons ───────────────────────────────────────────── */
@@ -94,7 +96,6 @@ function useReveal(threshold = 0.12) {
 
 /* ── Main ────────────────────────────────────────────────── */
 export default function LandingPage() {
-  const [menuOpen, setMenuOpen] = useState(false)
   const [stepRef, stepVis] = useReveal()
   const [featRef, featVis] = useReveal()
   const [secRef,  secVis]  = useReveal()
@@ -111,35 +112,7 @@ export default function LandingPage() {
   return (
     <div className="landing">
 
-      {/* ══ NAV ══════════════════════════════════════════════ */}
-      <header className="nav">
-        <Link to="/" className="nav-brand">TrueCount</Link>
-
-        <nav className={`nav-links${menuOpen ? ' nav-links--open' : ''}`} aria-label="Navigasi utama">
-          <a href="#cara-kerja" onClick={() => setMenuOpen(false)}>Cara Kerja</a>
-          <a href="#fitur"      onClick={() => setMenuOpen(false)}>Fitur</a>
-          <a href="#keamanan"   onClick={() => setMenuOpen(false)}>Keamanan</a>
-          <Link to="/tentang" onClick={() => setMenuOpen(false)}>Tentang</Link>
-        </nav>
-
-        <div className="nav-right">
-          <Link to="/masuk" className="btn-solid nav-login">
-            <Icon name="login" size={16} />
-            Masuk
-          </Link>
-
-          <button
-            className="nav-hamburger"
-            aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(v => !v)}
-          >
-            <Icon name={menuOpen ? 'close' : 'menu'} size={22} />
-          </button>
-        </div>
-      </header>
-
-      {/* ══ HERO ═════════════════════════════════════════════ */}
+            {/* ══ HERO ═════════════════════════════════════════════ */}
       <main className="hero">
 
         {/* Left - text */}
@@ -272,7 +245,12 @@ export default function LandingPage() {
 
       {/* ══ FOOTER ═══════════════════════════════════════════ */}
       <footer className="footer">
-        <Link to="/" className="nav-brand">TrueCount</Link>
+        <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
+          <picture className="nav-logo-img">
+            <source srcSet={navLogoDark} media="(prefers-color-scheme: dark)" />
+            <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
+          </picture>
+        </Link>
         <nav className="footer-links">
           <Link to="/tentang">Tentang Kami</Link>
         </nav>
@@ -283,3 +261,4 @@ export default function LandingPage() {
     </div>
   )
 }
+

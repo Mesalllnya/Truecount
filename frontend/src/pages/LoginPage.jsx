@@ -517,7 +517,7 @@ export default function LoginPage() {
                 name="password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="••••••••"
+                placeholder="i'm Password"
                 value={form.password}
                 onChange={handleChange}
                 required

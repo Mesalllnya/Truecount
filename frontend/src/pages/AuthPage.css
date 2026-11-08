@@ -93,6 +93,13 @@
   color: var(--black);
 }
 
+/* ── Nav logo di halaman login (agak lebih besar dari standar nav 55px) ── */
+.auth-brand .nav-logo {
+  height: 60px;
+  width: auto;
+  display: block;
+}
+
 /* ── Card ───────────────────────────────────────────────── */
 .auth-card {
   flex: 1;

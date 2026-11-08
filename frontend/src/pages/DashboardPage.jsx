@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
-import navLogoDark from '/logo/TrueCount_navLogo_darkmode.svg'
+import { SkeletonRow } from '../components/ui/Skeleton'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
@@ -477,7 +477,12 @@ function InvitesPanel() {
         </div>
 
         {loading && (
-          <p className="invite-list-note">Memuat undangan…</p>
+          <div className="skeleton-pane">
+            <div className="skeleton skeleton-text--title" />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </div>
         )}
 
         {!loading && !listError && filteredInvites.length === 0 && (
@@ -618,10 +623,7 @@ export default function DashboardPage() {
           aria-label={`TrueCount - klik ${5 - clicks} kali lagi`}
           title="TrueCount"
         >
-          <picture className="dash-brand-img">
-            <source srcSet={navLogoDark} media="(prefers-color-scheme: dark)" />
-            <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
-          </picture>
+          <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
           {clicks > 0 && clicks < 5 && (
             <span className="dash-brand-dots" aria-hidden="true">
               {Array.from({ length: 5 }, (_, i) => (

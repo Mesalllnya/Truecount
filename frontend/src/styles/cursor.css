@@ -1,0 +1,216 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   TrueCount custom cursor set
+   Asset: public/assets/CursorTrueCount/TrueCount_cursor_full_set/
+   Hotspot: 0 0 (paling pojok kiri atas)
+   Ukuran utama: 32px (kecil), fallback 64px layar tinggi DPI
+   !important digunakan agar menang terhadap cursor: pointer bawaan tiap halaman
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* Normal pointer */
+html, body {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/normal/truecount_normal_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/normal/truecount_normal_64.png') 0 0,
+    auto !important;
+}
+
+/* Link / interaktif — termasuk .btn-submit (Windows Hello) */
+a, button, [role='button'], select, summary, label, [href],
+.btn-submit, .btn-submit--webauthn, button.btn-submit {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/link/truecount_link_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/link/truecount_link_64.png') 0 0,
+    pointer !important;
+}
+
+/* Tombol (tangan menunjuk) — mencakup .btn-submit agar Windows Hello ikut custom */
+button, [role='button'], summary, input[type='button'], input[type='submit'], label[for],
+.btn-submit, .btn-submit--webauthn, button.btn-submit {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/tombol/truecount_tombol_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/tombol/truecount_tombol_64.png') 0 0,
+    pointer !important;
+}
+
+/* Pilih / suara (checkbox, radio, tombol pilih) */
+input[type='checkbox'],
+input[type='radio'],
+.tc-pilih {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/pilih/truecount_pilih_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/pilih/truecount_pilih_64.png') 0 0,
+    pointer !important;
+}
+
+/* Teks — 32px utama */
+input:not([type]),
+input[type='text'],
+input[type='email'],
+input[type='search'],
+input[type='password'],
+input[type='url'],
+textarea,
+[contenteditable='true'],
+.tc-text {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/text/truecount_text_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/text/truecount_text_64.png') 0 0,
+    text !important;
+}
+
+/* Teks vertikal */
+.tc-text-vertical {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/text_v/truecount_text_v_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/text_v/truecount_text_v_64.png') 0 0,
+    vertical-text !important;
+}
+
+/* Crosshair */
+.tc-crosshair {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/crosshair/truecount_crosshair_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/crosshair/truecount_crosshair_64.png') 0 0,
+    crosshair !important;
+}
+
+/* Move / all-scroll */
+.tc-move,
+.tc-all-scroll {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/move/truecount_move_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/move/truecount_move_64.png') 0 0,
+    move !important;
+}
+
+/* Resize EW / kolom */
+.tc-ew-resize,
+.tc-col-resize {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/resize_ew/truecount_resize_ew_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/resize_ew/truecount_resize_ew_64.png') 0 0,
+    ew-resize !important;
+}
+
+/* Resize NS / baris */
+.tc-ns-resize,
+.tc-row-resize {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/resize_ns/truecount_resize_ns_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/resize_ns/truecount_resize_ns_64.png') 0 0,
+    ns-resize !important;
+}
+
+/* Resize NW-SE */
+.tc-nwse-resize {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/resize_nwse/truecount_resize_nwse_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/resize_nwse/truecount_resize_nwse_64.png') 0 0,
+    nwse-resize !important;
+}
+
+/* Resize NE-SW */
+.tc-nesw-resize {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/resize_nesw/truecount_resize_nesw_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/resize_nesw/truecount_resize_nesw_64.png') 0 0,
+    nesw-resize !important;
+}
+
+/* Grab */
+.tc-grab {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/grab/truecount_grab_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/grab/truecount_grab_64.png') 0 0,
+    grab !important;
+}
+
+/* Grabbing */
+.tc-grabbing,
+.tc-grab:active {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/grabbing/truecount_grabbing_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/grabbing/truecount_grabbing_64.png') 0 0,
+    grabbing !important;
+}
+
+/* Zoom in */
+.tc-zoom-in {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/zoom_in/truecount_zoom_in_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/zoom_in/truecount_zoom_in_64.png') 0 0,
+    zoom-in !important;
+}
+
+/* Zoom out */
+.tc-zoom-out {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/zoom_out/truecount_zoom_out_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/zoom_out/truecount_zoom_out_64.png') 0 0,
+    zoom-out !important;
+}
+
+/* Copy */
+.tc-copy {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/copy/truecount_copy_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/copy/truecount_copy_64.png') 0 0,
+    copy !important;
+}
+
+/* Context menu */
+.tc-context-menu {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/menu/truecount_menu_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/menu/truecount_menu_64.png') 0 0,
+    context-menu !important;
+}
+
+/* Wait / busy */
+.tc-wait {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/wait/truecount_wait_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/wait/truecount_wait_64.png') 0 0,
+    wait !important;
+}
+
+/* Loading / progress */
+.tc-loading,
+[aria-busy='true'],
+.tc-progress {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/loading/truecount_loading_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/loading/truecount_loading_64.png') 0 0,
+    progress !important;
+}
+
+/* Help / tooltip */
+.tc-help,
+[title] {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/help/truecount_help_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/help/truecount_help_64.png') 0 0,
+    help !important;
+}
+
+/* Tidak diizinkan / disabled — termasuk .btn-submit:disabled */
+:disabled,
+[aria-disabled='true'],
+.tc-not-allowed,
+.tc-nope,
+.tc-no-drop,
+.btn-submit:disabled {
+  cursor:
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/nope/truecount_nope_32.png') 0 0,
+    url('/assets/CursorTrueCount/TrueCount_cursor_full_set/nope/truecount_nope_64.png') 0 0,
+    not-allowed !important;
+}
+
+/* Matikan animasi kursor untuk pengguna yang butuh gerakan minimum */
+@media (prefers-reduced-motion: reduce) {
+  .tc-loading,
+  [aria-busy='true'],
+  .tc-progress {
+    cursor: progress !important;
+  }
+}

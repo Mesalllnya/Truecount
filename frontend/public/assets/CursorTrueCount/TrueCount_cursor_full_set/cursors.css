@@ -1,0 +1,29 @@
+/* TrueCount ballot cursor set
+ * Simpan file ini sejajar dengan folder normal/, tombol/, text/, dst.
+ * Ganti _32.png jadi _48.png / _64.png kalau mau kursor lebih besar (hotspot menyesuaikan, lihat nilai di cursor-demo.html). */
+html, body { cursor: url('normal/truecount_normal_32.png') 1 1, auto; }  /* panah default */
+a, [role='link'] { cursor: url('link/truecount_link_32.png') 1 1, pointer; }  /* link */
+button, [role='button'], summary, select, input[type='button'], input[type='submit'], label[for] { cursor: url('tombol/truecount_tombol_32.png') 9 1, pointer; }  /* tombol (tangan menunjuk) */
+input[type='checkbox'], input[type='radio'], .tc-pilih { cursor: url('pilih/truecount_pilih_32.png') 1 1, pointer; }  /* pilihan */
+input:not([type]), input[type='text'], input[type='email'], input[type='search'], input[type='password'], input[type='url'], textarea, [contenteditable='true'], .tc-text { cursor: url('text/truecount_text_32.png') 16 15, text; }  /* teks */
+.tc-text-vertical { cursor: url('text_v/truecount_text_v_32.png') 15 16, vertical-text; }
+.tc-crosshair { cursor: url('crosshair/truecount_crosshair_32.png') 16 16, crosshair; }
+.tc-move { cursor: url('move/truecount_move_32.png') 16 16, move; }
+.tc-all-scroll { cursor: url('move/truecount_move_32.png') 16 16, all-scroll; }
+.tc-ew-resize { cursor: url('resize_ew/truecount_resize_ew_32.png') 16 16, ew-resize; }
+.tc-col-resize { cursor: url('resize_ew/truecount_resize_ew_32.png') 16 16, col-resize; }
+.tc-ns-resize { cursor: url('resize_ns/truecount_resize_ns_32.png') 16 16, ns-resize; }
+.tc-row-resize { cursor: url('resize_ns/truecount_resize_ns_32.png') 16 16, row-resize; }
+.tc-nwse-resize { cursor: url('resize_nwse/truecount_resize_nwse_32.png') 16 15, nwse-resize; }
+.tc-nesw-resize { cursor: url('resize_nesw/truecount_resize_nesw_32.png') 16 15, nesw-resize; }
+.tc-grab { cursor: url('grab/truecount_grab_32.png') 16 15, grab; }
+.tc-grabbing, .tc-grab:active { cursor: url('grabbing/truecount_grabbing_32.png') 16 15, grabbing; }
+.tc-zoom-in { cursor: url('zoom_in/truecount_zoom_in_32.png') 11 11, zoom-in; }
+.tc-zoom-out { cursor: url('zoom_out/truecount_zoom_out_32.png') 11 11, zoom-out; }
+.tc-copy { cursor: url('copy/truecount_copy_32.png') 1 1, copy; }
+.tc-context-menu { cursor: url('menu/truecount_menu_32.png') 1 1, context-menu; }
+.tc-wait { cursor: url('wait/truecount_wait_32.png') 16 15, wait; }
+.tc-progress, [aria-busy='true'] { cursor: url('loading/truecount_loading_32.png') 1 1, progress; }
+.tc-help { cursor: url('help/truecount_help_32.png') 1 1, help; }
+:disabled, [aria-disabled='true'], .tc-not-allowed { cursor: url('nope/truecount_nope_32.png') 1 1, not-allowed; }
+.tc-no-drop { cursor: url('nope/truecount_nope_32.png') 1 1, no-drop; }

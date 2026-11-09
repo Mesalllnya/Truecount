@@ -21,3 +21,6 @@ Thumbs.db
 # ── Tauri / Rust ─────────────────────────────────────────
 frontend/src-tauri/target/
 frontend/src-tauri/WixTools/
+
+# ── Private encrypted storage ──────────────────────────
+backend/storage/private/

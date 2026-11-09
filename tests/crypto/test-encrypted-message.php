@@ -1,7 +1,7 @@
 
 <?php
 
-require_once __DIR__ . '/backend/services/crypto/EncryptedMessageService.php';
+require_once __DIR__ . '/../../backend/services/crypto/EncryptedMessageService.php';
 
 try {
     // Ganti dengan ID user yang benar-benar ada di tabel users.

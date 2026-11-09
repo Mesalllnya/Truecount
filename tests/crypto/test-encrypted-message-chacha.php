@@ -1,7 +1,6 @@
 <?php
 
-require_once __DIR__ .
-    '/backend/services/crypto/EncryptedMessageService.php';
+require_once __DIR__ . '/../../backend/services/crypto/EncryptedMessageService.php';
 
 echo "=== CHACHA20 DATABASE INTEGRATION TEST ===\n\n";
 

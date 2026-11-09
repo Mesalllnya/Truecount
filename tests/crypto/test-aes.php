@@ -1,7 +1,7 @@
 
 <?php
 
-require_once __DIR__ . '/backend/services/crypto/AESGCMService.php';
+require_once __DIR__ . '/../../backend/services/crypto/AESGCMService.php';
 
 $message = "Halo TrueCount! Ini pesan rahasia.";
 

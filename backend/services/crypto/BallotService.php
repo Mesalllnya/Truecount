@@ -12,6 +12,16 @@ require_once __DIR__ . '/../../config/database.php';
 
 class BallotService
 {
+    private const CRYPTO_VERSION = 1;
+
+    /**
+     * AAD untuk mengikat ciphertext dengan election ID.
+     */
+    private static function getAAD(int $electionId): string
+    {
+        return 'truecount:ballot:v1:election:' . $electionId;
+    }
+
     /**
      * Submit suara pemilih.
      *
@@ -124,15 +134,21 @@ class BallotService
                 );
             }
 
-            // 4. Enkripsi payload suara.
+            // 4. Buat payload suara.
             $payload = json_encode([
                 'election_id' => $electionId,
                 'candidate_id' => $candidateId
             ], JSON_THROW_ON_ERROR);
 
-            $encrypted = AESGCMService::encrypt($payload);
+            // 5. Enkripsi menggunakan AES-256-GCM + AAD.
+            $aad = self::getAAD($electionId);
 
-            // 5. Buat hash untuk pemeriksaan integritas tambahan.
+            $encrypted = AESGCMService::encrypt(
+                $payload,
+                $aad
+            );
+
+            // 6. Buat hash untuk pemeriksaan integritas tambahan.
             $integrityHash = hash(
                 'sha256',
                 $encrypted['ciphertext'] .
@@ -140,37 +156,43 @@ class BallotService
                 $encrypted['tag']
             );
 
-            // 6. Simpan ballot TANPA user_id atau voter_id.
+            // 7. Simpan ballot tanpa user_id atau voter_id.
             $stmt = $db->prepare(
-                "INSERT INTO ballots
-                (
+                    "INSERT INTO ballots
+                    (
                     election_id,
                     encrypted_vote,
                     nonce,
                     auth_tag,
-                    integrity_hash
-                )
+                    crypto_version,
+                    integrity_hash,
+                    submitted_at
+                    )
                 VALUES
-                (
+                    (
                     :election_id,
-                    :encrypted_vote,
-                    :nonce,
-                    :auth_tag,
-                    :integrity_hash
-                )"
-            );
+                :encrypted_vote,
+                :nonce,
+                :auth_tag,
+                :crypto_version,
+                :integrity_hash,
+                UTC_TIMESTAMP()
+                    )"
+                );
 
             $stmt->execute([
                 ':election_id' => $electionId,
                 ':encrypted_vote' => $encrypted['ciphertext'],
                 ':nonce' => $encrypted['nonce'],
                 ':auth_tag' => $encrypted['tag'],
+                ':crypto_version' => self::CRYPTO_VERSION,
                 ':integrity_hash' => $integrityHash
             ]);
 
             $ballotId = (int) $db->lastInsertId();
 
-            // 7. Tandai pemilih sudah menggunakan hak pilih.
+
+            // 8. Tandai pemilih sudah menggunakan hak pilih.
             $stmt = $db->prepare(
                 "UPDATE voters
                 SET has_voted = 1,

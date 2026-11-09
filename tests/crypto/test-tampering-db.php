@@ -1,8 +1,8 @@
 
 <?php
 
-require_once __DIR__ . '/backend/services/crypto/EncryptedMessageService.php';
-require_once __DIR__ . '/backend/config/database.php';
+require_once __DIR__ . '/../../backend/services/crypto/EncryptedMessageService.php';
+require_once __DIR__ . '/../../backend/config/database.php';
 
 $messageId = 4;
 $userId = 1;

@@ -1,10 +1,7 @@
 <?php
 
-require_once __DIR__ .
-    '/backend/config/database.php';
-
-require_once __DIR__ .
-    '/backend/services/crypto/BlockchainService.php';
+require_once __DIR__ . '/../../backend/config/database.php';
+require_once __DIR__ . '/../../backend/services/crypto/BlockchainService.php';
 
 $db = getDB();
 

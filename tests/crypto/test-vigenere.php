@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/backend/services/crypto/VigenereCipherService.php';
+require_once __DIR__ . '/../../backend/services/crypto/VigenereCipherService.php';
 
 function test(string $name, bool $condition): void
 {

@@ -1,7 +1,6 @@
 <?php
 
-require_once __DIR__ .
-    '/backend/services/crypto/ChaCha20Poly1305Service.php';
+require_once __DIR__ . '/../../backend/services/crypto/ChaCha20Poly1305Service.php';
 
 echo "=== CHACHA20-POLY1305 TEST ===\n\n";
 

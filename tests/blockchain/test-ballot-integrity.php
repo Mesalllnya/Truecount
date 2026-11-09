@@ -1,7 +1,7 @@
 <?php
 
-require_once __DIR__ . '/backend/config/database.php';
-require_once __DIR__ . '/backend/services/crypto/AESGCMService.php';
+require_once __DIR__ . '/../../backend/config/database.php';
+require_once __DIR__ . '/../../backend/services/crypto/AESGCMService.php';
 
 echo "=== BALLOT INTEGRITY VERIFICATION ===\n\n";
 

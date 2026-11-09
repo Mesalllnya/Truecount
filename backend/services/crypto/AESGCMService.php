@@ -1,4 +1,3 @@
-
 <?php
 
 /**
@@ -22,25 +21,35 @@ class AESGCMService
         $encodedKey = getenv('ENCRYPTION_KEY_B64');
 
         if ($encodedKey === false || $encodedKey === '') {
-            throw new RuntimeException('Encryption key tidak ditemukan.');
+            throw new RuntimeException(
+                'Encryption key tidak ditemukan.'
+            );
         }
 
         $key = base64_decode($encodedKey, true);
 
         if ($key === false || strlen($key) !== 32) {
-            throw new RuntimeException('Encryption key harus 32 byte.');
+            throw new RuntimeException(
+                'Encryption key harus 32 byte.'
+            );
         }
 
         return $key;
     }
 
     /**
-     * Enkripsi plaintext.
+     * Enkripsi plaintext menggunakan AES-256-GCM.
+     *
+     * @param string $plaintext Data yang dienkripsi.
+     * @param string $aad Additional Authenticated Data.
      */
-    public static function encrypt(string $plaintext): array
-    {
+    public static function encrypt(
+        string $plaintext,
+        string $aad = ''
+    ): array {
         $key = self::getKey();
 
+        // Nonce harus unik untuk setiap enkripsi dengan key yang sama.
         $nonce = random_bytes(self::NONCE_LENGTH);
         $tag = '';
 
@@ -51,7 +60,7 @@ class AESGCMService
             OPENSSL_RAW_DATA,
             $nonce,
             $tag,
-            '',
+            $aad,
             self::TAG_LENGTH
         );
 
@@ -67,14 +76,16 @@ class AESGCMService
     }
 
     /**
-     * Dekripsi ciphertext.
+     * Dekripsi ciphertext menggunakan AES-256-GCM.
+     *
+     * AAD harus sama persis dengan AAD saat enkripsi.
      */
     public static function decrypt(
         string $ciphertext,
         string $nonce,
-        string $tag
+        string $tag,
+        string $aad = ''
     ): string {
-
         $cipherRaw = base64_decode($ciphertext, true);
         $nonceRaw = base64_decode($nonce, true);
         $tagRaw = base64_decode($tag, true);
@@ -86,7 +97,9 @@ class AESGCMService
             strlen($nonceRaw) !== self::NONCE_LENGTH ||
             strlen($tagRaw) !== self::TAG_LENGTH
         ) {
-            throw new InvalidArgumentException('Format data tidak valid.');
+            throw new InvalidArgumentException(
+                'Format data tidak valid.'
+            );
         }
 
         $plaintext = openssl_decrypt(
@@ -95,7 +108,8 @@ class AESGCMService
             self::getKey(),
             OPENSSL_RAW_DATA,
             $nonceRaw,
-            $tagRaw
+            $tagRaw,
+            $aad
         );
 
         if ($plaintext === false) {

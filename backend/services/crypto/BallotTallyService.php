@@ -1,4 +1,3 @@
-
 <?php
 
 require_once __DIR__ . '/AESGCMService.php';
@@ -6,6 +5,11 @@ require_once __DIR__ . '/../../config/database.php';
 
 class BallotTallyService
 {
+    private static function getAAD(int $electionId): string
+    {
+        return 'truecount:ballot:v1:election:' . $electionId;
+    }
+
     public static function calculateResults(int $electionId): array
     {
         if ($electionId <= 0) {
@@ -60,9 +64,14 @@ class BallotTallyService
             ];
         }
 
-        // Ambil ciphertext ballot.
+        // Ambil ciphertext ballot dan versi enkripsinya.
         $stmt = $db->prepare(
-            "SELECT encrypted_vote, nonce, auth_tag, integrity_hash
+            "SELECT
+                encrypted_vote,
+                nonce,
+                auth_tag,
+                integrity_hash,
+                crypto_version
              FROM ballots
              WHERE election_id = :election_id"
         );
@@ -91,11 +100,29 @@ class BallotTallyService
                 );
             }
 
+            // Tentukan AAD berdasarkan versi enkripsi.
+            $cryptoVersion = (int) $ballot['crypto_version'];
+
+            if ($cryptoVersion === 0) {
+                // Ballot lama: tanpa AAD.
+                $aad = '';
+
+            } elseif ($cryptoVersion === 1) {
+                // Ballot baru: AAD berdasarkan election ID.
+                $aad = self::getAAD($electionId);
+
+            } else {
+                throw new RuntimeException(
+                    'Versi enkripsi ballot tidak didukung.'
+                );
+            }
+
             // Dekripsi dan verifikasi AES-GCM.
             $plaintext = AESGCMService::decrypt(
                 $ballot['encrypted_vote'],
                 $ballot['nonce'],
-                $ballot['auth_tag']
+                $ballot['auth_tag'],
+                $aad
             );
 
             $vote = json_decode(

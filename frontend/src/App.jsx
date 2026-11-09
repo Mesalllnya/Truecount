@@ -7,6 +7,7 @@ import VotePage from './pages/VotePage'
 import AboutPage from './pages/AboutPage'
 import UsbTokenTestPage from './pages/UsbTokenTestPage'
 import ProfileSettingsPage from './pages/ProfileSettingsPage'
+import ResultsPage from './pages/ResultsPage'
 import HealthMonitor from './components/HealthMonitor'
 import Nav from './components/Nav'
 
@@ -40,6 +41,7 @@ function AppRoutes() {
         <Route path="/dasbor"     element={<DashboardPage />} />
         <Route path="/dashboard"  element={<Navigate to="/dasbor" replace />} />
         <Route path="/pilih"           element={<VotePage />} />
+        <Route path="/hasil/:id"       element={<ResultsPage />} />
         <Route path="/pengaturan"      element={<ProfileSettingsPage />} />
         <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
         <Route path="*"                element={<Navigate to="/" replace />} />

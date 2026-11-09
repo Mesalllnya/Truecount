@@ -47,6 +47,32 @@ $method = $_SERVER['REQUEST_METHOD'];
 $uri = preg_replace('#^/api#', '', $uri);
 $uri = rtrim($uri, '/') ?: '/';
 
+// Static files: /uploads/...
+if (str_starts_with($uri, '/uploads/')) {
+    $filePath = __DIR__ . $uri;
+    // Cegah path traversal
+    $realUploads = realpath(__DIR__ . '/uploads');
+    $realFile    = realpath($filePath);
+    if ($realFile && $realUploads && str_starts_with($realFile, $realUploads) && file_exists($realFile)) {
+        $ext = strtolower(pathinfo($realFile, PATHINFO_EXTENSION));
+        $mimes = [
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'webp' => 'image/webp',
+            'gif'  => 'image/gif',
+            'svg'  => 'image/svg+xml',
+        ];
+        header('Content-Type: ' . ($mimes[$ext] ?? 'application/octet-stream'));
+        header('Content-Length: ' . filesize($realFile));
+        header('Cache-Control: public, max-age=86400');
+        readfile($realFile);
+        exit;
+    } else {
+        jsonResponse(['error' => 'File tidak ditemukan.'], 404);
+    }
+}
+
 // ── Routing ──────────────────────────────────────────────────────────────────
 
 match (true) {
@@ -211,6 +237,127 @@ match (true) {
         require_once __DIR__ . '/api/mfa/usb/label.php';
     })(),
     preg_match('#^/mfa/usb/(\d+)/label$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // ── Elections ────────────────────────────────────────────
+    // GET  /elections        - daftar semua pemilihan
+    $uri === '/elections' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/elections/list.php';
+    })(),
+    // POST /elections        - buat pemilihan baru (admin)
+    $uri === '/elections' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/elections/create.php';
+    })(),
+    $uri === '/elections' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // GET    /elections/{id}  - detail pemilihan
+    preg_match('#^/elections/(\d+)$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1];
+        require_once __DIR__ . '/api/elections/show.php';
+    })(),
+    // PUT    /elections/{id}  - update pemilihan (admin)
+    preg_match('#^/elections/(\d+)$#', $uri, $m) && $method === 'PUT' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1];
+        require_once __DIR__ . '/api/elections/update.php';
+    })(),
+    // DELETE /elections/{id}  - hapus pemilihan (admin)
+    preg_match('#^/elections/(\d+)$#', $uri, $m) && $method === 'DELETE' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1];
+        require_once __DIR__ . '/api/elections/delete.php';
+    })(),
+    preg_match('#^/elections/(\d+)$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // ── Candidates ───────────────────────────────────────────
+    // GET  /elections/{id}/candidates         - daftar kandidat
+    preg_match('#^/elections/(\d+)/candidates$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates';
+        require_once __DIR__ . '/api/elections/candidates/list.php';
+    })(),
+    // POST /elections/{id}/candidates         - tambah kandidat (admin)
+    preg_match('#^/elections/(\d+)/candidates$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates';
+        require_once __DIR__ . '/api/elections/candidates/create.php';
+    })(),
+    preg_match('#^/elections/(\d+)/candidates$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // ── Voters ───────────────────────────────────────────────
+    // GET  /elections/{id}/voters  - daftar voter (admin)
+    preg_match('#^/elections/(\d+)/voters$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/voters';
+        require_once __DIR__ . '/api/elections/voters/list.php';
+    })(),
+    // POST /elections/{id}/voters  - daftarkan voter (admin)
+    preg_match('#^/elections/(\d+)/voters$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/voters';
+        require_once __DIR__ . '/api/elections/voters/register.php';
+    })(),
+    preg_match('#^/elections/(\d+)/voters$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // GET    /elections/{id}/results          - hasil tally pemilihan
+    preg_match('#^/elections/(\d+)/results$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/results';
+        require_once __DIR__ . '/api/elections/results.php';
+    })(),
+    preg_match('#^/elections/(\d+)/results$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // POST   /elections/{id}/vote             - kirim suara (voter)
+    preg_match('#^/elections/(\d+)/vote$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/vote';
+        require_once __DIR__ . '/api/elections/vote.php';
+    })(),
+    preg_match('#^/elections/(\d+)/vote$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Upload foto kandidat: POST /elections/{id}/candidates/{cid}/photo
+    preg_match('#^/elections/(\d+)/candidates/(\d+)/photo$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates/' . $m[2] . '/photo';
+        require_once __DIR__ . '/api/elections/candidates/upload_photo.php';
+    })(),
+    preg_match('#^/elections/(\d+)/candidates/(\d+)/photo$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // PUT    /elections/{id}/candidates/{cid} - update kandidat (admin)
+    preg_match('#^/elections/(\d+)/candidates/(\d+)$#', $uri, $m) && $method === 'PUT' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates/' . $m[2];
+        require_once __DIR__ . '/api/elections/candidates/update.php';
+    })(),
+    // DELETE /elections/{id}/candidates/{cid} - hapus kandidat (admin)
+    preg_match('#^/elections/(\d+)/candidates/(\d+)$#', $uri, $m) && $method === 'DELETE' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates/' . $m[2];
+        require_once __DIR__ . '/api/elections/candidates/delete.php';
+    })(),
+    preg_match('#^/elections/(\d+)/candidates/(\d+)$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // ── Voters Management ─────────────────────────────────────
+    // GET /users/voters - daftar semua voter yang aktif di sistem (admin)
+    $uri === '/users/voters' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/users/voters.php';
+    })(),
+    $uri === '/users/voters' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // DELETE /elections/{id}/voters/{userId} - keluarkan voter dari pemilihan (admin)
+    preg_match('#^/elections/(\d+)/voters/(\d+)$#', $uri, $m) && $method === 'DELETE' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/voters/' . $m[2];
+        require_once __DIR__ . '/api/elections/voters/delete.php';
+    })(),
+    preg_match('#^/elections/(\d+)/voters/(\d+)$#', $uri) => (function () {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 

@@ -485,6 +485,373 @@ test('GET /endpoint-tidak-ada → 404', function () {
     assert_equals(404, $r['status'], 'Status HTTP harus 404');
 });
 
+// ── 12. Elections CRUD (admin) ────────────────────────────
+echo "\n" . bold("12. Elections CRUD\n");
+
+$electionId = null;
+
+test('POST /elections (admin) → 201', function () use (&$electionId, &$adminToken) {
+    $r = request('POST', '/elections', [
+        'title'       => 'Test Pemilihan BEM',
+        'description' => 'Pemilihan test otomatis',
+        'start_time'  => date('c', strtotime('+1 hour')),
+        'end_time'    => date('c', strtotime('+2 days')),
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(201, $r['status'], 'Status HTTP harus 201');
+    assert_has($r['body'], 'election', 'Key election');
+    assert_not_empty($r['body']['election']['id'] ?? 0, 'election.id');
+    assert_equals('draft', $r['body']['election']['status'] ?? null, 'status awal harus draft');
+    $electionId = $r['body']['election']['id'];
+});
+
+test('POST /elections (voter) → 403', function () use (&$token) {
+    $r = request('POST', '/elections', [
+        'title'      => 'Tidak boleh',
+        'start_time' => date('c', strtotime('+1 hour')),
+        'end_time'   => date('c', strtotime('+2 days')),
+    ], ["Authorization: Bearer {$token}"]);
+    assert_equals(403, $r['status'], 'Status HTTP harus 403');
+});
+
+test('POST /elections → 422 (tanpa title) ', function () use (&$adminToken) {
+    $r = request('POST', '/elections', [
+        'start_time' => date('c', strtotime('+1 hour')),
+        'end_time'   => date('c', strtotime('+2 days')),
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(422, $r['status'], 'Status HTTP harus 422');
+});
+
+test('POST /elections → 422 (end_time ≤ start_time)', function () use (&$adminToken) {
+    $r = request('POST', '/elections', [
+        'title'      => 'Waktu salah',
+        'start_time' => date('c', strtotime('+2 days')),
+        'end_time'   => date('c', strtotime('+1 hour')),
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(422, $r['status'], 'Status HTTP harus 422');
+});
+
+test('GET /elections (admin) → 200', function () use (&$adminToken) {
+    $r = request('GET', '/elections', [], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    assert_has($r['body'], 'elections', 'Key elections');
+});
+
+test('GET /elections (voter, hanya active/closed) → 200', function () use (&$token) {
+    $r = request('GET', '/elections', [], ["Authorization: Bearer {$token}"]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    // Voter tidak boleh lihat draft
+    foreach (($r['body']['elections'] ?? []) as $e) {
+        if ($e['status'] === 'draft') {
+            throw new \RuntimeException('Voter tidak boleh melihat election draft');
+        }
+    }
+});
+
+test('GET /elections/{id} (admin) → 200', function () use (&$electionId, &$adminToken) {
+    $r = request('GET', "/elections/{$electionId}", [], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    assert_equals($electionId, $r['body']['election']['id'] ?? null, 'election.id sesuai');
+});
+
+test('GET /elections/{id} draft (voter) → 404', function () use (&$electionId, &$token) {
+    // election masih draft, voter harus dapat 404
+    $r = request('GET', "/elections/{$electionId}", [], ["Authorization: Bearer {$token}"]);
+    assert_equals(404, $r['status'], 'Voter tidak boleh lihat draft');
+});
+
+test('PUT /elections/{id} → 200 (ubah status jadi active)', function () use (&$electionId, &$adminToken) {
+    $r = request('PUT', "/elections/{$electionId}", [
+        'status' => 'active',
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    assert_equals('active', $r['body']['election']['status'] ?? null, 'status harus active');
+});
+
+test('GET /elections/{id} active (voter) → 200', function () use (&$electionId, &$token) {
+    $r = request('GET', "/elections/{$electionId}", [], ["Authorization: Bearer {$token}"]);
+    assert_equals(200, $r['status'], 'Voter boleh lihat active');
+});
+
+// ── 13. Candidates CRUD ───────────────────────────────────
+echo "\n" . bold("13. Candidates CRUD\n");
+
+$candidateId = null;
+
+test('POST /elections/{id}/candidates (admin) → 201', function () use (&$electionId, &$adminToken, &$candidateId) {
+    $r = request('POST', "/elections/{$electionId}/candidates", [
+        'name'    => 'Kandidat Test',
+        'vision'  => 'Visi test',
+        'mission' => 'Misi test',
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(201, $r['status'], 'Status HTTP harus 201');
+    assert_has($r['body'], 'candidate', 'Key candidate');
+    assert_equals('Kandidat Test', $r['body']['candidate']['name'] ?? null, 'name sesuai');
+    $candidateId = $r['body']['candidate']['id'];
+});
+
+test('POST /elections/{id}/candidates (voter) → 403', function () use (&$electionId, &$token) {
+    $r = request('POST', "/elections/{$electionId}/candidates", [
+        'name' => 'Coba voter tambah kandidat',
+    ], ["Authorization: Bearer {$token}"]);
+    assert_equals(403, $r['status'], 'Voter tidak boleh tambah kandidat');
+});
+
+test('POST /elections/{id}/candidates → 422 (tanpa nama)', function () use (&$electionId, &$adminToken) {
+    $r = request('POST', "/elections/{$electionId}/candidates", [
+        'vision' => 'tanpa nama',
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(422, $r['status'], 'Status HTTP harus 422');
+});
+
+test('GET /elections/{id}/candidates → 200', function () use (&$electionId, &$token) {
+    $r = request('GET', "/elections/{$electionId}/candidates", [], ["Authorization: Bearer {$token}"]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    assert_has($r['body'], 'candidates', 'Key candidates');
+});
+
+test('PUT /elections/{id}/candidates/{cid} → 200', function () use (&$electionId, &$candidateId, &$adminToken) {
+    $r = request('PUT', "/elections/{$electionId}/candidates/{$candidateId}", [
+        'name' => 'Kandidat Test Updated',
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    assert_equals('Kandidat Test Updated', $r['body']['candidate']['name'] ?? null, 'name terupdate');
+});
+
+// ── 14. Voting ────────────────────────────────────────────
+echo "\n" . bold("14. Voting\n");
+
+// Daftarkan voter ke election langsung via DB untuk keperluan test
+function registerVoterDb(int $userId, int $electionId): void
+{
+    $db = getDB();
+    $db->prepare(
+        'INSERT IGNORE INTO voters (user_id, election_id, has_voted, registered_at)
+         VALUES (?, ?, 0, UTC_TIMESTAMP())'
+    )->execute([$userId, $electionId]);
+}
+
+$voterId = null;
+
+test('GET /auth/me untuk dapat voter user_id', function () use (&$token, &$voterId) {
+    $r = request('GET', '/auth/me', [], ["Authorization: Bearer {$token}"]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    $voterId = $r['body']['user']['id'] ?? null;
+    assert_not_empty($voterId, 'Harus dapat user id voter');
+});
+
+test('POST /elections/{id}/vote (belum terdaftar) → 403', function () use (&$electionId, &$candidateId, &$token) {
+    $r = request('POST', "/elections/{$electionId}/vote", [
+        'candidate_id' => $candidateId,
+    ], ["Authorization: Bearer {$token}"]);
+    assert_equals(403, $r['status'], 'Harus 403 jika belum terdaftar sebagai voter');
+});
+
+test('POST /elections/{id}/vote (admin tidak boleh) → 403', function () use (&$electionId, &$candidateId, &$adminToken) {
+    $r = request('POST', "/elections/{$electionId}/vote", [
+        'candidate_id' => $candidateId,
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(403, $r['status'], 'Admin tidak boleh vote');
+});
+
+test('POST /elections/{id}/vote (voter terdaftar) → 200', function () use (&$electionId, &$candidateId, &$token, &$voterId) {
+    // Daftarkan voter ke election via DB
+    registerVoterDb((int)$voterId, (int)$electionId);
+    $r = request('POST', "/elections/{$electionId}/vote", [
+        'candidate_id' => $candidateId,
+    ], ["Authorization: Bearer {$token}"]);
+    assert_equals(200, $r['status'], 'Status HTTP harus 200');
+    assert_has($r['body'], 'message', 'Key message');
+});
+
+test('POST /elections/{id}/vote (vote dua kali) → 409', function () use (&$electionId, &$candidateId, &$token) {
+    $r = request('POST', "/elections/{$electionId}/vote", [
+        'candidate_id' => $candidateId,
+    ], ["Authorization: Bearer {$token}"]);
+    assert_equals(409, $r['status'], 'Harus 409 jika sudah pernah vote');
+});
+
+test('POST /elections/{id}/vote (kandidat tidak ada) → 404', function () use (&$electionId, &$adminToken) {
+    // Buat voter admin baru untuk tes ini (pakai user admin, daftarkan dulu)
+    // Karena admin tidak bisa vote, pakai fixture DB buat voter baru
+    $db      = getDB();
+    $suffix2 = substr(md5(microtime() . 'v2'), 0, 6);
+    $pw      = password_hash('VoterTest@1', PASSWORD_ARGON2ID);
+    $db->prepare(
+        "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'voter')"
+    )->execute(["voter2_{$suffix2}", "voter2_{$suffix2}@test.com", $pw]);
+    $uid2 = (int)$db->lastInsertId();
+    registerVoterDb($uid2, (int)$electionId);
+
+    $loginR = request('POST', '/auth/login', [
+        'identifier' => "voter2_{$suffix2}",
+        'password'   => 'VoterTest@1',
+    ]);
+    $token2 = $loginR['body']['token'] ?? '';
+
+    $r = request('POST', "/elections/{$electionId}/vote", [
+        'candidate_id' => 999999,
+    ], ["Authorization: Bearer {$token2}"]);
+    assert_equals(404, $r['status'], 'Kandidat tidak ada harus 404');
+});
+
+test('POST /elections/{id}/vote (election draft) → 422', function () use (&$adminToken, &$candidateId) {
+    // Buat election baru yang masih draft
+    $createR = request('POST', '/elections', [
+        'title'      => 'Draft Election Test',
+        'start_time' => date('c', strtotime('+1 day')),
+        'end_time'   => date('c', strtotime('+3 days')),
+    ], ["Authorization: Bearer {$adminToken}"]);
+    $draftId = $createR['body']['election']['id'] ?? 0;
+
+    $db      = getDB();
+    $suffix3 = substr(md5(microtime() . 'v3'), 0, 6);
+    $pw      = password_hash('VoterTest@1', PASSWORD_ARGON2ID);
+    $db->prepare(
+        "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'voter')"
+    )->execute(["voter3_{$suffix3}", "voter3_{$suffix3}@test.com", $pw]);
+    $uid3 = (int)$db->lastInsertId();
+    registerVoterDb($uid3, (int)$draftId);
+
+    $loginR = request('POST', '/auth/login', [
+        'identifier' => "voter3_{$suffix3}",
+        'password'   => 'VoterTest@1',
+    ]);
+    $token3 = $loginR['body']['token'] ?? '';
+
+    $r = request('POST', "/elections/{$draftId}/vote", [
+        'candidate_id' => $candidateId,
+    ], ["Authorization: Bearer {$token3}"]);
+    assert_equals(422, $r['status'], 'Election draft harus 422');
+});
+
+// ── 15. Voters Management ─────────────────────────────────
+echo "\n" . bold("15. Voters Management\n");
+
+test('POST /elections/{id}/voters (admin, daftarkan voter) → 200', function () use (&$electionId, &$adminToken, &$voterId) {
+    // Buat voter baru via DB untuk didaftarkan
+    $db      = getDB();
+    $suffix4 = substr(md5(microtime() . 'v4'), 0, 6);
+    $pw      = password_hash('VoterTest@1', PASSWORD_ARGON2ID);
+    $db->prepare(
+        "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'voter')"
+    )->execute(["voter4_{$suffix4}", "voter4_{$suffix4}@test.com", $pw]);
+    $uid4 = (int)$db->lastInsertId();
+
+    $r = request('POST', "/elections/{$electionId}/voters", [
+        'user_id' => $uid4,
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Status HTTP harus 200');
+    assert_has($r['body'], 'registered', 'Key registered');
+    assert_equals(1, $r['body']['registered'] ?? null, 'registered harus 1');
+});
+
+test('POST /elections/{id}/voters (idempoten - user sudah terdaftar) → 200', function () use (&$electionId, &$adminToken, &$voterId) {
+    // Kirim ulang voterId yang sudah terdaftar dari test voting sebelumnya
+    $r = request('POST', "/elections/{$electionId}/voters", [
+        'user_id' => $voterId,
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Status HTTP harus 200');
+    assert_equals(0, $r['body']['registered'] ?? -1, 'registered 0 karena sudah terdaftar');
+    assert_equals(1, $r['body']['skipped']    ?? -1, 'skipped 1');
+});
+
+test('POST /elections/{id}/voters (bulk user_ids) → 200', function () use (&$electionId, &$adminToken) {
+    $db      = getDB();
+    $suffix5 = substr(md5(microtime() . 'v5'), 0, 6);
+    $pw      = password_hash('VoterTest@1', PASSWORD_ARGON2ID);
+    $db->prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'voter')")
+       ->execute(["voter5a_{$suffix5}", "voter5a_{$suffix5}@test.com", $pw]);
+    $uid5a = (int)$db->lastInsertId();
+    $db->prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'voter')")
+       ->execute(["voter5b_{$suffix5}", "voter5b_{$suffix5}@test.com", $pw]);
+    $uid5b = (int)$db->lastInsertId();
+
+    $r = request('POST', "/elections/{$electionId}/voters", [
+        'user_ids' => [$uid5a, $uid5b],
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Status HTTP harus 200');
+    assert_equals(2, $r['body']['registered'] ?? -1, 'registered harus 2');
+});
+
+test('POST /elections/{id}/voters (voter tidak boleh) → 403', function () use (&$electionId, &$token, &$voterId) {
+    $r = request('POST', "/elections/{$electionId}/voters", [
+        'user_id' => $voterId,
+    ], ["Authorization: Bearer {$token}"]);
+    assert_equals(403, $r['status'], 'Voter tidak boleh daftarkan voter');
+});
+
+test('POST /elections/{id}/voters (user_id tidak ada) → 422', function () use (&$electionId, &$adminToken) {
+    $r = request('POST', "/elections/{$electionId}/voters", [
+        'user_id' => 999998,
+    ], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(422, $r['status'], 'User tidak ada harus 422');
+});
+
+test('GET /elections/{id}/voters (admin) → 200', function () use (&$electionId, &$adminToken) {
+    $r = request('GET', "/elections/{$electionId}/voters", [], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Status HTTP');
+    assert_has($r['body'], 'voters', 'Key voters');
+    assert_has($r['body'], 'total',  'Key total');
+    assert_has($r['body'], 'voted',  'Key voted');
+});
+
+test('GET /elections/{id}/voters (voter tidak boleh) → 403', function () use (&$electionId, &$token) {
+    $r = request('GET', "/elections/{$electionId}/voters", [], ["Authorization: Bearer {$token}"]);
+    assert_equals(403, $r['status'], 'Voter tidak boleh lihat daftar voter');
+});
+
+// ── 16. Results ───────────────────────────────────────────
+echo "\n" . bold("16. Hasil Pemilihan\n");
+
+test('GET /elections/{id}/results (active, admin) → 200 live count', function () use (&$electionId, &$adminToken) {
+    $r = request('GET', "/elections/{$electionId}/results", [], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $r['status'], 'Admin boleh lihat hasil election active');
+    assert_has($r['body'], 'results',     'Key results');
+    assert_has($r['body'], 'total_votes', 'Key total_votes');
+    assert_has($r['body'], 'voter_count', 'Key voter_count');
+    assert_has($r['body'], 'participation_rate', 'Key participation_rate');
+});
+
+test('GET /elections/{id}/results (active, voter) → 403', function () use (&$electionId, &$token) {
+    $r = request('GET', "/elections/{$electionId}/results", [], ["Authorization: Bearer {$token}"]);
+    assert_equals(403, $r['status'], 'Voter tidak boleh lihat hasil election active');
+});
+
+test('GET /elections/{id}/results (closed, voter) → 200', function () use (&$electionId, &$adminToken, &$token) {
+    // Tutup election dulu
+    request('PUT', "/elections/{$electionId}", ['status' => 'closed'], ["Authorization: Bearer {$adminToken}"]);
+
+    $r = request('GET', "/elections/{$electionId}/results", [], ["Authorization: Bearer {$token}"]);
+    assert_equals(200, $r['status'], 'Voter boleh lihat hasil election closed');
+    assert_has($r['body'], 'results', 'Key results');
+    // Pastikan ada suara (dari test voting sebelumnya)
+    $totalVotes = $r['body']['total_votes'] ?? -1;
+    if ($totalVotes < 1) {
+        throw new \RuntimeException("total_votes harus >= 1, didapat: {$totalVotes}");
+    }
+});
+
+// ── 17. Delete election (admin) ───────────────────────────
+echo "\n" . bold("17. Hapus Election\n");
+
+test('DELETE /elections/{id} (active) → 422', function () use (&$electionId, &$adminToken) {
+    $r = request('DELETE', "/elections/{$electionId}", [], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(422, $r['status'], 'Tidak boleh hapus election active');
+});
+
+test('DELETE /elections/{id} draft → 200', function () use (&$adminToken) {
+    $r = request('POST', '/elections', [
+        'title'      => 'Akan Dihapus',
+        'start_time' => date('c', strtotime('+1 day')),
+        'end_time'   => date('c', strtotime('+3 days')),
+    ], ["Authorization: Bearer {$adminToken}"]);
+    $tmpId = $r['body']['election']['id'] ?? 0;
+
+    $del = request('DELETE', "/elections/{$tmpId}", [], ["Authorization: Bearer {$adminToken}"]);
+    assert_equals(200, $del['status'], 'Hapus draft harus 200');
+    assert_has($del['body'], 'message', 'Key message');
+});
+
 // ── Summary ───────────────────────────────────────────────
 $total = $pass + $fail;
 echo "\n" . dim(str_repeat('─', 42)) . "\n";

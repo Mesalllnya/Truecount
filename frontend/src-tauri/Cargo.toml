@@ -20,5 +20,18 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri       = { version = "2", features = ["wry"], default-features = false }
 tauri-plugin-opener = { version = "2" }
+tauri-plugin-fs = "2"
+tauri-plugin-shell = "2"
+tokio = { version = "1", features = ["rt", "time", "sync"] }
 serde       = { version = "1", features = ["derive"] }
 serde_json  = "1"
+base64      = "0.22"
+hex         = "0.4"
+sha2        = "0.10"
+pbkdf2      = "0.12"
+aes-gcm     = "0.10"
+x509-parser = { version = "0.16", features = ["verify"] }
+pkcs8 = { version = "0.11", features = ["alloc", "pem"] }
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+der         = "0.7"

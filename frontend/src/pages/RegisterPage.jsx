@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './AuthPage.css'
+import { SkeletonText, SkeletonCircle } from '../components/ui/Skeleton'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
  *  jangan pernah tampilkan mentah ke user. */
@@ -135,8 +136,12 @@ export default function RegisterPage() {
           <Link to="/" className="brand-link">TrueCount</Link>
         </div>
         <div className="auth-state">
-          <span className="auth-state-spinner" aria-hidden="true" />
-          <h1>Memeriksa undangan…</h1>
+          <div className="skeleton-pane">
+            <SkeletonCircle className="skeleton-pane-circle" />
+            <SkeletonText variant="title" />
+            <SkeletonText variant="text" />
+            <SkeletonText variant="text" />
+          </div>
         </div>
       </div>
     )

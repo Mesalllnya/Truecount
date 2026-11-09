@@ -1,0 +1,239 @@
+/* ═══════════════════════════════════════════════════════════
+   ResultsPage.css - TrueCount Halaman Hasil Pemilihan
+   ═══════════════════════════════════════════════════════════ */
+
+.results-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #fafaf8;
+  font-family: 'Plus Jakarta Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  color: #0d0d0d;
+}
+
+.results-main {
+  flex: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.results-head {
+  margin-bottom: 2.5rem;
+}
+
+.results-head h1 {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+  text-wrap: balance;
+}
+
+.results-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  margin-bottom: 0.85rem;
+}
+
+.results-status-badge--closed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.results-status-badge--active {
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.results-meta {
+  font-size: 0.82rem;
+  color: #6a6a67;
+  line-height: 1.6;
+}
+
+/* ── Stats summary ──────────────────────────────────────── */
+.results-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+@media (max-width: 480px) {
+  .results-stats { grid-template-columns: 1fr 1fr; }
+}
+
+.results-stat-card {
+  background: #fff;
+  border: 1px solid #e4e4e1;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+
+.results-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6a6a67;
+  margin-bottom: 0.3rem;
+}
+
+.results-stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: #0d0d0d;
+}
+
+.results-stat-value span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6a6a67;
+  letter-spacing: 0;
+}
+
+/* ── Kandidat hasil ─────────────────────────────────────── */
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 2.5rem;
+}
+
+.results-item {
+  background: #fff;
+  border: 2px solid #e4e4e1;
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  transition: border-color 150ms;
+}
+
+.results-item--winner {
+  border-color: #2a7a3b;
+  background: #f0fdf4;
+}
+
+.results-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.65rem;
+}
+
+.results-item-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.results-item-rank {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #6a6a67;
+  min-width: 24px;
+}
+
+.results-item-rank--winner {
+  color: #15803d;
+}
+
+.results-item-name {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.results-item-vision {
+  font-size: 0.8rem;
+  color: #6a6a67;
+  margin-top: 0.1rem;
+}
+
+.results-item-votes {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.results-item-count {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.results-item-pct {
+  font-size: 0.75rem;
+  color: #6a6a67;
+  font-weight: 500;
+}
+
+/* Progress bar */
+.results-bar-track {
+  height: 8px;
+  background: #e4e4e1;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.results-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #3468b0;
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.results-item--winner .results-bar-fill {
+  background: #2a7a3b;
+}
+
+/* ── Winner badge ───────────────────────────────────────── */
+.results-winner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #15803d;
+  background: #dcfce7;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+/* ── Back button ────────────────────────────────────────── */
+.results-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 1.4rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1.5px solid #0d0d0d;
+  border-radius: 10px;
+  background: transparent;
+  color: #0d0d0d;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 150ms, color 150ms;
+}
+
+.results-back-btn:hover { background: #0d0d0d; color: #fff; }

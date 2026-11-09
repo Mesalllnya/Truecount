@@ -54,10 +54,16 @@ Truecount/
 │   └── api_test.php        # Test otomatis 20 kasus
 │
 ├── docs/
-│   ├── deploy.md           # Panduan deploy web + desktop
-│   ├── desktop.md          # Panduan konversi ke desktop app
-│   ├── knowledge_transfer.md  # Konteks proyek untuk AI
-│   └── pembagian_jobdesk_secure_e_voting.md
+│   ├── deploy/
+│   │   └── deploy.md       # Panduan deploy web + desktop
+│   ├── desktop/
+│   │   └── desktop.md      # Panduan konversi ke desktop app
+│   ├── admin/
+│   │   └── PANDUAN_ADMIN.md # Panduan operasional admin/panitia
+│   ├── dev/
+│   │   └── knowledge_transfer.md  # Konteks proyek untuk AI
+│   └── project/
+│       └── pembagian_jobdesk_secure_e_voting.md  # Pembagian tugas tim
 │
 ├── .env.example
 └── README.md
@@ -77,7 +83,14 @@ cp .env.example .env        # isi DB_PASS, JWT_SECRET
 php database/migrate.php --seed
 ```
 
-Akun admin default: `admin` / `Admin@1234`
+### Akun Default & Dummy
+
+| Username | Password | Role | Keterangan |
+| --- | --- | --- | --- |
+| `admin` | `Admin@1234` | admin | Akun utama |
+| `rio` | `Rio@12345` | voter | Testing MFA USB token |
+| `pemilih1` | `Pemilih@123` | voter | Testing pemilihan |
+| `pemilih2` | `Pemilih@123` | voter | Testing pemilihan |
 
 ### 3. Backend + Frontend
 
@@ -125,7 +138,7 @@ Kalau port 8000 sudah dipakai server lain, app akan memakai server yang sudah ad
 
 Log aplikasi (jika troubleshooting): `%LOCALAPPDATA%\com.truecount.app\logs\` (Windows) - berisi `truecount.log` dan `php.log`.
 
-Lihat [`docs/desktop.md`](docs/desktop.md) untuk panduan lengkap.
+Lihat [`docs/desktop/desktop.md`](docs/desktop/desktop.md) untuk panduan lengkap.
 
 ## API Endpoints (Sprint 2)
 
@@ -166,16 +179,17 @@ Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis.
 
 ## Deploy
 
-Panduan lengkap (web + desktop): [`docs/deploy.md`](docs/deploy.md)
+Panduan lengkap (web + desktop): [`docs/deploy/deploy.md`](docs/deploy/deploy.md)
 
 ## Dokumentasi
 
 | Dokumen | Isi |
 | --- | --- |
-| [`docs/deploy.md`](docs/deploy.md) | Setup lokal, server, Nginx, HTTPS, checklist |
-| [`docs/desktop.md`](docs/desktop.md) | Konversi ke .exe / .dmg / .deb via Tauri |
-| [`docs/knowledge_transfer.md`](docs/knowledge_transfer.md) | Konteks lengkap untuk AI / onboarding |
-| [`docs/pembagian_jobdesk_secure_e_voting.md`](docs/pembagian_jobdesk_secure_e_voting.md) | Pembagian tugas tim |
+| [`docs/admin/PANDUAN_ADMIN.md`](docs/admin/PANDUAN_ADMIN.md) | **Panduan operasional admin/panitia** (undangan, USB token, troubleshooting) |
+| [`docs/deploy/deploy.md`](docs/deploy/deploy.md) | Setup lokal, server, Nginx, HTTPS, checklist |
+| [`docs/desktop/desktop.md`](docs/desktop/desktop.md) | Konversi ke .exe / .dmg / .deb via Tauri |
+| [`docs/dev/knowledge_transfer.md`](docs/dev/knowledge_transfer.md) | Konteks lengkap untuk AI / onboarding |
+| [`docs/project/pembagian_jobdesk_secure_e_voting.md`](docs/project/pembagian_jobdesk_secure_e_voting.md) | Pembagian tugas tim |
 
 ## Tim Pengembang
 
@@ -184,7 +198,7 @@ Project ini dibuat untuk menuntaskan **Proyek Akhir Mata Kuliah Kriptografi**.
 | # | Nama | Peran | Fokus Sprint |
 | --- | ------ | ------- | -------------- |
 | 1 | **Rio Meidi Ataurrahman** | Authentication & User Management | Sprint 1 (Auth, Invite, Dashboard) · Sprint 4 (MFA: WebAuthn, USB Token) |
-| 2 | **[Nama Orang 2]** | Election Management & Voting System | Sprint 2 (Election CRUD, Voting, Results) |
+| 2 | **Muhamad Ifsal Fadhilah** | Election Management & Voting System | Sprint 2 (Election CRUD, Voting, Results) |
 | 3 | **[Nama Orang 3]** | Cryptography & Advanced Security | Sprint 3 (Vigenere, AES-256-GCM, ChaCha20, Blockchain, Steganografi) |
 
 > **Anggota:** Mahasiswa S1 Informatika UPN "Veteran" Yogyakarta Angkatan 2024

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './AboutPage.css'
+import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 
 /* ── SVG Icons ───────────────────────────────────────────── */
 function Icon({ name, size = 20 }) {
@@ -90,8 +91,8 @@ const team = [
     university: 'UPN "Veteran" Yogyakarta',
     major: 'S1 Informatika',
     batch: 'Angkatan 2024',
-    github: 'https://github.com/riomeidi', // placeholder
-    linkedin: 'https://linkedin.com/in/riomeidi', // placeholder
+    github: 'https://github.com/orions29', // placeholder
+    linkedin: 'https://linkedin.com/in/riomeidia', // placeholder
   },
   {
     number: '02',
@@ -148,15 +149,6 @@ export default function AboutPage() {
 
   return (
     <div className="about">
-      {/* ══ NAV ══════════════════════════════════════════════ */}
-      <header className="nav">
-        <Link to="/" className="nav-brand">TrueCount</Link>
-        <nav className="nav-links" aria-label="Navigasi utama">
-          <Link to="/">Beranda</Link>
-          <Link to="/masuk">Masuk</Link>
-        </nav>
-      </header>
-
       {/* ══ HERO ═════════════════════════════════════════════ */}
       <main
         ref={heroRef}
@@ -170,7 +162,7 @@ export default function AboutPage() {
             e-voting aman.
           </h1>
           <p className="hero-sub">
-            TrueCount dikembangkan sebagai <strong>Proyek Akhir Mata Kuliah Kriptografi</strong>
+            TrueCount dikembangkan sebagai <strong> Proyek Akhir Mata Kuliah Kriptografi </strong>
             oleh tiga mahasiswa S1 Informatika UPN "Veteran" Yogyakarta Angkatan 2024.
             Kami percaya suara setiap orang berhak dihitung dengan jujur, aman, dan transparan.
           </p>
@@ -335,7 +327,9 @@ export default function AboutPage() {
 
       {/* ══ FOOTER ═══════════════════════════════════════════ */}
       <footer className="footer">
-        <Link to="/" className="nav-brand">TrueCount</Link>
+        <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
+          <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
+        </Link>
         <p>Sistem E-Voting Aman - Proyek Akhir Kriptografi</p>
         <p className="footer-copy">© 2026 UPN "Veteran" Yogyakarta</p>
       </footer>

@@ -1,7 +1,7 @@
 # Panduan Admin & Panitia — TrueCount
 
 > **Untuk siapa:** Admin sistem & panitia pemilihan yang mengoperasikan TrueCount.
-> **Catatan:** Dokumen ini panduan pemakaian. Detail teknis untuk developer ada di [knowledge_transfer.md](knowledge_transfer.md).
+> **Catatan:** Dokumen ini panduan pemakaian. Detail teknis untuk developer ada di [knowledge_transfer.md](../dev/knowledge_transfer.md).
 
 ---
 
@@ -62,7 +62,7 @@ npm run dev:full           # PHP :8000 + Vite :5173
 2. Masukkan username/email + kata sandi
 3. Klik "Masuk" → diarahkan ke dasbor
 
-> **Status dongle di halaman login:** Indikator "Dongle terpasang / tidak terdeteksi" menunjukkan deteksi USB token secara otomatis. Ini **hanya indikator** — tidak memengaruhi proses login (belum menjadi syarat wajib).
+> **Status dongle di halaman login:** Indikator "Dongle terpasang / tidak terdeteksi" menunjukkan deteksi USB token secara otomatis. Di **aplikasi desktop**, tombol "Dongle Keamanan" bisa dipilih untuk login pakai USB token (MFA). Di **mode browser**, tombol ini disabled karena auto-detect USB hanya tersedia di Tauri desktop (batasan keamanan browser).
 
 ---
 

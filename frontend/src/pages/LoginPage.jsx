@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUsbToken, startUsbAuthenticate, verifyUsbAuthenticate, base64urlToBytes, bytesToBase64url } from '../hooks/useUsbToken'
 import { useWebAuthnLogin } from '../hooks/useWebAuthn'
+import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import './AuthPage.css'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
@@ -120,6 +121,14 @@ export default function LoginPage() {
     credentialId: null,
     formatValid: null,
   })
+
+  // ── Toast untuk metode login yang tidak tersedia ──
+  const [toast, setToast] = useState(null)
+
+  const showAuthToast = useCallback((message) => {
+    setToast(message)
+    setTimeout(() => setToast(null), 3500)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -343,6 +352,13 @@ export default function LoginPage() {
     setUsbAuthChallengeData(null)
   }
 
+  // ── Deteksi lingkungan: Tauri desktop vs browser web ──
+  // window.__TAURI__ butuh withGlobalTauri: true di tauri.conf.json.
+  // window.__TAURI_INTERNALS__ selalu tersedia saat berjalan di Tauri (dev & build),
+  // konsisten dengan deteksi di hooks/useUsbToken.ts.
+  const isTauri =
+    typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+
   // ── Konfigurasi metode auth ─────────────────────────────────
   const authMethods = [
     {
@@ -358,8 +374,8 @@ export default function LoginPage() {
       label: 'Dongle Keamanan',
       description: 'USB token fisik (TrueCount Token)',
       icon: <KeyIcon />,
-      available: true,
-      unavailableReason: undefined,
+      available: isTauri,
+      unavailableReason: isTauri ? undefined : 'Dongle USB hanya tersedia di aplikasi desktop',
     },
     {
       id: 'password',
@@ -391,7 +407,9 @@ export default function LoginPage() {
             />
           </svg>
         </button>
-        <Link to="/" className="brand-link">TrueCount</Link>
+        <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
+          <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
+        </Link>
       </div>
 
       <div className="auth-card">
@@ -407,6 +425,13 @@ export default function LoginPage() {
           </p>
         )}
 
+        {toast && (
+          <p className="auth-warning" role="status">
+            <AlertIcon />
+            {toast}
+          </p>
+        )}
+
         {/* ── Pilihan Metode Auth ────────────────────────────── */}
         <div className="auth-method-selector" role="radiogroup" aria-label="Pilih metode masuk">
           {authMethods.map((method) => (
@@ -414,7 +439,13 @@ export default function LoginPage() {
               key={method.id}
               type="button"
               className={`auth-method-btn ${selectedMethod === method.id ? 'auth-method-btn--active' : ''} ${!method.available ? 'auth-method-btn--disabled' : ''}`}
-              onClick={() => method.available && setSelectedMethod(method.id)}
+              onClick={() => {
+                if (method.available) {
+                  setSelectedMethod(method.id)
+                } else {
+                  showAuthToast(method.unavailableReason || 'Metode ini tidak tersedia di perangkat Anda.')
+                }
+              }}
               disabled={!method.available}
               role="radio"
               aria-checked={selectedMethod === method.id}
@@ -486,7 +517,7 @@ export default function LoginPage() {
                 name="password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="••••••••"
+                placeholder="i'm Password"
                 value={form.password}
                 onChange={handleChange}
                 required
@@ -566,29 +597,6 @@ export default function LoginPage() {
 
             {usbAuthStep === 'idle' && (
               <>
-                <div className="field">
-                  <label htmlFor="dongle-pin">PIN Dongle</label>
-                  <div className="password-input-wrapper">
-                    <input
-                      id="dongle-pin"
-                      name="password"
-                      type="password"
-                      autoComplete="current-password"
-                      placeholder="Masukkan PIN dongle (opsional untuk memulai)"
-                      value={form.password}
-                      onChange={handleChange}
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setUsbAuthPinShow(p => !p)}
-                      aria-label={usbAuthPinShow ? 'Sembunyikan PIN' : 'Tampilkan PIN'}
-                    >
-                      {usbAuthPinShow ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
-                  </div>
-                </div>
-
                 {error && <p className="field-error" role="alert"><AlertIcon />{error}</p>}
                 {usbAuthError && <p className="field-error" role="alert"><AlertIcon />{usbAuthError}</p>}
 
@@ -696,12 +704,14 @@ export default function LoginPage() {
                 <div className="error-icon"><AlertIcon /></div>
                 <h3>Autentikasi Gagal</h3>
                 <p>{usbAuthError || 'Terjadi kesalahan saat autentikasi dongle.'}</p>
-                <button type="button" className="btn-submit btn-submit--dongle" onClick={handleUsbAuthStart}>
-                  <KeyIcon /> Coba Lagi
-                </button>
-                <button type="button" className="btn-submit btn-submit--secondary" onClick={handleUsbAuthCancel}>
-                  Kembali
-                </button>
+                <div className="form-actions">
+                  <button type="button" className="btn-submit btn-submit--dongle" onClick={handleUsbAuthStart}>
+                    <KeyIcon /> Coba Lagi
+                  </button>
+                  <button type="button" className="btn-submit btn-submit--secondary" onClick={handleUsbAuthCancel}>
+                    Kembali
+                  </button>
+                </div>
               </div>
             )}
           </div>

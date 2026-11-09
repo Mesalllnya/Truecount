@@ -1,0 +1,126 @@
+/* ════════════════════════════════════════════════════════════════
+   Skeleton.css - Placeholder animasi saat konten masih memuat
+   Font: Plus Jakarta Sans · Palette: #F13C35
+   ════════════════════════════════════════════════════════════════ */
+
+:root {
+  --skeleton-bg:    #e4e4e1;
+  --skeleton-fg:    #f0f0ec;
+  --skeleton-speed: 1.4s;
+}
+
+/* ── Base skeleton block ─────────────────────────────────────── */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--skeleton-bg);
+  color: transparent;
+  animation: skeletonPulse var(--skeleton-speed) ease-in-out infinite;
+}
+
+/* Shimmer gelombang di dalam blok */
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeleton-fg) 40%,
+    var(--skeleton-bg) 100%
+  );
+  animation: skeletonShimmer var(--skeleton-speed) ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+
+@keyframes skeletonShimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* ── Varian teks (baris paragraf) ────────────────────────────── */
+.skeleton-text {
+  height: 1rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+.skeleton-text--title {
+  height: 1.25rem;
+  width: 60%;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+}
+.skeleton-text--small {
+  height: 0.8rem;
+  width: 45%;
+  border-radius: 4px;
+  margin-bottom: 0.35rem;
+}
+
+/* ── Varian avatar / lingkaran ───────────────────────────────── */
+.skeleton-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+/* Lingkaran di dalam pane loading (agak lebih besar) */
+.skeleton-pane-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+}
+
+/* ── Varian baris tabel / kartu undangan ─────────────────────── */
+.skeleton-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--skeleton-bg);
+}
+.skeleton-row:last-child { border-bottom: none; }
+.skeleton-row .skeleton-circle { flex-shrink: 0; }
+.skeleton-row .skeleton-text--title { width: 45%; }
+.skeleton-row .skeleton-text--small { width: 30%; }
+
+/* ── Varian kotak statistik ──────────────────────────────────── */
+.skeleton-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--skeleton-bg);
+  border-radius: 12px;
+}
+.skeleton-stat .skeleton-text--small { height: 0.9rem; width: 35%; }
+.skeleton-stat .skeleton-text { height: 1.7rem; width: 55%; border-radius: 4px; }
+
+/* ── Container yang menutupi konten saat loading ─────────────── */
+.skeleton-pane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+.skeleton-pane .skeleton-text--title { width: 30%; margin: 0 auto; }
+.skeleton-pane .skeleton-text { width: 50%; margin: 0 auto; }
+
+/* Reduced motion untuk pengguna yang menginginkan gerakan minimum */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .skeleton::after {
+    animation: none;
+    opacity: 0.6;
+  }
+}

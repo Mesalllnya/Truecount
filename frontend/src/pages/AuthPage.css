@@ -93,6 +93,13 @@
   color: var(--black);
 }
 
+/* ── Nav logo di halaman login (agak lebih besar dari standar nav 55px) ── */
+.auth-brand .nav-logo {
+  height: 60px;
+  width: auto;
+  display: block;
+}
+
 /* ── Card ───────────────────────────────────────────────── */
 .auth-card {
   flex: 1;
@@ -896,6 +903,22 @@
   border-radius: 6px;
   background: #e9f4ec;
   border: 1px solid #c3e0cb;
+  margin-bottom: 1.25rem;
+  animation: cardReveal 400ms var(--ease-out) both;
+}
+
+/* ── Peringatan metode login tidak tersedia ─────────────── */
+.auth-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--red-dark);
+  padding: 0.55rem 0.75rem;
+  border-radius: 6px;
+  background: #fdf0ef;
+  border: 1px solid #f5c6c3;
   margin-bottom: 1.25rem;
   animation: cardReveal 400ms var(--ease-out) both;
 }

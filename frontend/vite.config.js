@@ -14,11 +14,11 @@ export default defineConfig(({ command }) => ({
     port: 5173,
     strictPort: true,
     // Tauri mendengarkan event dari host ini
-    host: '127.0.0.1',
+    host: 'localhost',
     // HMR untuk hot reload saat desktop dev
     hmr: {
       protocol: 'ws',
-      host: '127.0.0.1',
+      host: 'localhost',
       port: 5183,
     },
     watch: {

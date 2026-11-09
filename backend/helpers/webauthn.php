@@ -10,22 +10,26 @@
 /**
  * Encode bytes ke base64url (tanpa padding, -_ alih-alih +/)
  */
-function base64urlEncode(string $data): string
-{
-    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+if (!function_exists('base64urlEncode')) {
+    function base64urlEncode(string $data): string
+    {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
 }
 
 /**
  * Decode base64url ke bytes
  */
-function base64urlDecode(string $data): string
-{
-    $data = strtr($data, '-_', '+/');
-    $pad = strlen($data) % 4;
-    if ($pad > 0) {
-        $data .= str_repeat('=', 4 - $pad);
+if (!function_exists('base64urlDecode')) {
+    function base64urlDecode(string $data): string
+    {
+        $data = strtr($data, '-_', '+/');
+        $pad = strlen($data) % 4;
+        if ($pad > 0) {
+            $data .= str_repeat('=', 4 - $pad);
+        }
+        return base64_decode($data);
     }
-    return base64_decode($data);
 }
 
 /**

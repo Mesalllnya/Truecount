@@ -3,23 +3,11 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useUsbToken, fetchUsbCredentials, revokeUsbCredential, updateUsbLabel, listUsbDrives, createTokenFile, startUsbRegister, verifyUsbRegister } from '../hooks/useUsbToken'
 import { useChangePassword } from '../hooks/useAuth'
 import { useWebAuthnRegister, useWebAuthnList, useWebAuthnRevoke, isPlatformAuthenticatorAvailable } from '../hooks/useAuth'
+import { getRpId, base64urlEncode, base64urlDecode } from '../utils/webauthn'
 import './ProfileSettingsPage.css'
 
 /* ── Constants & Helpers ─────────────────────────────────── */
 const API_BASE = 'http://localhost:8000'
-
-function base64urlEncode(bytes) {
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
-}
-function base64urlDecode(str) {
-  const base64 = str.replace(/-/g, '+').replace(/_/g, '/')
-  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
-  const binary = atob(padded)
-  return Uint8Array.from(binary, c => c.charCodeAt(0))
-}
 
 /* ── Icon components ─────────────────────────────────────── */
 function UserIcon() {
@@ -208,7 +196,7 @@ export default function ProfileSettingsPage() {
 
   // Toast state
   const [toast, setToast] = useState(null)
-  const toastTimerRef = useState(null)
+  const [toastTimerRef, setToastTimerRef] = useState(null)
 
   const showToast = useCallback((message) => {
     setToast(message)
@@ -278,7 +266,7 @@ export default function ProfileSettingsPage() {
     setWaRegisterCredId('')
   }
 
-  const handleWaRegister = async () => {
+  const handleWaRegister = useCallback(async () => {
     setWaRegisterStep('creating')
     clearWaError()
     try {
@@ -304,7 +292,7 @@ export default function ProfileSettingsPage() {
       const credential = await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: data.rp.name, id: data.rp.id },
+          rp: { name: data.rp.name, id: getRpId() },
           user: {
             id: userId,
             name: data.user.name,
@@ -347,7 +335,15 @@ export default function ProfileSettingsPage() {
       setWaRegisterStep('error')
       setWaRegisterError(err instanceof Error ? err.message : 'Registrasi Windows Hello gagal')
     }
-  }
+  }, []) // Empty deps: handleWaRegister is stable, only calls setState and API
+
+  // Saat modal WebAuthn dibuka dan masih di step idle, langsung mulai registrasi
+  // agar navigator.credentials.create() dipanggil dan jendela Windows Hello muncul.
+  useEffect(() => {
+    if (showWaRegister && waRegisterStep === 'idle') {
+      handleWaRegister()
+    }
+  }, [showWaRegister, waRegisterStep])
 
   const handleWaRevoke = async (id) => {
     if (!window.confirm('Hapus Windows Hello ini? Anda tidak bisa login dengan Windows Hello yang dihapus.')) return
@@ -1203,10 +1199,12 @@ export default function ProfileSettingsPage() {
             {waRegisterStep === 'idle' && (
               <div className="modal-body">
                 <div className="wa-step-waiting">
-                  <div className="wa-pulse-ring"></div>
-                  <div className="wa-pulse-ring"></div>
-                  <div className="wa-pulse-ring"></div>
-                  <FingerprintIcon className="wa-pulse-center" />
+                  <div className="wa-pulse-rings">
+                    <div className="wa-pulse-ring"></div>
+                    <div className="wa-pulse-ring"></div>
+                    <div className="wa-pulse-ring"></div>
+                    <FingerprintIcon className="wa-pulse-center" />
+                  </div>
                 </div>
                 <p className="wa-step-title">Menyiapkan registrasi…</p>
                 <p className="wa-step-desc">Meminta challenge dari server dan mempersiapkan WebAuthn.</p>
@@ -1244,7 +1242,9 @@ export default function ProfileSettingsPage() {
                   <code>{waRegisterCredId.slice(0, 24)}…</code>
                   <span className="credential-label">Credential ID</span>
                 </div>
-                <button className="btn btn-primary btn-full" onClick={handleCloseWaRegister}>Selesai</button>
+                <div className="form-actions">
+                  <button className="btn btn-primary btn-full" onClick={handleCloseWaRegister}>Selesai</button>
+                </div>
               </div>
             )}
 

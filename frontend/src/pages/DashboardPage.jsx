@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
+import { SkeletonRow } from '../components/ui/Skeleton'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
@@ -58,6 +60,53 @@ function RevokeIcon() {
       <circle cx="12" cy="12" r="10"/>
       <line x1="15" y1="9" x2="9" y2="15"/>
       <line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
+  )
+}
+
+/* Nav icons */
+function DashboardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  )
+}
+
+function VoteIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2"/>
+      <line x1="8" y1="9"  x2="16" y2="9"/>
+      <line x1="8" y1="13" x2="16" y2="13"/>
+      <line x1="8" y1="17" x2="12" y2="17"/>
+    </svg>
+  )
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  )
+}
+
+function BallotNavIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {/* lembar kertas suara yang dilipat */}
+      <rect x="6" y="3" width="12" height="18" rx="1" />
+      <path d="M6 3 l6 4" />
+      <path d="M12 3 l6 4" />
+      {/* garis pada kertas */}
+      <line x1="8" y1="7" x2="16" y2="7"/>
+      <line x1="8" y1="10" x2="14" y2="10"/>
+      <line x1="8" y1="13" x2="12" y2="13"/>
     </svg>
   )
 }
@@ -428,7 +477,12 @@ function InvitesPanel() {
         </div>
 
         {loading && (
-          <p className="invite-list-note">Memuat undangan…</p>
+          <div className="skeleton-pane">
+            <div className="skeleton skeleton-text--title" />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </div>
         )}
 
         {!loading && !listError && filteredInvites.length === 0 && (
@@ -847,7 +901,7 @@ export default function DashboardPage() {
           aria-label={`TrueCount - klik ${5 - clicks} kali lagi`}
           title="TrueCount"
         >
-          TrueCount
+          <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
           {clicks > 0 && clicks < 5 && (
             <span className="dash-brand-dots" aria-hidden="true">
               {Array.from({ length: 5 }, (_, i) => (
@@ -858,10 +912,10 @@ export default function DashboardPage() {
         </button>
 
         <nav className="dash-nav-links" aria-label="Navigasi dasbor">
-          <span className="dash-nav-item dash-nav-active">Dasbor</span>
-          <Link to="/pilih" className="dash-nav-item">Pemilihan</Link>
-          <Link to="/pengaturan" className="dash-nav-item">Pengaturan</Link>
-          <span className="dash-nav-item">Surat Suara Saya</span>
+          <span className="dash-nav-item dash-nav-active"><DashboardIcon /> Dasbor</span>
+          <Link to="/pilih" className="dash-nav-item"><VoteIcon /> Pemilihan</Link>
+          <Link to="/pengaturan" className="dash-nav-item"><SettingsIcon /> Pengaturan</Link>
+          <span className="dash-nav-item"><BallotNavIcon /> Surat Suara Saya</span>
         </nav>
 
         {/* ── Server status sudah dihapus dari UI - HealthMonitor global

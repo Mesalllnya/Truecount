@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import './DashboardPage.css'   // reuse .dash-nav / .dash-brand / .dash-logout
 import './VotePage.css'
 
@@ -38,6 +39,29 @@ function ExitIcon() {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <polyline points="16 17 21 12 16 7" />
       <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  )
+}
+
+/* Nav icons */
+function DashboardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  )
+}
+
+function VoteIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2"/>
+      <line x1="8" y1="9"  x2="16" y2="9"/>
+      <line x1="8" y1="13" x2="16" y2="13"/>
+      <line x1="8" y1="17" x2="12" y2="17"/>
     </svg>
   )
 }
@@ -240,10 +264,13 @@ export default function VotePage() {
     <div className="vote-shell">
 
       <header className="dash-nav">
-        <Link to="/dasbor" className="dash-brand">TrueCount</Link>
+        <Link to="/dasbor" className="dash-brand" aria-label="TrueCount - Dasbor">
+          <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
+        </Link>
+
         <nav className="dash-nav-links" aria-label="Navigasi dasbor">
-          <Link to="/dasbor" className="dash-nav-item">Dasbor</Link>
-          <span className="dash-nav-item dash-nav-active" aria-current="page">Pilih</span>
+          <Link to="/dasbor" className="dash-nav-item"><DashboardIcon /> Dasbor</Link>
+          <span className="dash-nav-item dash-nav-active" aria-current="page"><VoteIcon /> Pilih</span>
         </nav>
         <button className="dash-logout" onClick={handleLogout}>
           <ExitIcon />

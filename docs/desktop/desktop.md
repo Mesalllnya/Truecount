@@ -131,7 +131,7 @@ Untuk mengubah ukuran default, edit nilai `width`/`height` di [`frontend/src-tau
 
 ## Menambahkan Icon Aplikasi
 
-> ✅ **Sudah selesai** - icons sudah di-generate dari `frontend/public/raise_hand.jpg`
+> ✅ **Sudah selesai** - icons sudah di-generate dari `frontend/public/icon/TrueCount_logo_transparent.png`
 > dengan perintah di bawah. Skip seksi ini kecuali mau ganti logo.
 
 File di `frontend/src-tauri/icons/` dengan nama persis:
@@ -152,7 +152,7 @@ Cara generate ulang - gunakan CLI Tauri:
 # Kalau source tidak square, tambahkan --fit cover / --fit contain.
 cd frontend
 npx tauri icon path/to/icon-1024.png
-npx tauri icon public/raise_hand.jpg --fit cover
+npx tauri icon public/icon/TrueCount_logo_transparent.png --fit cover
 ```
 
 ---
@@ -224,7 +224,7 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 
 ## Checklist Sebelum Build Production
 
-- [x] Isi semua file icon di `src-tauri/icons/` (dari `raise_hand.jpg`)
+- [x] Isi semua file icon di `src-tauri/icons/` (dari `TrueCount_logo_transparent.png`)
 - [x] Backend URL frontend `LoginPage.jsx` / `RegisterPage.jsx` → `http://localhost:8000`
 - [ ] Ganti `identifier` di `tauri.conf.json` jika dipublikasikan (`com.namakamu.truecount`)
 - [ ] Pastikan `php` terinstall & ada di PATH mesin target
@@ -243,4 +243,7 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 | "Entry Point Not Found: TaskDialogIndirect" | Fitur `dialog` Tauri aktif (Windows lama) | Pastikan `default-features = false` di `Cargo.toml` |
 | Build error `transformWithEsbuild` / `esbuild` | Vite 8 tidak bundle esbuild | `npm install -D esbuild terser` di `frontend/` |
 | Build error transform destructuring | Target build terlalu lama (`es2021`) | Pakai target `['es2020', 'chrome90', 'safari13']` di `vite.config.js` |
-| Build gagal `Couldn't find a .ico icon` | Folder `icons/` kosong | `npx tauri icon public/raise_hand.jpg --fit cover` |
+| Build gagal `Couldn't find a .ico icon` | Folder `icons/` kosong | `npx tauri icon public/icon/TrueCount_logo_transparent.png --fit cover` |
+| Tombol "Dongle Keamanan" disabled di login (desktop) | Deteksi `isTauri` pakai `window.__TAURI__` yang butuh `withGlobalTauri: true` (belum ada di `tauri.conf.json`) | Sudah fix di `LoginPage.jsx` baris 355: ganti ke `'__TAURI_INTERNALS__' in window` (selalu tersedia di Tauri) |
+| Terminal muncul-menutup tiap detik (Windows) | `list_removable_drives()` jalankan PowerShell tanpa `CREATE_NO_WINDOW`, jadi jendela konsol muncul saat scan USB tiap 2 detik | Sudah fix di `usb_token.rs`: tambah `cmd.creation_flags(0x08000000)` |
+| Icon app masih default | Icon di `src-tauri/icons/` masih default Tauri | Copy `public/icon/TrueCount_logo_transparent.png` → `src-tauri/icons/icon.png`, lalu `npx tauri icon src-tauri/icons/icon.png` untuk generate `.ico`/`.icns` dll. |

@@ -43,8 +43,8 @@ $election = $stmt->fetch();
 if (!$election) {
     jsonResponse(['error' => 'Pemilihan tidak ditemukan.'], 404);
 }
-if ($election['status'] === 'closed') {
-    jsonResponse(['error' => 'Tidak dapat mengubah kandidat pada pemilihan yang sudah ditutup.'], 422);
+if ($election['status'] !== 'draft') {
+    jsonResponse(['error' => 'Tidak dapat mengubah kandidat setelah pemilihan dimulai atau ditutup.'], 422);
 }
 
 // Verifikasi kandidat ada dan milik election ini

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import { SkeletonRow } from '../components/ui/Skeleton'
+import { CandidatesModal, VotersModal } from '../components/ElectionModals'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
@@ -579,6 +580,10 @@ function ElectionsPanel() {
   // ── Edit status / inline ──────────────────────────────────
   const [updatingId, setUpdatingId] = useState(null)
 
+  // ── Modals: Paslon & Voters ───────────────────────────────
+  const [selectedCandidatesEl, setSelectedCandidatesEl] = useState(null)
+  const [selectedVotersEl, setSelectedVotersEl]         = useState(null)
+
   const token = localStorage.getItem('tc_token')
 
   const loadElections = useCallback(async () => {
@@ -775,8 +780,29 @@ function ElectionsPanel() {
                 )}
                 <div className="el-meta">
                   <span>{formatDate(el.start_time)} → {formatDate(el.end_time)}</span>
-                  <span>{el.candidate_count} kandidat</span>
+                  <span>{el.candidate_count} paslon</span>
+                  <span>{el.voter_count ?? 0} pemilih terdaftar</span>
                 </div>
+              </div>
+
+              {/* Aksi Paslon & Pemilih */}
+              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="copy-btn"
+                  onClick={() => setSelectedCandidatesEl(el)}
+                  title="Kelola Paslon & Foto"
+                >
+                  👥 Paslon ({el.candidate_count})
+                </button>
+                <button
+                  type="button"
+                  className="copy-btn"
+                  onClick={() => setSelectedVotersEl(el)}
+                  title="Tentukan Peserta Pemilih"
+                >
+                  📋 Peserta ({el.voter_count ?? 0})
+                </button>
               </div>
 
               {/* Aksi status */}
@@ -830,9 +856,298 @@ function ElectionsPanel() {
 
       <p className="admin-footnote">
         Status: <strong>Draft</strong> = belum dibuka · <strong>Aktif</strong> = sedang voting · <strong>Selesai</strong> = hasil tersedia.
-        Tambahkan kandidat & daftarkan pemilih via API setelah pemilihan dibuat.
+        Kelola pasangan calon serta tentukan akun pemilih yang berhak mengikuti pemilihan sebelum pemilihan dibuka.
       </p>
+
+      {/* Modal Paslon */}
+      {selectedCandidatesEl && (
+        <CandidatesModal
+          election={selectedCandidatesEl}
+          onClose={() => setSelectedCandidatesEl(null)}
+          onRefreshElection={loadElections}
+        />
+      )}
+
+      {/* Modal Pemilih */}
+      {selectedVotersEl && (
+        <VotersModal
+          election={selectedVotersEl}
+          onClose={() => setSelectedVotersEl(null)}
+          onRefreshElection={loadElections}
+        />
+      )}
     </section>
+  )
+}
+
+/* ── Voter Elections Overview Panel (Dashboard Pemilih) ─────────────── */
+function VoterDashboardView() {
+  const navigate = useNavigate()
+  const token    = localStorage.getItem('tc_token')
+  const [elections, setElections] = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState('')
+
+  const loadVoterElections = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API}/elections?with_candidates=1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await readJson(res)
+      if (!res.ok) throw new Error(data.error || 'Gagal memuat pemilihan.')
+      setElections(data.elections ?? [])
+    } catch (err) {
+      setError(err?.message || 'Gagal memuat pemilihan.')
+    } finally {
+      setLoading(false)
+    }
+  }, [token])
+
+  useEffect(() => { loadVoterElections() }, [loadVoterElections])
+
+  const registeredElections = elections.filter(e => e.is_registered)
+
+  if (loading) {
+    return (
+      <main className="dash-main" style={{ maxWidth: '980px', width: '100%', margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <p style={{ color: 'var(--muted)' }}>Memuat agenda pemilihan Anda…</p>
+      </main>
+    )
+  }
+
+  if (error) {
+    return (
+      <main className="dash-main" style={{ maxWidth: '980px', width: '100%', margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '1rem', color: '#b91c1c' }}>
+          {error}
+        </div>
+      </main>
+    )
+  }
+
+  if (registeredElections.length === 0) {
+    return (
+      <main className="dash-main">
+        <div className="dash-empty">
+          <div className="dash-empty-icon" aria-hidden="true">
+            <BallotIcon />
+          </div>
+          <h1>Belum Terdaftar di Pemilihan</h1>
+          <p>Anda belum diikutsertakan ke dalam pemilihan apa pun oleh admin/panitia.</p>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main className="dash-main dash-main--voter" style={{ display: 'block', maxWidth: '980px', width: '100%', margin: '0 auto', padding: '2.5rem 1.5rem 4rem' }}>
+      <header className="admin-head" style={{ marginBottom: '2rem' }}>
+        <div className="admin-title">
+          <h1>Agenda Pemilihan Anda</h1>
+          <p>
+            Berikut adalah daftar pemilihan yang Anda ikuti. Silakan geser paslon ke samping untuk melihat visi & misi, atau buka bilik suara untuk menentukan pilihan.
+          </p>
+        </div>
+      </header>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        {registeredElections.map((el) => {
+          const candidates = el.candidates ?? []
+          return (
+            <section
+              key={el.id}
+              style={{
+                background: 'var(--white)',
+                border: '1px solid var(--border)',
+                borderRadius: '16px',
+                padding: '1.75rem',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+              }}
+            >
+              {/* Header Pemilihan */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', paddingBottom: '1.25rem', borderBottom: '1px solid var(--border)' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'var(--black)' }}>
+                      {el.title}
+                    </h2>
+                    <span className={`badge badge--${el.status}`}>
+                      {el.status === 'active' ? 'Sedang Berlangsung' : el.status === 'closed' ? 'Selesai' : 'Persiapan'}
+                    </span>
+                    {el.has_voted ? (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#e8f5e9', color: '#2a7a3b' }}>
+                        ✓ Suara Telah Diinput
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c' }}>
+                        Belum Memberikan Suara
+                      </span>
+                    )}
+                  </div>
+                  {el.description && (
+                    <p style={{ fontSize: '0.88rem', color: 'var(--muted)', marginTop: '0.35rem' }}>
+                      {el.description}
+                    </p>
+                  )}
+                  <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: '0.4rem' }}>
+                    Periode: <strong>{formatDate(el.start_time)}</strong> s/d <strong>{formatDate(el.end_time)}</strong>
+                  </div>
+                </div>
+
+                {el.status === 'active' && (
+                  <button
+                    className="create-submit"
+                    onClick={() => navigate('/pilih')}
+                    style={{
+                      background: el.has_voted ? '#4b5563' : '#F13C35',
+                      borderColor: el.has_voted ? '#4b5563' : '#F13C35',
+                      fontSize: '0.88rem',
+                      padding: '0.6rem 1.25rem',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {el.has_voted ? 'Lihat Pilihan Anda' : 'Buka Bilik Suara →'}
+                  </button>
+                )}
+                {el.status === 'closed' && (
+                  <Link
+                    to={`/hasil/${el.id}`}
+                    className="create-submit"
+                    style={{
+                      background: '#3468b0',
+                      borderColor: '#3468b0',
+                      fontSize: '0.88rem',
+                      padding: '0.6rem 1.25rem',
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Lihat Hasil Akhir
+                  </Link>
+                )}
+              </div>
+
+              {/* Daftar Pasangan Calon & Visi Misi */}
+              <div style={{ marginTop: '1.25rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)', marginBottom: '1rem' }}>
+                  Daftar Pasangan Calon ({candidates.length})
+                </h3>
+
+                {candidates.length === 0 ? (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Belum ada pasangan calon yang terdaftar pada pemilihan ini.</p>
+                ) : (
+                  <div style={{
+                    display: 'flex',
+                    gap: '1.25rem',
+                    overflowX: 'auto',
+                    paddingBottom: '0.85rem',
+                    scrollSnapType: 'x mandatory',
+                    WebkitOverflowScrolling: 'touch',
+                  }}>
+                    {candidates.map((c, i) => (
+                      <div
+                        key={c.id}
+                        style={{
+                          flex: '0 0 320px',
+                          maxWidth: '320px',
+                          scrollSnapAlign: 'start',
+                          background: 'var(--cream)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '12px',
+                          padding: '1.25rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.75rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                          {c.photo_path ? (
+                            <img
+                              src={`${API}${c.photo_path}`}
+                              alt={c.name}
+                              style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '10px',
+                                objectFit: 'cover',
+                                border: '1px solid var(--border)',
+                                flexShrink: 0,
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.innerHTML = '<div style="width:64px;height:64px;border-radius:10px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:1.8rem;">👤</div>';
+                              }}
+                            />
+                          ) : (
+                            <div style={{
+                              width: '64px',
+                              height: '64px',
+                              borderRadius: '10px',
+                              background: '#e5e7eb',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '1.8rem',
+                              flexShrink: 0,
+                            }}>
+                              👤
+                            </div>
+                          )}
+                          <div style={{ minWidth: 0 }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.05em' }}>
+                              PASLON {String(i + 1).padStart(2, '0')}
+                            </span>
+                            <h4 style={{
+                              fontSize: '1.05rem',
+                              fontWeight: 800,
+                              margin: '0.1rem 0 0 0',
+                              color: 'var(--black)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {c.name}
+                            </h4>
+                          </div>
+                        </div>
+
+                        {c.vision && (
+                          <div style={{
+                            background: 'var(--white)',
+                            padding: '0.65rem 0.85rem',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border)',
+                            fontSize: '0.82rem',
+                          }}>
+                            <span style={{ fontWeight: 700, color: 'var(--black)', display: 'block', marginBottom: '0.15rem' }}>
+                              Visi:
+                            </span>
+                            <span style={{ color: 'var(--muted)', fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              "{c.vision}"
+                            </span>
+                          </div>
+                        )}
+
+                        {c.mission && (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--black)', lineHeight: 1.5 }}>
+                            <span style={{ fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>Misi:</span>
+                            <p style={{ margin: 0, color: '#374151', whiteSpace: 'pre-line', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                              {c.mission}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+    </main>
   )
 }
 
@@ -933,21 +1248,7 @@ export default function DashboardPage() {
           <InvitesPanel />
         </main>
       ) : (
-        <main className="dash-main">
-          <div className="dash-empty">
-            <div className="dash-empty-icon" aria-hidden="true">
-              <BallotIcon />
-            </div>
-            <h1>Belum ada pemilihan</h1>
-            <p>Pemilihan yang sedang aktif akan muncul di sini setelah admin membukanya.</p>
-            <button
-              className="dash-empty-demo"
-              onClick={() => navigate('/pilih')}
-            >
-              Lihat halaman pemilihan (demo)
-            </button>
-          </div>
-        </main>
+        <VoterDashboardView />
       )}
     </div>
   )

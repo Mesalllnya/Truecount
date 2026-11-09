@@ -48,22 +48,55 @@ if (!$election) {
     jsonResponse(['error' => 'Pemilihan tidak ditemukan.'], 404);
 }
 
-if ($election['status'] === 'closed') {
-    jsonResponse(['error' => 'Tidak dapat menambah kandidat ke pemilihan yang sudah ditutup.'], 422);
+if ($election['status'] !== 'draft') {
+    jsonResponse(['error' => 'Tidak dapat menambah kandidat setelah pemilihan dimulai atau ditutup.'], 422);
 }
 
 // ── Parse body ────────────────────────────────────────────
-$body      = json_decode(file_get_contents('php://input'), true) ?? [];
-$name      = trim($body['name']       ?? '');
-$vision    = trim($body['vision']     ?? '');
-$mission   = trim($body['mission']    ?? '');
-$photoPath = trim($body['photo_path'] ?? '');
+// Mendukung JSON body atau multipart/form-data (dengan upload file langsung)
+$name      = '';
+$vision    = '';
+$mission   = '';
+$photoPath = '';
+
+if (!empty($_POST)) {
+    $name    = trim($_POST['name']    ?? '');
+    $vision  = trim($_POST['vision']  ?? '');
+    $mission = trim($_POST['mission'] ?? '');
+} else {
+    $body      = json_decode(file_get_contents('php://input'), true) ?? [];
+    $name      = trim($body['name']       ?? '');
+    $vision    = trim($body['vision']     ?? '');
+    $mission   = trim($body['mission']    ?? '');
+    $photoPath = trim($body['photo_path'] ?? '');
+}
 
 if ($name === '') {
     jsonResponse(['error' => 'Nama kandidat wajib diisi.'], 422);
 }
 if (strlen($name) > 150) {
     jsonResponse(['error' => 'Nama kandidat maksimal 150 karakter.'], 422);
+}
+
+// Cek apakah ada file foto yang diunggah langsung melalui multipart
+if (!empty($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+    $file     = $_FILES['photo'];
+    $maxBytes = 2 * 1024 * 1024;
+    if ($file['size'] <= $maxBytes) {
+        $finfo    = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($file['tmp_name']);
+        $extMap   = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        if (isset($extMap[$mimeType])) {
+            $uploadDir = __DIR__ . '/../../../uploads/candidates/';
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0777, true);
+            }
+            $filename = 'c_' . bin2hex(random_bytes(8)) . '.' . $extMap[$mimeType];
+            if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
+                $photoPath = '/uploads/candidates/' . $filename;
+            }
+        }
+    }
 }
 
 // ── Simpan ────────────────────────────────────────────────

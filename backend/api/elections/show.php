@@ -60,6 +60,19 @@ if (!$isAdmin && $election['status'] === 'draft') {
     jsonResponse(['error' => 'Pemilihan tidak ditemukan.'], 404);
 }
 
+$isRegistered = false;
+$hasVoted     = false;
+
+if (!$isAdmin) {
+    $stmtVoter = $db->prepare('SELECT id, has_voted FROM voters WHERE election_id = ? AND user_id = ? LIMIT 1');
+    $stmtVoter->execute([$id, $authUser['sub']]);
+    $vRow = $stmtVoter->fetch();
+    if ($vRow) {
+        $isRegistered = true;
+        $hasVoted     = (bool)$vRow['has_voted'];
+    }
+}
+
 jsonResponse([
     'election' => [
         'id'              => (int)$election['id'],
@@ -73,5 +86,7 @@ jsonResponse([
         'updated_at'      => toIso8601($election['updated_at']),
         'candidate_count' => (int)$election['candidate_count'],
         'voter_count'     => (int)$election['voter_count'],
+        'is_registered'   => $isRegistered,
+        'has_voted'       => $hasVoted,
     ],
 ]);

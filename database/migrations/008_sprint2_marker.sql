@@ -1,0 +1,6 @@
+-- =============================================================
+-- TrueCount - Migration 008: uploads folder marker
+-- Kandidat photo_path sudah ada di tabel candidates (migration 001).
+-- Migration ini hanya placeholder agar migrate runner tahu Sprint 2.
+-- =============================================================
+-- Marker sprint 2

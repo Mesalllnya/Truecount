@@ -41,8 +41,8 @@ if (!$election) {
     jsonResponse(['error' => 'Pemilihan tidak ditemukan.'], 404);
 }
 
-if (in_array($election['status'], ['active', 'closed'], true)) {
-    jsonResponse(['error' => 'Tidak dapat menghapus kandidat pada pemilihan yang sudah aktif atau ditutup.'], 422);
+if ($election['status'] !== 'draft') {
+    jsonResponse(['error' => 'Tidak dapat menghapus kandidat setelah pemilihan dimulai atau ditutup.'], 422);
 }
 
 $stmt = $db->prepare('SELECT id FROM candidates WHERE id = ? AND election_id = ? LIMIT 1');

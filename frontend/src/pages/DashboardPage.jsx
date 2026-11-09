@@ -564,6 +564,289 @@ function InvitesPanel() {
    ══════════════════════════════════════════════════════════ */
 const API = 'http://localhost:8000'
 
+
+function BlockchainAuditPanel() {
+  const [elections, setElections] = useState([])
+  const [selectedId, setSelectedId] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [processing, setProcessing] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState(null)
+  const [action, setAction] = useState('')
+
+  const token = localStorage.getItem('tc_token')
+
+  useEffect(() => {
+    async function loadElections() {
+      try {
+        const res = await fetch(`${API}/elections`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        const data = await readJson(res)
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Gagal memuat election.')
+        }
+
+        setElections(data.elections ?? [])
+      } catch (err) {
+        setError(err.message || 'Gagal memuat election.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadElections()
+  }, [token])
+
+  const selectedElection = elections.find(
+    el => String(el.id) === String(selectedId)
+  )
+
+  async function handleBlockchainAction(type) {
+    if (!selectedElection) return
+
+    if (
+      type === 'seal' &&
+      selectedElection.status !== 'closed'
+    ) {
+      setError('Election harus berstatus closed sebelum sealing.')
+      return
+    }
+
+    if (
+      type === 'seal' &&
+      !window.confirm(
+        `Seal election "${selectedElection.title}" ke blockchain? Tindakan ini tidak dapat diulang.`
+      )
+    ) {
+      return
+    }
+
+    setProcessing(true)
+    setError('')
+    setResult(null)
+    setAction(type)
+
+    try {
+      const url =
+        `${API}/elections/blockchain/${type === 'seal' ? 'seal' : 'verify'}` +
+        `?id=${encodeURIComponent(selectedElection.id)}`
+
+      const res = await fetch(url, {
+        method: type === 'seal' ? 'POST' : 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await readJson(res)
+
+      // HTTP 409 pada verify berarti chain tidak valid.
+      if (!res.ok && res.status !== 409) {
+        throw new Error(
+          data.error || data.message || 'Operasi blockchain gagal.'
+        )
+      }
+
+      setResult({
+        ...data,
+        action: type,
+      })
+    } catch (err) {
+      setError(err.message || 'Terjadi kesalahan.')
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  return (
+    <section
+      className="admin-panel"
+      aria-label="Blockchain audit"
+      style={{ marginTop: '3rem' }}
+    >
+      <div className="admin-head">
+        <div>
+          <h2 className="admin-title">Blockchain Audit</h2>
+          <p className="admin-footnote">
+            Sealing dan verifikasi integritas blockchain election.
+          </p>
+        </div>
+      </div>
+
+      <div style={{ padding: '1rem 0' }}>
+        <label
+          htmlFor="blockchain-election"
+          style={{ display: 'block', marginBottom: '0.5rem' }}
+        >
+          Pilih Election
+        </label>
+
+        <select
+          id="blockchain-election"
+          value={selectedId}
+          onChange={e => {
+            setSelectedId(e.target.value)
+            setResult(null)
+            setError('')
+          }}
+          disabled={loading || processing}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            borderRadius: '8px',
+            border: '1px solid #ccc',
+          }}
+        >
+          <option value="">
+            {loading ? 'Memuat election...' : 'Pilih election'}
+          </option>
+
+          {elections.map(el => (
+            <option key={el.id} value={el.id}>
+              {el.title} — {el.status}
+            </option>
+          ))}
+        </select>
+
+        {selectedElection && (
+          <p style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>
+            Status: <strong>{selectedElection.status}</strong>
+          </p>
+        )}
+
+        <div
+          style={{
+            display: 'flex',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+            marginTop: '1rem',
+          }}
+        >
+          <button
+            type="button"
+            className="create-submit"
+            disabled={
+              processing ||
+              !selectedElection ||
+              selectedElection.status !== 'closed'
+            }
+            onClick={() => handleBlockchainAction('seal')}
+          >
+            {processing && action === 'seal'
+              ? 'Sealing...'
+              : 'Seal Election'}
+          </button>
+
+          <button
+            type="button"
+            className="create-submit"
+            disabled={processing || !selectedElection}
+            onClick={() => handleBlockchainAction('verify')}
+            style={{
+              background: '#3468b0',
+              borderColor: '#3468b0',
+            }}
+          >
+            {processing && action === 'verify'
+              ? 'Memverifikasi...'
+              : 'Verify Blockchain'}
+          </button>
+        </div>
+
+        {error && (
+          <div
+            role="alert"
+            style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              background: '#fef2f2',
+              color: '#b91c1c',
+              borderRadius: '8px',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {result && (
+          <div
+            role="status"
+            style={{
+              marginTop: '1.25rem',
+              padding: '1rem',
+              border: '1px solid #ddd',
+              borderRadius: '10px',
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              {result.action === 'seal'
+                ? 'Hasil Sealing'
+                : 'Hasil Verifikasi'}
+            </h3>
+
+            <p>
+              <strong>Status: </strong>
+              {result.success ? 'Berhasil / Valid' : 'Tidak Valid'}
+            </p>
+
+            <p>{result.message}</p>
+
+            {result.data && (
+              <div style={{ fontSize: '0.85rem', overflowWrap: 'anywhere' }}>
+                {result.data.ballot_count !== undefined && (
+                  <p>
+                    Ballot Count: {result.data.ballot_count}
+                  </p>
+                )}
+
+                {result.data.blocks_checked !== undefined && (
+                  <p>
+                    Blocks Checked: {result.data.blocks_checked}
+                  </p>
+                )}
+
+                {result.data.block_index !== undefined && (
+                  <p>
+                    Sealed Block Index: {result.data.block_index}
+                  </p>
+                )}
+
+                {result.data.merkle_root && (
+                  <p>
+                    Merkle Root: <code>{result.data.merkle_root}</code>
+                  </p>
+                )}
+
+                {result.data.block_hash && (
+                  <p>
+                    Block Hash: <code>{result.data.block_hash}</code>
+                  </p>
+                )}
+
+                {result.data.last_hash && (
+                  <p>
+                    Last Hash: <code>{result.data.last_hash}</code>
+                  </p>
+                )}
+
+                {result.data.failed_block !== undefined && (
+                  <p>
+                    Failed Block: {result.data.failed_block}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+
 function ElectionsPanel() {
   const [elections,   setElections]   = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -1229,6 +1512,8 @@ export default function DashboardPage() {
         <nav className="dash-nav-links" aria-label="Navigasi dasbor">
           <span className="dash-nav-item dash-nav-active"><DashboardIcon /> Dasbor</span>
           <Link to="/pilih" className="dash-nav-item"><VoteIcon /> Pemilihan</Link>
+          <Link to="/pesan-terenkripsi" className="dash-nav-item">
+          <span aria-hidden="true">🔐</span> Pesan Terenkripsi </Link>
           <Link to="/pengaturan" className="dash-nav-item"><SettingsIcon /> Pengaturan</Link>
           <span className="dash-nav-item"><BallotNavIcon /> Surat Suara Saya</span>
         </nav>
@@ -1245,6 +1530,7 @@ export default function DashboardPage() {
       {isAdmin ? (
         <main className="dash-main dash-main--admin">
           <ElectionsPanel />
+          <BlockchainAuditPanel />
           <InvitesPanel />
         </main>
       ) : (

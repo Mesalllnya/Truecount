@@ -10,6 +10,7 @@ import ProfileSettingsPage from './pages/ProfileSettingsPage'
 import ResultsPage from './pages/ResultsPage'
 import HealthMonitor from './components/HealthMonitor'
 import Nav from './components/Nav'
+import EncryptedMessagesPage from './pages/EncryptedMessagesPage'
 
 /** Alias lama /register → /daftar, dengan query (?undangan=...) tetap dibawa */
 function RegisterRedirect() {
@@ -23,6 +24,8 @@ function AppRoutes() {
     location.pathname.startsWith('/dasbor') ||
     location.pathname.startsWith('/dashboard') ||
     location.pathname.startsWith('/pilih') ||
+    location.pathname.startsWith('/hasil') ||
+    location.pathname.startsWith('/pesan-terenkripsi') ||
     location.pathname.startsWith('/pengaturan') ||
     location.pathname.startsWith('/usb-token-test') ||
     location.pathname.startsWith('/masuk') ||
@@ -45,6 +48,7 @@ function AppRoutes() {
         <Route path="/pengaturan"      element={<ProfileSettingsPage />} />
         <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
         <Route path="*"                element={<Navigate to="/" replace />} />
+        <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
       </Routes>
     </>
   )

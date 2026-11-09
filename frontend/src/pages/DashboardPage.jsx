@@ -504,6 +504,284 @@ function InvitesPanel() {
 }
 
 /* ── Main ────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   ELECTIONS PANEL - manajemen pemilihan untuk admin
+   ══════════════════════════════════════════════════════════ */
+const API = 'http://localhost:8000'
+
+function ElectionsPanel() {
+  const [elections,   setElections]   = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [listError,   setListError]   = useState('')
+
+  // ── Form buat election ────────────────────────────────────
+  const [showForm,  setShowForm]  = useState(false)
+  const [creating,  setCreating]  = useState(false)
+  const [createErr, setCreateErr] = useState('')
+  const [form, setForm] = useState({
+    title: '', description: '', start_time: '', end_time: '',
+  })
+
+  // ── Edit status / inline ──────────────────────────────────
+  const [updatingId, setUpdatingId] = useState(null)
+
+  const token = localStorage.getItem('tc_token')
+
+  const loadElections = useCallback(async () => {
+    setLoading(true)
+    setListError('')
+    try {
+      const res  = await fetch(`${API}/elections`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await readJson(res)
+      if (!res.ok) { setListError(data.error || 'Gagal memuat pemilihan.'); return }
+      setElections(data.elections ?? [])
+    } catch (err) {
+      setListError(err?.message === 'Failed to fetch'
+        ? 'Tidak dapat terhubung ke server.'
+        : (err?.message || 'Gagal memuat pemilihan.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [token])
+
+  useEffect(() => { loadElections() }, [loadElections])
+
+  async function handleCreate(e) {
+    e.preventDefault()
+    setCreating(true)
+    setCreateErr('')
+    // Konversi datetime-local (format "2026-11-10T08:00") ke ISO 8601 dengan detik
+    const payload = {
+      ...form,
+      start_time: form.start_time ? new Date(form.start_time).toISOString() : '',
+      end_time:   form.end_time   ? new Date(form.end_time).toISOString()   : '',
+    }
+    try {
+      const res  = await fetch(`${API}/elections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+      const data = await readJson(res)
+      if (!res.ok) { setCreateErr(data.error || 'Gagal membuat pemilihan.'); return }
+      setForm({ title: '', description: '', start_time: '', end_time: '' })
+      setShowForm(false)
+      loadElections()
+    } catch (err) {
+      setCreateErr(err?.message === 'Failed to fetch'
+        ? 'Tidak dapat terhubung ke server.'
+        : (err?.message || 'Gagal membuat pemilihan.'))
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  async function handleSetStatus(election, newStatus) {
+    if (!window.confirm(`Ubah status "${election.title}" menjadi ${newStatus}?`)) return
+    setUpdatingId(election.id)
+    try {
+      const res  = await fetch(`${API}/elections/${election.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      const data = await readJson(res)
+      if (!res.ok) { alert(data.error || 'Gagal memperbarui status.'); return }
+      loadElections()
+    } catch (err) {
+      alert(err?.message || 'Gagal memperbarui status.')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  async function handleDelete(election) {
+    if (!window.confirm(`Hapus pemilihan "${election.title}"?\nTindakan ini tidak dapat dibatalkan.`)) return
+    try {
+      const res  = await fetch(`${API}/elections/${election.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await readJson(res)
+      if (!res.ok) { alert(data.error || 'Gagal menghapus.'); return }
+      loadElections()
+    } catch (err) {
+      alert(err?.message || 'Gagal menghapus.')
+    }
+  }
+
+  const STATUS_EL = {
+    draft:  { label: 'Draft',   cls: 'badge--draft'  },
+    active: { label: 'Aktif',   cls: 'badge--active' },
+    closed: { label: 'Selesai', cls: 'badge--closed' },
+  }
+
+  return (
+    <section className="admin-panel" aria-label="Manajemen pemilihan" style={{ marginTop: '3rem' }}>
+      <div className="admin-head">
+        <div className="admin-title">
+          <h1>Pemilihan</h1>
+          <p>Buat dan kelola sesi pemilihan, kandidat, serta peserta pemilih.</p>
+        </div>
+        <button
+          className="admin-create-btn"
+          onClick={() => { setShowForm(v => !v); setCreateErr('') }}
+          aria-expanded={showForm}
+        >
+          <PlusIcon />
+          Buat pemilihan
+        </button>
+      </div>
+
+      {/* ── Form buat election ── */}
+      {showForm && (
+        <form className="create-panel" onSubmit={handleCreate}>
+          {createErr && <p className="invite-error" role="alert">{createErr}</p>}
+          <div className="create-fields el-create-fields">
+            <div className="create-field" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="el-title">Judul pemilihan <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                id="el-title"
+                type="text"
+                placeholder="Contoh: Pemilihan Ketua BEM 2026"
+                value={form.title}
+                required
+                maxLength={255}
+                onChange={e => { setForm(p => ({ ...p, title: e.target.value })); setCreateErr('') }}
+              />
+            </div>
+            <div className="create-field" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="el-desc">Deskripsi (opsional)</label>
+              <input
+                id="el-desc"
+                type="text"
+                placeholder="Keterangan singkat tentang pemilihan ini"
+                value={form.description}
+                onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+            <div className="create-field">
+              <label htmlFor="el-start">Waktu mulai <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                id="el-start"
+                type="datetime-local"
+                value={form.start_time}
+                required
+                onChange={e => setForm(p => ({ ...p, start_time: e.target.value }))}
+              />
+            </div>
+            <div className="create-field">
+              <label htmlFor="el-end">Waktu selesai <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                id="el-end"
+                type="datetime-local"
+                value={form.end_time}
+                required
+                onChange={e => setForm(p => ({ ...p, end_time: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="create-actions">
+            <button type="submit" className="create-submit" disabled={creating}>
+              {creating ? 'Menyimpan…' : 'Buat pemilihan'}
+            </button>
+            <button type="button" className="create-cancel" onClick={() => { setShowForm(false); setCreateErr('') }}>
+              Batal
+            </button>
+          </div>
+        </form>
+      )}
+
+      {listError && <p className="invite-error" role="alert">{listError}</p>}
+
+      {/* ── Daftar election ── */}
+      <div className="invite-card">
+        {loading && <p className="invite-list-note">Memuat pemilihan…</p>}
+
+        {!loading && elections.length === 0 && (
+          <p className="invite-list-note">Belum ada pemilihan. Klik "Buat pemilihan" untuk memulai.</p>
+        )}
+
+        {!loading && elections.map(el => {
+          const st = STATUS_EL[el.status] ?? { label: el.status, cls: '' }
+          const isUpdating = updatingId === el.id
+          return (
+            <div className="invite-row el-row" key={el.id}>
+
+              {/* Info */}
+              <div className="el-info">
+                <div className="el-title-row">
+                  <span className="invite-email" style={{ fontWeight: 700 }}>{el.title}</span>
+                  <span className={`badge ${st.cls}`}>{st.label}</span>
+                </div>
+                {el.description && (
+                  <span className="invite-date" style={{ marginTop: '0.1rem' }}>{el.description}</span>
+                )}
+                <div className="el-meta">
+                  <span>{formatDate(el.start_time)} → {formatDate(el.end_time)}</span>
+                  <span>{el.candidate_count} kandidat</span>
+                </div>
+              </div>
+
+              {/* Aksi status */}
+              <div className="invite-cell invite-cell--action el-actions">
+                {el.status === 'draft' && (
+                  <button
+                    className="create-submit"
+                    style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem' }}
+                    disabled={isUpdating}
+                    onClick={() => handleSetStatus(el, 'active')}
+                    title="Buka pemilihan untuk voting"
+                  >
+                    {isUpdating ? '…' : 'Buka'}
+                  </button>
+                )}
+                {el.status === 'active' && (
+                  <button
+                    className="create-submit"
+                    style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem', background: '#2a7a3b', borderColor: '#2a7a3b' }}
+                    disabled={isUpdating}
+                    onClick={() => handleSetStatus(el, 'closed')}
+                    title="Tutup dan hitung hasil"
+                  >
+                    {isUpdating ? '…' : 'Tutup'}
+                  </button>
+                )}
+                {el.status === 'closed' && (
+                  <Link
+                    to={`/hasil/${el.id}`}
+                    className="create-submit"
+                    style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem', background: '#3468b0', borderColor: '#3468b0', textDecoration: 'none' }}
+                  >
+                    Hasil
+                  </Link>
+                )}
+                {el.status === 'draft' && (
+                  <button
+                    className="revoke-btn"
+                    disabled={isUpdating}
+                    onClick={() => handleDelete(el)}
+                    title="Hapus pemilihan (hanya draft)"
+                  >
+                    <RevokeIcon />
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <p className="admin-footnote">
+        Status: <strong>Draft</strong> = belum dibuka · <strong>Aktif</strong> = sedang voting · <strong>Selesai</strong> = hasil tersedia.
+        Tambahkan kandidat & daftarkan pemilih via API setelah pemilihan dibuat.
+      </p>
+    </section>
+  )
+}
+
 export default function DashboardPage() {
   const navigate   = useNavigate()
   const [clicks, setClicks]   = useState(0)
@@ -597,11 +875,8 @@ export default function DashboardPage() {
 
       {isAdmin ? (
         <main className="dash-main dash-main--admin">
+          <ElectionsPanel />
           <InvitesPanel />
-
-          <p className="admin-demo-link">
-            <Link to="/pilih">Lihat halaman pemilihan (demo) →</Link>
-          </p>
         </main>
       ) : (
         <main className="dash-main">

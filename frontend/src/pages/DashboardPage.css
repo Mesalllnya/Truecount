@@ -785,3 +785,59 @@
   transition: color 150ms;
 }
 .admin-demo-link a:hover { color: var(--red); }
+
+/* ══════════════════════════════════════════════════════════
+   ELECTIONS PANEL - baris election di daftar
+   ══════════════════════════════════════════════════════════ */
+
+/* Form buat election: 2 kolom untuk waktu */
+.el-create-fields {
+  grid-template-columns: 1fr 1fr !important;
+}
+@media (max-width: 560px) {
+  .el-create-fields { grid-template-columns: 1fr !important; }
+}
+
+/* Baris election */
+.el-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.el-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.el-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.el-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.el-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Badge status election */
+.badge--draft  { color: #7c5cd8; background: #f3effe; border-color: #d8c5f7; }
+.badge--active { color: #92400e; background: #fef9c3; border-color: #fde68a; }
+.badge--closed { color: #2a7a3b; background: #e9f4ec; border-color: #c3e0cb; }

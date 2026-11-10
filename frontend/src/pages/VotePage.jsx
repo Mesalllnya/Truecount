@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
-import { CandidatePhoto } from '../components/ElectionModals'
+import DashNav from '../components/DashNav'
 import './DashboardPage.css'   // reuse .dash-nav / .dash-brand / .dash-logout
 import './VotePage.css'
 
@@ -32,41 +32,7 @@ function CheckIcon({ size = 13 }) {
   )
 }
 
-function ExitIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-  )
-}
-
-/* Nav icons */
-function DashboardIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/>
-      <rect x="14" y="14" width="7" height="7" rx="1"/>
-    </svg>
-  )
-}
-
-function VoteIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4" y="3" width="16" height="18" rx="2"/>
-      <line x1="8" y1="9"  x2="16" y2="9"/>
-      <line x1="8" y1="13" x2="16" y2="13"/>
-      <line x1="8" y1="17" x2="12" y2="17"/>
-    </svg>
-  )
-}
-
+/* ── Ikon panah kembali ──────────────────────────────────── */
 function ArrowLeftIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -219,10 +185,11 @@ export default function VotePage() {
   if (loadingElections) {
     return (
       <div className="vote-shell">
-        <header className="dash-nav">
-          <Link to="/dasbor" className="dash-brand">TrueCount</Link>
-          <button className="dash-logout" onClick={handleLogout}><ExitIcon />Keluar</button>
-        </header>
+        <DashNav
+          brand={<Link to="/dasbor" className="dash-brand">TrueCount</Link>}
+          items={[]}
+          onLogout={handleLogout}
+        />
         <main className="vote-main">
           <p style={{ color: 'var(--muted)', marginTop: '4rem' }}>Memuat pemilihan…</p>
         </main>
@@ -236,16 +203,15 @@ export default function VotePage() {
 
     return (
       <div className="vote-shell">
-        <header className="dash-nav">
-          <Link to="/dasbor" className="dash-brand">
-            <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
-          </Link>
-          <nav className="dash-nav-links" aria-label="Navigasi dasbor">
-            <Link to="/dasbor" className="dash-nav-item"><DashboardIcon /> Dasbor</Link>
-            <span className="dash-nav-item dash-nav-active" aria-current="page"><VoteIcon /> Pemilihan</span>
-          </nav>
-          <button className="dash-logout" onClick={handleLogout}><ExitIcon />Keluar</button>
-        </header>
+        <DashNav
+          active="/pilih"
+          brand={
+            <Link to="/dasbor" className="dash-brand">
+              <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
+            </Link>
+          }
+          onLogout={handleLogout}
+        />
 
         <main className="vote-main">
           <header className="vote-head">
@@ -350,22 +316,17 @@ export default function VotePage() {
 
   return (
     <div className="vote-shell">
-      <header className="dash-nav">
-        <Link to="/dasbor" className="dash-brand" aria-label="TrueCount - Dasbor">
-          <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
-        </Link>
+        <DashNav
+          active="/pilih"
+          brand={
+            <Link to="/dasbor" className="dash-brand" aria-label="TrueCount - Dasbor">
+              <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
+            </Link>
+          }
+          onLogout={handleLogout}
+        />
 
-        <nav className="dash-nav-links" aria-label="Navigasi dasbor">
-          <Link to="/dasbor" className="dash-nav-item"><DashboardIcon /> Dasbor</Link>
-          <span className="dash-nav-item dash-nav-active" aria-current="page"><VoteIcon /> Pemilihan</span>
-        </nav>
-        <button className="dash-logout" onClick={handleLogout}>
-          <ExitIcon />
-          Keluar
-        </button>
-      </header>
-
-      <main className="vote-main">
+        <main className="vote-main">
         {/* Tombol kembali ke daftar pemilihan */}
         <div style={{ width: '100%', maxWidth: '880px', marginBottom: '1.5rem' }}>
           <button

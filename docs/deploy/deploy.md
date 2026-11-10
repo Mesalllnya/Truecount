@@ -283,6 +283,11 @@ sudo chown -R www-data:www-data /var/www/truecount/backend
 sudo chmod -R 755 /var/www/truecount/backend
 sudo chmod -R 700 /var/www/truecount/backend/storage
 
+# Folder auth_photos (foto kamera percobaan login) harus bisa ditulis PHP
+sudo mkdir -p /var/www/truecount/storage/auth_photos
+sudo chown -R www-data:www-data /var/www/truecount/storage/auth_photos
+sudo chmod -R 755 /var/www/truecount/storage/auth_photos
+
 # Frontend dist bisa dibaca oleh Nginx
 sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 ```

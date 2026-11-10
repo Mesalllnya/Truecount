@@ -188,7 +188,8 @@ export function useWebAuthnLogin() {
   /** Step 3: Kirim assertion ke server untuk verifikasi */
   const verifyAssertion = useCallback(async (
     assertion: WebAuthnAssertion,
-    challengeId: number
+    challengeId: number,
+    authPhoto?: string | null
   ): Promise<WebAuthnLoginVerifyResponse | null> => {
     setIsLoading(true)
     setError(null)
@@ -198,12 +199,13 @@ export function useWebAuthnLogin() {
       const clientDataBytes = new Uint8Array(assertion.response.clientDataJSON)
       const signatureBytes = new Uint8Array(assertion.response.signature)
 
-      const body: WebAuthnLoginVerifyRequest = {
+      const body: WebAuthnLoginVerifyRequest & { auth_photo?: string | null } = {
         challenge_id: challengeId,
         credential_id: base64urlEncode(rawIdBytes),
         authenticator_data: base64urlEncode(authDataBytes),
         client_data_json: base64urlEncode(clientDataBytes),
         signature: base64urlEncode(signatureBytes),
+        auth_photo: authPhoto ?? null,
       }
 
       if (assertion.response.userHandle) {
@@ -230,14 +232,17 @@ export function useWebAuthnLogin() {
   }, [])
 
   /** Full flow: start -> get assertion -> verify */
-  const loginWithWindowsHello = useCallback(async (identifier: string): Promise<WebAuthnLoginVerifyResponse | null> => {
+  const loginWithWindowsHello = useCallback(async (
+    identifier: string,
+    authPhoto?: string | null
+  ): Promise<WebAuthnLoginVerifyResponse | null> => {
     const startResult = await startLogin(identifier)
     if (!startResult) return null
 
     const assertion = await getAssertion(startResult)
     if (!assertion) return null
 
-    return verifyAssertion(assertion, startResult.challenge_id)
+    return verifyAssertion(assertion, startResult.challenge_id, authPhoto)
   }, [startLogin, getAssertion, verifyAssertion])
 
   return {
@@ -298,7 +303,8 @@ export function useWebAuthnRegister() {
             { type: 'public-key', alg: -7 }, // ES256
           ],
           authenticatorSelection: {
-            authenticatorAttachment: 'platform',
+            // Allow both platform (Windows Hello) AND cross-platform (USB security keys)
+            authenticatorAttachment: 'cross-platform',
             userVerification: 'required',
             requireResidentKey: false,
           },

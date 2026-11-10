@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
+import DashNav from '../components/DashNav'
 import './DashboardPage.css'
 import './EncryptedMessagesPage.css'
 
@@ -122,28 +123,19 @@ export default function EncryptedMessagesPage() {
 
   return (
     <div className="dash-shell">
-      <header className="dash-nav">
-        <Link to="/dasbor" className="dash-brand" title="TrueCount">
-          <img
-            src={navLogoLight}
-            alt="TrueCount"
-            className="dash-brand-logo"
-          />
-        </Link>
-
-        <nav className="dash-nav-links" aria-label="Navigasi dasbor">
-          <Link to="/dasbor" className="dash-nav-item">Dasbor</Link>
-          <Link to="/pilih" className="dash-nav-item">Pemilihan</Link>
-          <Link to="/pesan-terenkripsi" className="dash-nav-item dash-nav-active">
-            Pesan Terenkripsi
+      <DashNav
+        active="/pesan-terenkripsi"
+        brand={
+          <Link to="/dasbor" className="dash-brand" title="TrueCount">
+            <img
+              src={navLogoLight}
+              alt="TrueCount"
+              className="dash-brand-logo"
+            />
           </Link>
-          <Link to="/pengaturan" className="dash-nav-item">Pengaturan</Link>
-        </nav>
-
-        <button className="dash-logout" onClick={handleLogout}>
-          Keluar
-        </button>
-      </header>
+        }
+        onLogout={handleLogout}
+      />
 
       <main className="encrypted-page">
         <header className="encrypted-heading">

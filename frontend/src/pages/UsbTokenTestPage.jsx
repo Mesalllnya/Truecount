@@ -100,7 +100,13 @@ export default function UsbTokenTestPage() {
   return (
     <div className="usb-test-page">
       <header className="page-header">
-        <h1>🔐 USB Token Test</h1>
+        <h1>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'inline-block', marginRight: '0.5rem', verticalAlign: 'middle' }}>
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          USB Token Test
+        </h1>
         <p>Halaman testing deteksi & dekripsi USB token — <strong>belum terintegrasi ke auth</strong></p>
       </header>
 
@@ -149,7 +155,13 @@ export default function UsbTokenTestPage() {
 
         {/* Panel 2: Decrypt & Key Info */}
         <section className="panel">
-          <h2>🔓 Dekripsi Private Key</h2>
+          <h2>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'inline-block', marginRight: '0.5rem', verticalAlign: 'middle' }}>
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Dekripsi Private Key
+        </h2>
           {decryptedKey ? (
             <div className="key-info">
               <div className="success-badge">✅ Private Key Berhasil Didekripsi</div>
@@ -190,7 +202,15 @@ export default function UsbTokenTestPage() {
               </div>
               {error && <div className="error-msg">❌ {error}</div>}
               <button className="primary" onClick={handleDecrypt} disabled={isDecrypting || !selectedDrive || !pin}>
-                {isDecrypting ? '⏳ Mendekripsi…' : '🔓 Dekripsi & Import Key'}
+                {isDecrypting ? '⏳ Mendekripsi…' : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'inline-block', marginRight: '0.4rem', verticalAlign: 'middle' }}>
+                      <rect x="3" y="11" width="18" height="11" rx="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    Dekripsi & Import Key
+                  </>
+                )}
               </button>
             </div>
           )}

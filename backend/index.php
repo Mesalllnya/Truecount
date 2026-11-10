@@ -9,6 +9,9 @@
 
 require_once __DIR__ . '/helpers/logger.php';     // File logger → storage/logs/
 
+// Set zona waktu default ke WIB (Asia/Jakarta, UTC+7)
+date_default_timezone_set('Asia/Jakarta');
+
 // Access log - SEMUA request tercatat, termasuk preflight OPTIONS
 // (harus sebelum response.php yang meng-exit OPTIONS lebih awal)
 tc_log_info(sprintf(
@@ -111,6 +114,45 @@ match (true) {
         require_once __DIR__ . '/api/auth/change_password.php';
     })(),
     $uri === '/auth/change-password' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Security setup status
+    $uri === '/auth/security-setup' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/auth/security_setup.php';
+    })(),
+    $uri === '/auth/security-setup' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Security status publik (halaman login - cek user perlu setup keamanan atau tidak)
+    $uri === '/auth/security-status' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/security_status.php';
+    })(),
+    $uri === '/auth/security-status' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Auth attempts logging
+    $uri === '/auth/attempts/log' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/attempts_log.php';
+    })(),
+    $uri === '/auth/attempts/log' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    $uri === '/auth/attempts/reset' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/attempts_reset.php';
+    })(),
+    $uri === '/auth/attempts/reset' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // List auth attempts (admin)
+    $uri === '/auth/attempts/list' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/auth/attempts_list.php';
+    })(),
+    $uri === '/auth/attempts/list' => (function () {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
@@ -358,6 +400,23 @@ match (true) {
         require_once __DIR__ . '/api/users/voters.php';
     })(),
     $uri === '/users/voters' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // GET /users/search?q=... - cari pengguna (admin)
+    $uri === '/users/search' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/users/search.php';
+    })(),
+    $uri === '/users/search' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // GET /auth/attempts/{id}/photo - foto kamera percobaan login (admin)
+    preg_match('#^/auth/attempts/(\d+)/photo$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/auth/attempts/' . $m[1] . '/photo';
+        require_once __DIR__ . '/api/auth/attempts_photo.php';
+    })(),
+    preg_match('#^/auth/attempts/(\d+)/photo$#', $uri) => (function () {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 

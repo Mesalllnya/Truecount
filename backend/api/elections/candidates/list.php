@@ -46,10 +46,11 @@ if (!$isAdmin && $election['status'] === 'draft') {
 }
 
 $stmt = $db->prepare(
-    'SELECT id, election_id, name, vision, mission, photo_path, created_at
-       FROM candidates
-      WHERE election_id = ?
-      ORDER BY id ASC'
+    'SELECT id, election_id, name, vision, mission,
+        photo_path, photo_file_id, created_at
+        FROM candidates
+        WHERE election_id = ?
+        ORDER BY id ASC'
 );
 $stmt->execute([$electionId]);
 $rows = $stmt->fetchAll();
@@ -61,6 +62,7 @@ $candidates = array_map(fn($r) => [
     'vision'      => $r['vision'],
     'mission'     => $r['mission'],
     'photo_path'  => $r['photo_path'],
+    'photo_file_id' => $r['photo_file_id'] !== null ? (int) $r['photo_file_id'] : null,
     'created_at'  => toIso8601($r['created_at']),
 ], $rows);
 

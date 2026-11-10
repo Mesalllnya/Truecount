@@ -16,12 +16,19 @@
 require_once __DIR__ . '/../../../helpers/response.php';
 require_once __DIR__ . '/../../../middleware/auth.php';
 require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/../../../services/crypto/SteganographyService.php';
+require_once __DIR__ . '/../../../services/crypto/FileEncryptionService.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
 }
 
-requireAdmin();
+$authUser = requireAdmin();
+$adminId  = (int) ($authUser['sub'] ?? 0);
+
+if ($adminId <= 0) {
+    jsonResponse(['error' => 'Identitas admin tidak valid.'], 401);
+}
 
 // ── Ambil ID dari URI ─────────────────────────────────────
 preg_match('#^/elections/(\d+)/candidates/(\d+)/photo$#',
@@ -79,34 +86,131 @@ if (!in_array($mimeType, $allowed, true)) {
     jsonResponse(['error' => 'Format foto tidak didukung. Gunakan JPEG, PNG, atau WebP.'], 422);
 }
 
-// ── Simpan file ───────────────────────────────────────────
-$uploadDir = __DIR__ . '/../../../uploads/candidates/';
-if (!is_dir($uploadDir)) {
-    @mkdir($uploadDir, 0777, true);
-}
-$ext       = $extMap[$mimeType];
-$filename  = $candidateId . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-$destPath  = $uploadDir . $filename;
+// Siapkan temporary file untuk PNG dan stego image
+$carrierPath = sys_get_temp_dir()
+    . DIRECTORY_SEPARATOR . 'tc_carrier_'
+    . bin2hex(random_bytes(12)) . '.png';
 
-if (!move_uploaded_file($file['tmp_name'], $destPath)) {
-    jsonResponse(['error' => 'Gagal menyimpan file ke server.'], 500);
-}
+$stegoPath = sys_get_temp_dir()
+    . DIRECTORY_SEPARATOR . 'tc_stego_'
+    . bin2hex(random_bytes(12)) . '.png';
 
-// Hapus foto lama jika ada
-$stmt = $db->prepare('SELECT photo_path FROM candidates WHERE id = ? LIMIT 1');
-$stmt->execute([$candidateId]);
-$old = $stmt->fetchColumn();
-if ($old) {
-    $oldAbs = $uploadDir . basename($old);
-    if (file_exists($oldAbs)) @unlink($oldAbs);
-}
+$image = null;
 
-// Simpan path relatif ke DB
-$photoUrl = '/uploads/candidates/' . $filename;
-$db->prepare('UPDATE candidates SET photo_path = ? WHERE id = ?')
-   ->execute([$photoUrl, $candidateId]);
+try {
+    // Baca gambar berdasarkan MIME yang sudah divalidasi
+    switch ($mimeType) {
+        case 'image/jpeg':
+            $image = imagecreatefromjpeg($file['tmp_name']);
+            break;
+
+        case 'image/png':
+            $image = imagecreatefrompng($file['tmp_name']);
+            break;
+
+        case 'image/webp':
+            if (!function_exists('imagecreatefromwebp')) {
+                throw new RuntimeException('GD WebP belum tersedia.');
+            }
+
+            $image = imagecreatefromwebp($file['tmp_name']);
+            break;
+    }
+
+    if (!$image) {
+        throw new RuntimeException('Gagal membaca gambar.');
+    }
+
+    // Konversi semua format menjadi PNG
+    if (!imagepng($image, $carrierPath, 6)) {
+        throw new RuntimeException('Gagal mengonversi gambar ke PNG.');
+    }
+
+    imagedestroy($image);
+    $image = null;
+
+    // Metadata yang akan disisipkan ke gambar
+    $metadata = json_encode([
+        'application' => 'TrueCount',
+        'version'     => 1,
+        'election_id' => $electionId,
+        'candidate_id'=> $candidateId,
+        'uploaded_by' => $adminId,
+        'uploaded_at' => gmdate('c')
+    ], JSON_THROW_ON_ERROR);
+
+    // Steganography: enkripsi metadata dan sisipkan ke PNG
+    SteganographyService::embedMessage(
+        $metadata,
+        $carrierPath,
+        $stegoPath,
+        $adminId
+    );
+
+    // File Encryption: enkripsi seluruh stego image
+    $encryptedFileId = FileEncryptionService::encryptAndStore(
+        $adminId,
+        $stegoPath,
+        'candidate_' . $candidateId . '.png'
+    );
+
+    // Ambil path foto lama untuk dibersihkan setelah update berhasil
+    $stmt = $db->prepare(
+        'SELECT photo_path FROM candidates WHERE id = ? LIMIT 1'
+    );
+    $stmt->execute([$candidateId]);
+    $oldPhotoPath = $stmt->fetchColumn();
+
+    // Simpan ID file terenkripsi, kosongkan path publik
+    $stmt = $db->prepare(
+        'UPDATE candidates
+            SET photo_file_id = ?, photo_path = NULL
+            WHERE id = ? AND election_id = ?'
+    );
+
+    $stmt->execute([
+        $encryptedFileId,
+        $candidateId,
+        $electionId
+    ]);
+
+    if ($stmt->rowCount() !== 1) {
+        throw new RuntimeException('Gagal memperbarui foto kandidat.');
+    }
+
+    // Hapus foto lama dari folder publik jika sebelumnya ada
+    if ($oldPhotoPath) {
+        $oldAbs = __DIR__ . '/../../../uploads/candidates/'
+            . basename($oldPhotoPath);
+
+        if (is_file($oldAbs)) {
+            @unlink($oldAbs);
+        }
+    }
+
+} catch (Throwable $e) {
+    error_log('[Candidate Photo Upload] ' . $e->getMessage());
+
+    jsonResponse([
+        'error' => 'Gagal memproses foto kandidat.'
+    ], 500);
+
+} finally {
+    if ($image) {
+        imagedestroy($image);
+    }
+
+    if (is_file($carrierPath)) {
+        @unlink($carrierPath);
+    }
+
+    if (is_file($stegoPath)) {
+        @unlink($stegoPath);
+    }
+}
 
 jsonResponse([
-    'message'   => 'Foto berhasil diunggah.',
-    'photo_url' => $photoUrl,
+    'message'        => 'Foto berhasil dienkripsi dan disimpan.',
+    'photo_file_id'  => $encryptedFileId
 ]);
+

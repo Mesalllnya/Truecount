@@ -10,6 +10,108 @@ async function readJson(res) {
   }
 }
 
+
+function CandidatePhoto({ candidate, electionId, token }) {
+  const [photoUrl, setPhotoUrl] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = null;
+
+    // Foto lama masih menggunakan public path
+    if (!candidate.photo_file_id) {
+      setPhotoUrl(
+        candidate.photo_path ? `${API}${candidate.photo_path}` : ''
+      );
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // Foto terenkripsi diambil melalui endpoint dekripsi
+    setPhotoUrl('');
+
+    fetch(
+      `${API}/elections/${electionId}/candidates/${candidate.id}/photo`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Gagal mengambil foto kandidat.');
+        }
+
+        return response.blob();
+      })
+      .then(blob => {
+        if (cancelled) return;
+
+        objectUrl = URL.createObjectURL(blob);
+        setPhotoUrl(objectUrl);
+      })
+      .catch(error => {
+        if (!cancelled) {
+          console.error(
+            `[Candidate Photo ${candidate.id}]`,
+            error
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [
+    candidate.id,
+    candidate.photo_file_id,
+    candidate.photo_path,
+    electionId,
+    token,
+  ]);
+
+  if (!photoUrl) {
+    return (
+      <div style={{
+        width: '42px',
+        height: '42px',
+        borderRadius: '8px',
+        background: '#f0f0ec',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '1.2rem',
+        flexShrink: 0,
+      }}>
+        👤
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={photoUrl}
+      alt={candidate.name}
+      style={{
+        width: '42px',
+        height: '42px',
+        borderRadius: '8px',
+        objectFit: 'cover',
+        border: '1px solid var(--border)',
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+
 /* ── Modal Manajemen Kandidat / Paslon (Admin) ───────────── */
 export function CandidatesModal({ election, onClose, onRefreshElection }) {
   const [candidates, setCandidates] = useState([])
@@ -22,6 +124,14 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
   const [mission, setMission]   = useState('')
   const [photoFile, setPhotoFile] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+
+  // Form edit kandidat
+  const [editingCandidate, setEditingCandidate] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [editVision, setEditVision] = useState('')
+  const [editMission, setEditMission] = useState('')
+  const [editPhotoFile, setEditPhotoFile] = useState(null)
+  const [updating, setUpdating] = useState(false)
 
   const token = localStorage.getItem('tc_token')
 
@@ -44,40 +154,193 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
 
   useEffect(() => { loadCandidates() }, [loadCandidates])
 
-  async function handleAddCandidate(e) {
-    e.preventDefault()
-    if (!name.trim()) return
-    setSubmitting(true)
-    setError('')
+  
+async function handleAddCandidate(e) {
+  e.preventDefault()
+  if (!name.trim()) return
 
-    try {
-      const formData = new FormData()
-      formData.append('name', name.trim())
-      formData.append('vision', vision.trim())
-      formData.append('mission', mission.trim())
-      if (photoFile) {
-        formData.append('photo', photoFile)
-      }
+  setSubmitting(true)
+  setError('')
 
-      const res = await fetch(`${API}/elections/${election.id}/candidates`, {
+  try {
+    // 1. Buat kandidat terlebih dahulu
+    const res = await fetch(
+      `${API}/elections/${election.id}/candidates`,
+      {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      })
-      const data = await readJson(res)
-      if (!res.ok) { setError(data.error || 'Gagal menambahkan kandidat.'); return }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          vision: vision.trim(),
+          mission: mission.trim(),
+        }),
+      }
+    )
 
-      setName('')
-      setVision('')
-      setMission('')
-      setPhotoFile(null)
-      loadCandidates()
-      onRefreshElection()
-    } catch (err) {
-      setError(err?.message || 'Gagal menambahkan kandidat.')
-    } finally {
-      setSubmitting(false)
+    const data = await readJson(res)
+
+    if (!res.ok) {
+      throw new Error(
+        data.error || 'Gagal menambahkan kandidat.'
+      )
     }
+
+    const candidateId = data.candidate?.id
+
+    if (!candidateId) {
+      throw new Error(
+        'Kandidat berhasil dibuat, tetapi ID kandidat tidak ditemukan.'
+      )
+    }
+
+    // 2. Upload foto melalui pipeline enkripsi + steganografi
+    if (photoFile) {
+      const formData = new FormData()
+      formData.append('photo', photoFile)
+
+      const photoResponse = await fetch(
+        `${API}/elections/${election.id}/candidates/${candidateId}/photo`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      )
+
+      const photoData = await readJson(photoResponse)
+
+      if (!photoResponse.ok) {
+        throw new Error(
+          photoData.error ||
+          'Kandidat berhasil dibuat, tetapi upload foto terenkripsi gagal.'
+        )
+      }
+    }
+
+    // 3. Reset form dan refresh data
+    setName('')
+    setVision('')
+    setMission('')
+    setPhotoFile(null)
+
+    await loadCandidates()
+    onRefreshElection()
+
+  } catch (err) {
+    setError(
+      err?.message || 'Gagal menambahkan kandidat.'
+    )
+
+    // Refresh untuk memastikan kandidat yang mungkin sudah
+    // terbuat tetap muncul meskipun upload foto gagal.
+    await loadCandidates()
+
+  } finally {
+    setSubmitting(false)
+  }
+}
+
+
+  // Membuka form edit kandidat
+  function startEditCandidate(candidate) {
+    setEditingCandidate(candidate)
+    setEditName(candidate.name ?? '')
+    setEditVision(candidate.vision ?? '')
+    setEditMission(candidate.mission ?? '')
+    setEditPhotoFile(null)
+    setError('')
+  }
+
+// Membatalkan edit kandidat
+  function cancelEditCandidate() {
+    setEditingCandidate(null)
+    setEditName('')
+    setEditVision('')
+    setEditMission('')
+    setEditPhotoFile(null)
+}
+
+// Menyimpan perubahan kandidat
+async function handleUpdateCandidate(e) {
+  e.preventDefault()
+
+  if (!editingCandidate) return
+
+  if (!editName.trim()) {
+    setError('Nama kandidat tidak boleh kosong.')
+    return
+  }
+
+  setUpdating(true)
+  setError('')
+
+  try {
+    const candidateId = editingCandidate.id
+
+    // Update informasi kandidat
+    const updateResponse = await fetch(
+      `${API}/elections/${election.id}/candidates/${candidateId}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: editName.trim(),
+          vision: editVision.trim(),
+          mission: editMission.trim(),
+        }),
+      }
+    )
+
+    const updateData = await readJson(updateResponse)
+
+    if (!updateResponse.ok) {
+      throw new Error(
+        updateData.error || 'Gagal memperbarui kandidat.'
+      )
+    }
+
+    // Upload foto baru jika dipilih
+    if (editPhotoFile) {
+      const formData = new FormData()
+      formData.append('photo', editPhotoFile)
+
+      const photoResponse = await fetch(
+        `${API}/elections/${election.id}/candidates/${candidateId}/photo`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      )
+
+      const photoData = await readJson(photoResponse)
+
+      if (!photoResponse.ok) {
+        throw new Error(
+          photoData.error || 'Gagal mengganti foto kandidat.'
+        )
+      }
+    }
+
+    cancelEditCandidate()
+    await loadCandidates()
+    onRefreshElection()
+
+  } catch (err) {
+    setError(err?.message || 'Gagal memperbarui kandidat.')
+  } finally {
+    setUpdating(false)
+  }
   }
 
   async function handleDeleteCandidate(cid, cname) {
@@ -193,38 +456,140 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {candidates.map((c, i) => (
-                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--white)', border: '1px solid var(--border)', borderRadius: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', width: '20px' }}>#{i + 1}</span>
-                      {c.photo_path ? (
-                        <img
-                          src={`${API}${c.photo_path}`}
-                          alt={c.name}
-                          style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                  <div
+                    key={c.id}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      padding: '0.75rem 1rem',
+                      background: 'var(--white)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '10px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', width: '20px' }}>
+                          #{i + 1}
+                        </span>
+
+                        <CandidatePhoto
+                          candidate={c}
+                          electionId={election.id}
+                          token={token}
                         />
-                      ) : (
-                        <div style={{ width: '42px', height: '42px', borderRadius: '8px', background: '#f0f0ec', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                          👤
+
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{c.name}</div>
+                          {c.vision && (
+                            <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>{c.vision}</div>
+                          )}
+                          {c.mission && (
+                            <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Misi: {c.mission}</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {election.status === 'draft' && (
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          <button
+                            type="button"
+                            className="create-submit"
+                            style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
+                            onClick={() => startEditCandidate(c)}
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            className="revoke-btn"
+                            style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                            onClick={() => handleDeleteCandidate(c.id, c.name)}
+                            title="Hapus paslon"
+                          >
+                            Hapus
+                          </button>
                         </div>
                       )}
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{c.name}</div>
-                        {c.vision && <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>{c.vision}</div>}
-                      </div>
                     </div>
 
-                    {election.status === 'draft' && (
-                      <button
-                        className="revoke-btn"
-                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-                        onClick={() => handleDeleteCandidate(c.id, c.name)}
-                        title="Hapus paslon"
+                    {editingCandidate?.id === c.id && (
+                      <form
+                        onSubmit={handleUpdateCandidate}
+                        style={{ background: 'var(--cream)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)' }}
                       >
-                        Hapus
-                      </button>
+                        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+                          Edit Pasangan Calon
+                        </h4>
+
+                        <div style={{ display: 'grid', gap: '0.75rem' }}>
+                          <div>
+                            <label>Nama Paslon *</label>
+                            <input
+                              type="text"
+                              required
+                              maxLength={150}
+                              value={editName}
+                              onChange={e => setEditName(e.target.value)}
+                              style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label>Visi</label>
+                            <input
+                              type="text"
+                              value={editVision}
+                              onChange={e => setEditVision(e.target.value)}
+                              style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label>Misi</label>
+                            <textarea
+                              rows={3}
+                              value={editMission}
+                              onChange={e => setEditMission(e.target.value)}
+                              style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontFamily: 'inherit' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label>Ganti Foto</label>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              onChange={e => setEditPhotoFile(e.target.files?.[0] || null)}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+                          <button
+                            type="button"
+                            className="revoke-btn"
+                            disabled={updating}
+                            onClick={cancelEditCandidate}
+                          >
+                            Batal
+                          </button>
+
+                          <button
+                            type="submit"
+                            className="create-submit"
+                            disabled={updating}
+                          >
+                            {updating ? 'Menyimpan...' : 'Simpan Perubahan'}
+                          </button>
+                        </div>
+                      </form>
                     )}
                   </div>
                 ))}
+
               </div>
             )}
           </div>

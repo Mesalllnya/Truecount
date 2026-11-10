@@ -320,6 +320,15 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    // GET foto kandidat terenkripsi
+    preg_match('#^/elections/(\d+)/candidates/(\d+)/photo$#', $uri, $m)
+    && $method === 'GET' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1]
+            . '/candidates/' . $m[2] . '/photo';
+
+        require_once __DIR__ . '/api/elections/candidates/show_photo.php';
+    })(),
+
     // Upload foto kandidat: POST /elections/{id}/candidates/{cid}/photo
     preg_match('#^/elections/(\d+)/candidates/(\d+)/photo$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
         $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates/' . $m[2] . '/photo';
@@ -359,6 +368,33 @@ match (true) {
     })(),
     preg_match('#^/elections/(\d+)/voters/(\d+)$#', $uri) => (function () {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+        // ── Cryptography: Encrypted Messages ──────────────────────
+
+    $uri === '/encrypted-messages' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/encrypted-messages/create.php';
+    })(),
+
+    preg_match('#^/encrypted-messages/(\d+)$#', $uri, $m)
+        && $method === 'GET' => (function () use ($m) {
+            $_GET['id'] = $m[1];
+            require_once __DIR__ . '/api/encrypted-messages/get.php';
+        })(),
+
+    $uri === '/encrypted-messages' ||
+    preg_match('#^/encrypted-messages/(\d+)$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // ── Blockchain ────────────────────────────────────────────
+
+    $uri === '/elections/blockchain/seal' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/elections/blockchain-seal.php';
+    })(),
+
+    $uri === '/elections/blockchain/verify' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/elections/blockchain-verify.php';
     })(),
 
     // 404

@@ -381,7 +381,10 @@ async function handleUpdateCandidate(e) {
               fontSize: '0.85rem',
               lineHeight: 1.5,
             }}>
-              🔒 <strong>Pasangan Calon Terkunci:</strong> Pemilihan ini sudah dimulai (status:{' '}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'inline-block', marginRight: '0.4rem', verticalAlign: 'middle' }}>
+                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg><strong>Pasangan Calon Terkunci:</strong> Pemilihan ini sudah dimulai (status:{' '}
               <strong>{election.status === 'active' ? 'Aktif / Berlangsung' : 'Selesai'}</strong>). Demi integritas dan keamanan pemilihan, tidak ada yang dapat menambah, mengubah, atau menghapus pasangan calon.
             </div>
           ) : (

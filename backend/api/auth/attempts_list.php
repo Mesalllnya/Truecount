@@ -88,6 +88,7 @@ $sql = "
         aa.error,
         aa.ip_address,
         aa.user_agent,
+        aa.photo_path,
         aa.created_at,
         u.username,
         u.email,
@@ -117,6 +118,7 @@ jsonResponse([
             'error'        => $a['error'],
             'ip_address'   => $a['ip_address'],
             'user_agent'   => $a['user_agent'],
+            'photo_path'   => $a['photo_path'],
             'created_at'   => toIso8601($a['created_at']),
             'user'         => $a['username'] ? [
                 'username' => $a['username'],

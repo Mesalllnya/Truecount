@@ -400,6 +400,23 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    // GET /users/search?q=... - cari pengguna (admin)
+    $uri === '/users/search' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/users/search.php';
+    })(),
+    $uri === '/users/search' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // GET /auth/attempts/{id}/photo - foto kamera percobaan login (admin)
+    preg_match('#^/auth/attempts/(\d+)/photo$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/auth/attempts/' . $m[1] . '/photo';
+        require_once __DIR__ . '/api/auth/attempts_photo.php';
+    })(),
+    preg_match('#^/auth/attempts/(\d+)/photo$#', $uri) => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
     // DELETE /elections/{id}/voters/{userId} - keluarkan voter dari pemilihan (admin)
     preg_match('#^/elections/(\d+)/voters/(\d+)$#', $uri, $m) && $method === 'DELETE' => (function () use ($m) {
         $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/voters/' . $m[2];

@@ -197,6 +197,10 @@ export function useCameraPermission() {
   // Interval ref for periodic camera re-check when permission is denied
   const recheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Ref ke stream terbaru untuk cleanup saat unmount
+  const streamRef = useRef<MediaStream | null>(null);
+  streamRef.current = stream;
+
   /** Clear the periodic re-check interval */
   const stopRecheck = useCallback(() => {
     if (recheckIntervalRef.current) {
@@ -534,6 +538,21 @@ export function useCameraPermission() {
       window.clearInterval(intervalId);
     };
   }, [hasPermission, isChecking, stream, verifyCameraActive, startRecheck]);
+
+  /**
+   * Matikan kamera saat halaman (mis. LoginPage) di-unmount —
+   * misalnya setelah login berhasil dan navigasi ke dashboard.
+   */
+  useEffect(() => {
+    return () => {
+      stopRecheck();
+      const current = streamRef.current;
+      if (current) {
+        current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [stopRecheck]);
 
   /** Capture a photo from the video stream */
   const capturePhoto = useCallback(async (): Promise<string | null> => {

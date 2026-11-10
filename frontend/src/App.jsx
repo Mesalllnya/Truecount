@@ -9,6 +9,7 @@ import AboutPage from './pages/AboutPage'
 import UsbTokenTestPage from './pages/UsbTokenTestPage'
 import ProfileSettingsPage from './pages/ProfileSettingsPage'
 import ResultsPage from './pages/ResultsPage'
+import UserSecurityLogPage from './pages/UserSecurityLogPage'
 import HealthMonitor from './components/HealthMonitor'
 import Nav from './components/Nav'
 import EncryptedMessagesPage from './pages/EncryptedMessagesPage'
@@ -46,6 +47,7 @@ function AppRoutes() {
     location.pathname.startsWith('/pesan-terenkripsi') ||
     location.pathname.startsWith('/pengaturan') ||
     location.pathname.startsWith('/usb-token-test') ||
+    location.pathname.startsWith('/log-keamanan') ||
     location.pathname.startsWith('/masuk') ||
     location.pathname.startsWith('/daftar') ||
     location.pathname.startsWith('/atur-keamanan')
@@ -71,6 +73,7 @@ function AppRoutes() {
           <Route path="/pengaturan"      element={<ProfileSettingsPage />} />
           <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
           <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
+          <Route path="/log-keamanan/:userId" element={<UserSecurityLogPage />} />
         </Route>
         
         <Route path="*"                element={<Navigate to="/" replace />} />

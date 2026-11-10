@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import SecuritySetupPage from './pages/SecuritySetupPage.tsx'
 import DashboardPage from './pages/DashboardPage'
 import VotePage from './pages/VotePage'
 import AboutPage from './pages/AboutPage'
@@ -11,11 +12,28 @@ import ResultsPage from './pages/ResultsPage'
 import HealthMonitor from './components/HealthMonitor'
 import Nav from './components/Nav'
 import EncryptedMessagesPage from './pages/EncryptedMessagesPage'
+import AuthGuard from './components/AuthGuard'
+import { FailedAttemptsProvider } from './hooks/useAuthSecurity'
 
 /** Alias lama /register → /daftar, dengan query (?undangan=...) tetap dibawa */
 function RegisterRedirect() {
   const location = useLocation()
   return <Navigate to={`/daftar${location.search}`} replace />
+}
+
+/** Protected routes wrapper */
+function ProtectedRoutes() {
+  return (
+    <Routes>
+      <Route path="/dasbor"     element={<DashboardPage />} />
+      <Route path="/dashboard"  element={<Navigate to="/dasbor" replace />} />
+      <Route path="/pilih"           element={<VotePage />} />
+      <Route path="/hasil/:id"       element={<ResultsPage />} />
+      <Route path="/pengaturan"      element={<ProfileSettingsPage />} />
+      <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
+      <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
+    </Routes>
+  )
 }
 
 function AppRoutes() {
@@ -29,7 +47,8 @@ function AppRoutes() {
     location.pathname.startsWith('/pengaturan') ||
     location.pathname.startsWith('/usb-token-test') ||
     location.pathname.startsWith('/masuk') ||
-    location.pathname.startsWith('/daftar')
+    location.pathname.startsWith('/daftar') ||
+    location.pathname.startsWith('/atur-keamanan')
 
   return (
     <>
@@ -41,14 +60,20 @@ function AppRoutes() {
         <Route path="/login"      element={<Navigate to="/masuk" replace />} />
         <Route path="/daftar"     element={<RegisterPage />} />
         <Route path="/register"   element={<RegisterRedirect />} />
-        <Route path="/dasbor"     element={<DashboardPage />} />
-        <Route path="/dashboard"  element={<Navigate to="/dasbor" replace />} />
-        <Route path="/pilih"           element={<VotePage />} />
-        <Route path="/hasil/:id"       element={<ResultsPage />} />
-        <Route path="/pengaturan"      element={<ProfileSettingsPage />} />
-        <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
+        <Route path="/atur-keamanan" element={<SecuritySetupPage />} />
+        
+        {/* Protected routes - require Windows Hello or Dongle setup */}
+        <Route element={<AuthGuard />}>
+          <Route path="/dasbor"     element={<DashboardPage />} />
+          <Route path="/dashboard"  element={<Navigate to="/dasbor" replace />} />
+          <Route path="/pilih"           element={<VotePage />} />
+          <Route path="/hasil/:id"       element={<ResultsPage />} />
+          <Route path="/pengaturan"      element={<ProfileSettingsPage />} />
+          <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
+          <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
+        </Route>
+        
         <Route path="*"                element={<Navigate to="/" replace />} />
-        <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
       </Routes>
     </>
   )
@@ -57,8 +82,10 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <HealthMonitor />
-      <AppRoutes />
+      <FailedAttemptsProvider>
+        <HealthMonitor />
+        <AppRoutes />
+      </FailedAttemptsProvider>
     </BrowserRouter>
   )
 }

@@ -501,6 +501,278 @@ function InvitesPanel() {
   )
 }
 
+/* ── Auth Attempts Panel (admin) ───────────────────────────── */
+function AuthAttemptsPanel() {
+  const [attempts, setAttempts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, total_pages: 1 })
+
+  const [filters, setFilters] = useState({
+    method: '',
+    success: '',
+    date_from: '',
+    date_to: '',
+    identifier: '',
+  })
+
+  const token = localStorage.getItem('tc_token')
+  const API = 'http://localhost:8000'
+
+  const buildQuery = useCallback(() => {
+    const params = new URLSearchParams()
+    params.set('page', String(pagination.page))
+    params.set('limit', String(pagination.limit))
+    if (filters.method) params.set('method', filters.method)
+    if (filters.success !== '') params.set('success', filters.success)
+    if (filters.date_from) params.set('date_from', filters.date_from)
+    if (filters.date_to) params.set('date_to', filters.date_to)
+    if (filters.identifier) params.set('identifier', filters.identifier)
+    return params.toString()
+  }, [pagination.page, pagination.limit, filters])
+
+  const loadAttempts = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API}/auth/attempts/list?${buildQuery()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await readJson(res)
+      if (!res.ok) { setError(data.error || 'Gagal memuat log login.'); return }
+      setAttempts(data.attempts ?? [])
+      setPagination(data.pagination ?? { page: 1, limit: 50, total: 0, total_pages: 1 })
+    } catch (err) {
+      setError(err?.message === 'Failed to fetch'
+        ? 'Tidak dapat terhubung ke server.'
+        : (err?.message || 'Gagal memuat log login.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [token, buildQuery])
+
+  useEffect(() => { loadAttempts() }, [loadAttempts])
+
+  function formatDateTime(iso) {
+    if (!iso) return '-'
+    const d = new Date(String(iso).replace(' ', 'T'))
+    if (Number.isNaN(d.getTime())) return '-'
+    return d.toLocaleString('id-ID', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    })
+  }
+
+  function handlePageChange(newPage) {
+    setPagination(p => ({ ...p, page: newPage }))
+  }
+
+  function handleFilterChange(key, value) {
+    setFilters(f => ({ ...f, [key]: value }))
+    setPagination(p => ({ ...p, page: 1 }))
+  }
+
+  const METHOD_LABELS = { webauthn: 'Windows Hello', dongle: 'Dongle USB', password: 'Kata Sandi' }
+  const METHOD_COLORS = { webauthn: '#3468b0', dongle: '#2a7a3b', password: '#F13C35' }
+
+  return (
+    <section className="admin-panel" aria-label="Log percobaan login" style={{ marginTop: '3rem' }}>
+      <div className="admin-head">
+        <div className="admin-title">
+          <h1>Log Percobaan Login</h1>
+          <p>Riwayat autentikasi pengguna (Windows Hello, Dongle USB, Kata Sandi).</p>
+        </div>
+      </div>
+
+      {/* ── Filter Bar ── */}
+      <div className="invite-toolbar" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div className="toolbar-search" style={{ flex: '1 1 250px' }}>
+          <label htmlFor="attempt-search" className="visually-hidden">Cari identifier</label>
+          <input
+            id="attempt-search"
+            type="search"
+            placeholder="Cari username/email/IP…"
+            value={filters.identifier}
+            onChange={e => handleFilterChange('identifier', e.target.value)}
+            className="search-input"
+          />
+        </div>
+        <select
+          value={filters.method}
+          onChange={e => handleFilterChange('method', e.target.value)}
+          className="filter-select"
+          style={{ minWidth: '160px' }}
+        >
+          <option value="">Semua metode</option>
+          <option value="webauthn">Windows Hello</option>
+          <option value="dongle">Dongle USB</option>
+          <option value="password">Kata Sandi</option>
+        </select>
+        <select
+          value={filters.success}
+          onChange={e => handleFilterChange('success', e.target.value)}
+          className="filter-select"
+          style={{ minWidth: '140px' }}
+        >
+          <option value="">Semua status</option>
+          <option value="1">Berhasil</option>
+          <option value="0">Gagal</option>
+        </select>
+        <input
+          type="date"
+          value={filters.date_from}
+          onChange={e => handleFilterChange('date_from', e.target.value)}
+          className="filter-select"
+          title="Dari tanggal"
+        />
+        <input
+          type="date"
+          value={filters.date_to}
+          onChange={e => handleFilterChange('date_to', e.target.value)}
+          className="filter-select"
+          title="Sampai tanggal"
+        />
+        <span className="toolbar-count">
+          {pagination.total} total · Halaman {pagination.page} / {pagination.total_pages}
+        </span>
+      </div>
+
+      {error && <p className="invite-error" role="alert">{error}</p>}
+
+      {/* ── Table ── */}
+      <div className="invite-card">
+        <div className="invite-list-head" aria-hidden="true">
+          <span>Waktu</span>
+          <span>Pengguna</span>
+          <span>Identifier</span>
+          <span>Metode</span>
+          <span>Status</span>
+          <span>IP Address</span>
+          <span>Error</span>
+        </div>
+
+        {loading && (
+          <div className="skeleton-pane">
+            <div className="skeleton skeleton-text--title" />
+            <SkeletonRow />
+            <SkeletonRow />
+            <SkeletonRow />
+          </div>
+        )}
+
+        {!loading && attempts.length === 0 && (
+          <p className="invite-list-note">
+            {filters.method || filters.success || filters.identifier || filters.date_from || filters.date_to
+              ? 'Tidak ada log yang cocok dengan filter.'
+              : 'Belum ada percobaan login tercatat.'}
+          </p>
+        )}
+
+        {!loading && attempts.map(a => (
+          <div className="invite-row" key={a.id} style={{ fontSize: '0.82rem' }}>
+            <div className="invite-cell">
+              <span className="invite-cell-label">Waktu</span>
+              <span>{formatDateTime(a.created_at)}</span>
+            </div>
+            <div className="invite-cell">
+              <span className="invite-cell-label">Pengguna</span>
+              {a.user ? (
+                <>
+                  <span className="invite-email">{a.user.username}</span>
+                  <span className="badge badge--{a.user.role}">{a.user.role === 'admin' ? 'Admin' : 'Pemilih'}</span>
+                </>
+              ) : (
+                <span style={{ color: 'var(--muted)' }}>- (user tidak ditemukan)</span>
+              )}
+            </div>
+            <div className="invite-cell">
+              <span className="invite-cell-label">Identifier</span>
+              <span style={{ fontFamily: 'monospace' }}>{a.identifier}</span>
+            </div>
+            <div className="invite-cell">
+              <span className="invite-cell-label">Metode</span>
+              <span className="badge" style={{ backgroundColor: METHOD_COLORS[a.method] + '20', color: METHOD_COLORS[a.method], borderColor: METHOD_COLORS[a.method] }}>
+                {METHOD_LABELS[a.method] ?? a.method}
+              </span>
+            </div>
+            <div className="invite-cell">
+              <span className="invite-cell-label">Status</span>
+              <span className={`badge ${a.success ? 'badge--active' : 'badge--dibatalkan'}`}>
+                {a.success ? 'Berhasil' : 'Gagal'}
+              </span>
+            </div>
+            <div className="invite-cell">
+              <span className="invite-cell-label">IP</span>
+              <span style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{a.ip_address ?? '-'}</span>
+            </div>
+            <div className="invite-cell">
+              <span className="invite-cell-label">Error</span>
+              <span style={{ color: a.success ? 'var(--muted)' : '#b91c1c', fontSize: '0.75rem', maxWidth: '300px', display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {a.error ?? '-'}
+              </span>
+            </div>
+          </div>
+        ))}
+
+        {/* ── Pagination ── */}
+        {!loading && pagination.total_pages > 1 && (
+          <div className="invite-pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', padding: '1rem', flexWrap: 'wrap' }}>
+            <button
+              className="copy-btn"
+              onClick={() => handlePageChange(1)}
+              disabled={pagination.page === 1}
+              title="Halaman pertama"
+            >
+              ⏮
+            </button>
+            <button
+              className="copy-btn"
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={pagination.page === 1}
+              title="Sebelumnya"
+            >
+              ‹
+            </button>
+            {Array.from({ length: Math.min(5, pagination.total_pages) }, (_, i) => {
+              let pageNum
+              if (pagination.total_pages <= 5) pageNum = i + 1
+              else if (pagination.page <= 3) pageNum = i + 1
+              else if (pagination.page >= pagination.total_pages - 2) pageNum = pagination.total_pages - 4 + i
+              else pageNum = pagination.page - 2 + i
+              return (
+                <button
+                  key={pageNum}
+                  className={`copy-btn ${pagination.page === pageNum ? 'active' : ''}`}
+                  onClick={() => handlePageChange(pageNum)}
+                  style={{ minWidth: '36px' }}
+                >
+                  {pageNum}
+                </button>
+              )
+            })}
+            <button
+              className="copy-btn"
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={pagination.page === pagination.total_pages}
+              title="Selanjutnya"
+            >
+              ›
+            </button>
+            <button
+              className="copy-btn"
+              onClick={() => handlePageChange(pagination.total_pages)}
+              disabled={pagination.page === pagination.total_pages}
+              title="Halaman terakhir"
+            >
+              ⏭
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 /* ── Main ────────────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════
    ELECTIONS PANEL - manajemen pemilihan untuk admin
@@ -1464,6 +1736,7 @@ export default function DashboardPage() {
           <ElectionsPanel />
           <BlockchainAuditPanel />
           <InvitesPanel />
+          <AuthAttemptsPanel />
         </main>
       ) : (
         <VoterDashboardView />

@@ -4,7 +4,8 @@
 
 $ports = @(5173, 5183, 8000)
 
-$pids = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+$states = @('Listen', 'TimeWait', 'FinWait1', 'FinWait2', 'CloseWait', 'Closing', 'LastAck')
+$pids = Get-NetTCPConnection -State $states -ErrorAction SilentlyContinue |
     Where-Object { $_.LocalPort -in $ports } |
     Select-Object -ExpandProperty OwningProcess -Unique
 

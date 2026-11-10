@@ -114,6 +114,45 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    // Security setup status
+    $uri === '/auth/security-setup' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/auth/security_setup.php';
+    })(),
+    $uri === '/auth/security-setup' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Security status publik (halaman login - cek user perlu setup keamanan atau tidak)
+    $uri === '/auth/security-status' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/security_status.php';
+    })(),
+    $uri === '/auth/security-status' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // Auth attempts logging
+    $uri === '/auth/attempts/log' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/attempts_log.php';
+    })(),
+    $uri === '/auth/attempts/log' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    $uri === '/auth/attempts/reset' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/auth/attempts_reset.php';
+    })(),
+    $uri === '/auth/attempts/reset' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // List auth attempts (admin)
+    $uri === '/auth/attempts/list' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/auth/attempts_list.php';
+    })(),
+    $uri === '/auth/attempts/list' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
     // WebAuthn (Windows Hello) - Login
     $uri === '/auth/webauthn/login/start' && $method === 'POST' => (function () {
         require_once __DIR__ . '/api/auth/webauthn_login_start.php';

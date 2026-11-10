@@ -16,6 +16,7 @@
 
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/datetime.php';
+require_once __DIR__ . '/../../helpers/election_scheduler.php';
 require_once __DIR__ . '/../../middleware/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 
@@ -27,6 +28,7 @@ $authUser = requireAuth();
 $isAdmin  = ($authUser['role'] ?? '') === 'admin';
 
 $db = getDB();
+syncElectionStatuses($db);
 
 // ── Filter status ──────────────────────────────────────────
 $statusFilter  = $_GET['status'] ?? null;
@@ -105,7 +107,7 @@ if ($isAdmin) {
         $eIds = array_map(fn($r) => (int)$r['id'], $rows);
         $placeholders = implode(',', array_fill(0, count($eIds), '?'));
         $stmtC = $db->prepare(
-            "SELECT id, election_id, name, vision, mission, photo_path
+            "SELECT id, election_id, name, vision, mission, photo_path, photo_file_id
                FROM candidates
               WHERE election_id IN ($placeholders)
               ORDER BY id ASC"
@@ -118,11 +120,12 @@ if ($isAdmin) {
                 $candidatesMap[$eid] = [];
             }
             $candidatesMap[$eid][] = [
-                'id'         => (int)$cr['id'],
-                'name'       => $cr['name'],
-                'vision'     => $cr['vision'],
-                'mission'    => $cr['mission'],
-                'photo_path' => $cr['photo_path'],
+                'id'            => (int)$cr['id'],
+                'name'          => $cr['name'],
+                'vision'        => $cr['vision'],
+                'mission'       => $cr['mission'],
+                'photo_path'    => $cr['photo_path'],
+                'photo_file_id' => $cr['photo_file_id'] !== null ? (int)$cr['photo_file_id'] : null,
             ];
         }
     }

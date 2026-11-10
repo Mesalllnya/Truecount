@@ -11,7 +11,7 @@ async function readJson(res) {
 }
 
 
-function CandidatePhoto({ candidate, electionId, token }) {
+export function CandidatePhoto({ candidate, electionId, token, style, fallbackSize = '1.2rem' }) {
   const [photoUrl, setPhotoUrl] = useState('');
 
   useEffect(() => {
@@ -32,11 +32,12 @@ function CandidatePhoto({ candidate, electionId, token }) {
     // Foto terenkripsi diambil melalui endpoint dekripsi
     setPhotoUrl('');
 
+    const authToken = token || localStorage.getItem('tc_token');
     fetch(
       `${API}/elections/${electionId}/candidates/${candidate.id}/photo`,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
       }
     )
@@ -77,18 +78,25 @@ function CandidatePhoto({ candidate, electionId, token }) {
     token,
   ]);
 
+  const defaultStyle = {
+    width: '42px',
+    height: '42px',
+    borderRadius: '8px',
+    objectFit: 'cover',
+    border: '1px solid var(--border)',
+    flexShrink: 0,
+    ...style,
+  };
+
   if (!photoUrl) {
     return (
       <div style={{
-        width: '42px',
-        height: '42px',
-        borderRadius: '8px',
+        ...defaultStyle,
         background: '#f0f0ec',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: '1.2rem',
-        flexShrink: 0,
+        fontSize: fallbackSize,
       }}>
         👤
       </div>
@@ -99,13 +107,12 @@ function CandidatePhoto({ candidate, electionId, token }) {
     <img
       src={photoUrl}
       alt={candidate.name}
-      style={{
-        width: '42px',
-        height: '42px',
-        borderRadius: '8px',
-        objectFit: 'cover',
-        border: '1px solid var(--border)',
-        flexShrink: 0,
+      style={defaultStyle}
+      onError={(e) => {
+        e.target.style.display = 'none';
+        if (e.target.parentElement) {
+          e.target.parentElement.innerHTML = `<div style="width:100%;height:100%;background:#f0f0ec;display:flex;align-items:center;justify-content:center;font-size:${fallbackSize};">👤</div>`;
+        }
       }}
     />
   );
@@ -123,6 +130,8 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
   const [vision, setVision]     = useState('')
   const [mission, setMission]   = useState('')
   const [photoFile, setPhotoFile] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [fileInputKey, setFileInputKey] = useState(Date.now())
   const [submitting, setSubmitting] = useState(false)
 
   // Form edit kandidat
@@ -196,50 +205,55 @@ async function handleAddCandidate(e) {
       )
     }
 
-    // 2. Upload foto melalui pipeline enkripsi + steganografi
+    // 2. Upload foto melalui pipeline enkripsi + steganografi jika ada
+    let photoUploadError = null
     if (photoFile) {
-      const formData = new FormData()
-      formData.append('photo', photoFile)
+      try {
+        const formData = new FormData()
+        formData.append('photo', photoFile)
 
-      const photoResponse = await fetch(
-        `${API}/elections/${election.id}/candidates/${candidateId}/photo`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      )
-
-      const photoData = await readJson(photoResponse)
-
-      if (!photoResponse.ok) {
-        throw new Error(
-          photoData.error ||
-          'Kandidat berhasil dibuat, tetapi upload foto terenkripsi gagal.'
+        const photoResponse = await fetch(
+          `${API}/elections/${election.id}/candidates/${candidateId}/photo`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          }
         )
+
+        const photoData = await readJson(photoResponse)
+
+        if (!photoResponse.ok) {
+          photoUploadError = photoData.error || 'Upload foto gagal diproses oleh server.'
+        }
+      } catch (uploadErr) {
+        photoUploadError = uploadErr.message || 'Gagal menghubungi server untuk upload foto.'
       }
     }
 
-    // 3. Reset form dan refresh data
+    // 3. Selalu reset form input ke nol setelah paslon dibuat
     setName('')
     setVision('')
     setMission('')
     setPhotoFile(null)
+    setPhotoPreview(null)
+    setFileInputKey(Date.now())
 
     await loadCandidates()
     onRefreshElection()
+
+    if (photoUploadError) {
+      setError(`Kandidat berhasil ditambahkan, namun foto gagal disimpan: ${photoUploadError}`)
+    }
 
   } catch (err) {
     setError(
       err?.message || 'Gagal menambahkan kandidat.'
     )
 
-    // Refresh untuk memastikan kandidat yang mungkin sudah
-    // terbuat tetap muncul meskipun upload foto gagal.
     await loadCandidates()
-
   } finally {
     setSubmitting(false)
   }
@@ -413,11 +427,30 @@ async function handleUpdateCandidate(e) {
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Foto Paslon (JPEG/PNG, maks 2MB)</label>
                   <input
+                    key={fileInputKey}
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    onChange={e => setPhotoFile(e.target.files[0] || null)}
+                    onChange={e => {
+                      const file = e.target.files[0] || null
+                      setPhotoFile(file)
+                      if (file) {
+                        setPhotoPreview(URL.createObjectURL(file))
+                      } else {
+                        setPhotoPreview(null)
+                      }
+                    }}
                     style={{ width: '100%', fontSize: '0.8rem' }}
                   />
+                  {photoPreview && (
+                    <div style={{ marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <img
+                        src={photoPreview}
+                        alt="Pratinjau"
+                        style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'cover', border: '1px solid var(--border)' }}
+                      />
+                      <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Pratinjau foto sebelum dienkripsi</span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Misi</label>

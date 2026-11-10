@@ -192,7 +192,7 @@ try {
     error_log('[Candidate Photo Upload] ' . $e->getMessage());
 
     jsonResponse([
-        'error' => 'Gagal memproses foto kandidat.'
+        'error' => 'Gagal memproses foto kandidat: ' . $e->getMessage()
     ], 500);
 
 } finally {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import { SkeletonRow } from '../components/ui/Skeleton'
-import { CandidatesModal, VotersModal } from '../components/ElectionModals'
+import { CandidatesModal, VotersModal, CandidatePhoto } from '../components/ElectionModals'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
@@ -860,6 +860,14 @@ function ElectionsPanel() {
     title: '', description: '', start_time: '', end_time: '',
   })
 
+  // ── Form edit election (draft) ────────────────────────────
+  const [editingElection,  setEditingElection]  = useState(null)
+  const [updatingElection, setUpdatingElection] = useState(false)
+  const [editErr,          setEditErr]          = useState('')
+  const [editForm, setEditForm] = useState({
+    title: '', description: '', start_time: '', end_time: '',
+  })
+
   // ── Edit status / inline ──────────────────────────────────
   const [updatingId, setUpdatingId] = useState(null)
 
@@ -936,6 +944,69 @@ function ElectionsPanel() {
       alert(err?.message || 'Gagal memperbarui status.')
     } finally {
       setUpdatingId(null)
+    }
+  }
+
+  function toDatetimeLocal(isoStr) {
+    if (!isoStr) return ''
+    try {
+      const d = new Date(isoStr)
+      if (isNaN(d.getTime())) return ''
+      const pad = n => String(n).padStart(2, '0')
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    } catch {
+      return ''
+    }
+  }
+
+  function startEditElection(election) {
+    setEditingElection(election)
+    setEditErr('')
+    setEditForm({
+      title: election.title ?? '',
+      description: election.description ?? '',
+      start_time: toDatetimeLocal(election.start_time),
+      end_time: toDatetimeLocal(election.end_time),
+    })
+  }
+
+  function cancelEditElection() {
+    setEditingElection(null)
+    setEditErr('')
+  }
+
+  async function handleUpdateElection(e) {
+    e.preventDefault()
+    if (!editingElection) return
+    setUpdatingElection(true)
+    setEditErr('')
+
+    const payload = {
+      title: editForm.title.trim(),
+      description: editForm.description.trim(),
+      start_time: editForm.start_time ? new Date(editForm.start_time).toISOString() : '',
+      end_time:   editForm.end_time   ? new Date(editForm.end_time).toISOString()   : '',
+    }
+
+    try {
+      const res = await fetch(`${API}/elections/${editingElection.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+      const data = await readJson(res)
+      if (!res.ok) {
+        setEditErr(data.error || 'Gagal memperbarui pemilihan.')
+        return
+      }
+      setEditingElection(null)
+      loadElections()
+    } catch (err) {
+      setEditErr(err?.message === 'Failed to fetch'
+        ? 'Tidak dapat terhubung ke server.'
+        : (err?.message || 'Gagal memperbarui pemilihan.'))
+    } finally {
+      setUpdatingElection(false)
     }
   }
 
@@ -1036,6 +1107,73 @@ function ElectionsPanel() {
         </form>
       )}
 
+      {/* ── Form edit election (draft only) ── */}
+      {editingElection && (
+        <form className="create-panel" onSubmit={handleUpdateElection} style={{ border: '2px solid #3468b0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#3468b0' }}>
+              Edit Pemilihan (Draft): {editingElection.title}
+            </h3>
+            <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+              Hanya pemilihan berstatus draft yang dapat diedit
+            </span>
+          </div>
+          {editErr && <p className="invite-error" role="alert">{editErr}</p>}
+          <div className="create-fields el-create-fields">
+            <div className="create-field" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="edit-el-title">Judul pemilihan <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                id="edit-el-title"
+                type="text"
+                placeholder="Contoh: Pemilihan Ketua BEM 2026"
+                value={editForm.title}
+                required
+                maxLength={255}
+                onChange={e => { setEditForm(p => ({ ...p, title: e.target.value })); setEditErr('') }}
+              />
+            </div>
+            <div className="create-field" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="edit-el-desc">Deskripsi (opsional)</label>
+              <input
+                id="edit-el-desc"
+                type="text"
+                placeholder="Keterangan singkat tentang pemilihan ini"
+                value={editForm.description}
+                onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+            <div className="create-field">
+              <label htmlFor="edit-el-start">Waktu mulai <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                id="edit-el-start"
+                type="datetime-local"
+                value={editForm.start_time}
+                required
+                onChange={e => setEditForm(p => ({ ...p, start_time: e.target.value }))}
+              />
+            </div>
+            <div className="create-field">
+              <label htmlFor="edit-el-end">Waktu selesai <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                id="edit-el-end"
+                type="datetime-local"
+                value={editForm.end_time}
+                required
+                onChange={e => setEditForm(p => ({ ...p, end_time: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="create-actions">
+            <button type="submit" className="create-submit" disabled={updatingElection}>
+              {updatingElection ? 'Menyimpan perubahan…' : 'Simpan Perubahan'}
+            </button>
+            <button type="button" className="create-cancel" onClick={cancelEditElection}>
+              Batal
+            </button>
+          </div>
+        </form>
+      )}
+
       {listError && <p className="invite-error" role="alert">{listError}</p>}
 
       {/* ── Daftar election ── */}
@@ -1091,15 +1229,27 @@ function ElectionsPanel() {
               {/* Aksi status */}
               <div className="invite-cell invite-cell--action el-actions">
                 {el.status === 'draft' && (
-                  <button
-                    className="create-submit"
-                    style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem' }}
-                    disabled={isUpdating}
-                    onClick={() => handleSetStatus(el, 'active')}
-                    title="Buka pemilihan untuk voting"
-                  >
-                    {isUpdating ? '…' : 'Buka'}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', fontWeight: 600 }}
+                      disabled={isUpdating}
+                      onClick={() => startEditElection(el)}
+                      title="Edit informasi pemilihan"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      className="create-submit"
+                      style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem' }}
+                      disabled={isUpdating}
+                      onClick={() => handleSetStatus(el, 'active')}
+                      title="Buka pemilihan untuk voting"
+                    >
+                      {isUpdating ? '…' : 'Buka'}
+                    </button>
+                  </>
                 )}
                 {el.status === 'active' && (
                   <button
@@ -1346,38 +1496,17 @@ function VoterDashboardView() {
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                          {c.photo_path ? (
-                            <img
-                              src={`${API}${c.photo_path}`}
-                              alt={c.name}
-                              style={{
-                                width: '64px',
-                                height: '64px',
-                                borderRadius: '10px',
-                                objectFit: 'cover',
-                                border: '1px solid var(--border)',
-                                flexShrink: 0,
-                              }}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = '<div style="width:64px;height:64px;border-radius:10px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:1.8rem;">👤</div>';
-                              }}
-                            />
-                          ) : (
-                            <div style={{
+                          <CandidatePhoto
+                            candidate={c}
+                            electionId={el.id}
+                            token={token}
+                            style={{
                               width: '64px',
                               height: '64px',
                               borderRadius: '10px',
-                              background: '#e5e7eb',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '1.8rem',
-                              flexShrink: 0,
-                            }}>
-                              👤
-                            </div>
-                          )}
+                            }}
+                            fallbackSize="1.8rem"
+                          />
                           <div style={{ minWidth: 0 }}>
                             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.05em' }}>
                               PASLON {String(i + 1).padStart(2, '0')}

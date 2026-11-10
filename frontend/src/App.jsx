@@ -15,6 +15,7 @@ import Nav from './components/Nav'
 import EncryptedMessagesPage from './pages/EncryptedMessagesPage'
 import AuthGuard from './components/AuthGuard'
 import { FailedAttemptsProvider } from './hooks/useAuthSecurity'
+import { AuthProvider } from './hooks/useAuthSession'
 
 /** Alias lama /register → /daftar, dengan query (?undangan=...) tetap dibawa */
 function RegisterRedirect() {
@@ -85,10 +86,12 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
-      <FailedAttemptsProvider>
-        <HealthMonitor />
-        <AppRoutes />
-      </FailedAttemptsProvider>
+      <AuthProvider>
+        <FailedAttemptsProvider>
+          <HealthMonitor />
+          <AppRoutes />
+        </FailedAttemptsProvider>
+      </AuthProvider>
     </BrowserRouter>
   )
 }

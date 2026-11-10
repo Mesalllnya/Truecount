@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUsbToken, startUsbAuthenticate, verifyUsbAuthenticate, base64urlToBytes, bytesToBase64url } from '../hooks/useUsbToken'
 import { useWebAuthnLogin, isWebAuthnSupported } from '../hooks/useWebAuthn'
 import { useFailedAttempts, useCameraPermission } from '../hooks/useAuthSecurity.tsx'
+import { useAuth } from '../hooks/useAuthSession'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import './AuthPage.css'
 
@@ -129,14 +130,28 @@ function LoaderIcon() {
   )
 }
 
+function RefreshIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1 4v6a6 6 0 0 0 6 6h6" />
+      <path d="M23 20v-6a6 6 0 0 0 -6 -6h-6" />
+      <polyline points="17 20 23 20 23 14" />
+      <polyline points="7 4 1 4 1 10" />
+    </svg>
+  )
+}
+
 /* ── Komponen utama ─────────────────────────────────────────── */
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // ── Auth Session ──────────────────────────────────────────────
+  const { login } = useAuth()
+
   // ── Failed Attempts Tracking ────────────────────────────────
-  const { state: attemptsState, increment, canUsePassword } = useFailedAttempts()
+  const { state: attemptsState, increment } = useFailedAttempts()
 
   // ── Camera Permission (required for Windows Hello) ──────────
   const { hasPermission: cameraPermission, isChecking: cameraChecking, error: cameraError, requestPermission, stream, videoEl, capturePhoto, verifyCameraActive } = useCameraPermission()
@@ -167,10 +182,11 @@ export default function LoginPage() {
   const [form, setForm] = useState({ identifier: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showPasswordFallback, setShowPasswordFallback] = useState(false)
   const [authPhoto, setAuthPhoto] = useState(null)
   // True jika user (berdasarkan identifier) belum pasang Windows Hello/Dongle
   const [identifierNeedsSetup, setIdentifierNeedsSetup] = useState(false)
+  // Kata sandi tersedia setelah 5x percobaan gagal
+  const showPasswordFallback = attemptsState.count >= 5
 
   // ── Capture photo before auth attempt ─────────────────────────
   const captureAuthPhoto = useCallback(async () => {
@@ -327,7 +343,7 @@ export default function LoginPage() {
     }
 
     // Capture photo before auth
-    await captureAuthPhoto()
+    const photo = await captureAuthPhoto()
 
     try {
       // 1. Decrypt private key dari USB
@@ -359,25 +375,37 @@ export default function LoginPage() {
         usbAuthChallengeData.challenge_id,
         usbAuthChallengeData.allowCredentials[0]?.id || '',
         signatureB64,
-        authPhoto
+        photo
       )
 
       if (!result) {
         setUsbAuthStep('error')
         setUsbAuthError('Verifikasi gagal di server.')
-        await increment(identifier, 'dongle', false, 'Verifikasi gagal di server')
+        try {
+          await increment(identifier, 'dongle', false, 'Verifikasi gagal di server')
+        } catch (incErr) {
+          console.warn('[Login] Failed to log dongle attempt:', incErr)
+        }
         return
       }
 
       // Success!
-      localStorage.setItem('tc_token', result.token)
-      await increment(identifier, 'dongle', true)
+      login(result.token, result.user)
+      try {
+        await increment(identifier, 'dongle', true)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log dongle attempt:', incErr)
+      }
       navigate('/dasbor')
     } catch (err) {
       setUsbAuthStep('error')
       const errMsg = err?.message || 'Terjadi kesalahan.'
       setUsbAuthError(errMsg)
-      await increment(identifier, 'dongle', false, errMsg)
+      try {
+        await increment(identifier, 'dongle', false, errMsg)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log dongle attempt:', incErr)
+      }
     } finally {
       setAuthPhoto(null)
     }
@@ -401,14 +429,6 @@ export default function LoginPage() {
   function handleBack() {
     navigate('/')
   }
-
-  // ── Update password fallback visibility based on attempts ────
-  useEffect(() => {
-    const identifier = form.identifier.trim()
-    if (identifier) {
-      setShowPasswordFallback(canUsePassword(identifier))
-    }
-  }, [attemptsState.count, form.identifier, canUsePassword])
 
   // ── Cek status keamanan user saat identifier diketik ──────────
   // Jika user belum pasang Windows Hello/Dongle, tampilkan Kata Sandi
@@ -456,7 +476,7 @@ export default function LoginPage() {
     }
 
     // Capture photo before auth
-    await captureAuthPhoto()
+    const photo = await captureAuthPhoto()
 
     setLoading(true)
     setError('')
@@ -464,7 +484,7 @@ export default function LoginPage() {
       const res = await fetch('http://localhost:8000/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, auth_photo: authPhoto }),
+        body: JSON.stringify({ ...form, auth_photo: photo }),
       })
       const data = await readJson(res)
       if (!res.ok) {
@@ -473,8 +493,12 @@ export default function LoginPage() {
         await increment(identifier, 'password', false, errMsg)
         return
       }
-      localStorage.setItem('tc_token', data.token)
-      await increment(identifier, 'password', true)
+      login(data.token, data.user)
+      try {
+        await increment(identifier, 'password', true)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log password attempt:', incErr)
+      }
       navigate('/dasbor')
     } catch (err) {
       const errMsg =
@@ -482,7 +506,11 @@ export default function LoginPage() {
           ? err.message
           : 'Tidak dapat terhubung ke server. Periksa koneksi Anda.'
       setError(errMsg)
-      await increment(identifier, 'password', false, errMsg)
+      try {
+        await increment(identifier, 'password', false, errMsg)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log password attempt:', incErr)
+      }
     } finally {
       setLoading(false)
       setAuthPhoto(null)
@@ -499,6 +527,8 @@ export default function LoginPage() {
     if (cameraChecking) return
     if (cameraPermission === false) {
       setError(cameraError || 'Izin kamera diperlukan untuk Windows Hello')
+      // Hitung sebagai percobaan gagal agar Kata Sandi terbuka setelah 5x gagal
+      await increment(identifier, 'webauthn', false, cameraError || 'Kamera tidak tersedia')
       return
     }
 
@@ -510,25 +540,37 @@ export default function LoginPage() {
     }
 
     // Capture photo before auth
-    await captureAuthPhoto()
+    const photo = await captureAuthPhoto()
 
     setLoading(true)
     setError('')
     try {
-      const result = await loginWithWindowsHello(identifier, authPhoto)
+      const result = await loginWithWindowsHello(identifier, photo)
       if (result) {
-        localStorage.setItem('tc_token', result.token)
-        await increment(identifier, 'webauthn', true)
+        login(result.token, result.user)
+        try {
+          await increment(identifier, 'webauthn', true)
+        } catch (incErr) {
+          console.warn('[Login] Failed to log webauthn attempt:', incErr)
+        }
         navigate('/dasbor')
       } else {
         const errMsg = webauthnError || 'Autentikasi Windows Hello gagal'
         setError(errMsg)
-        await increment(identifier, 'webauthn', false, errMsg)
+        try {
+          await increment(identifier, 'webauthn', false, errMsg)
+        } catch (incErr) {
+          console.warn('[Login] Failed to log webauthn attempt:', incErr)
+        }
       }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Terjadi kesalahan'
       setError(errMsg)
-      await increment(identifier, 'webauthn', false, errMsg)
+      try {
+        await increment(identifier, 'webauthn', false, errMsg)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log webauthn attempt:', incErr)
+      }
     } finally {
       setLoading(false)
       setAuthPhoto(null)
@@ -536,18 +578,21 @@ export default function LoginPage() {
   }
 
   // ── Konfigurasi metode auth ─────────────────────────────────
-  // Kata Sandi muncul jika:
+  // Kata Sandi tersedia jika:
   //   - identifierNeedsSetup = user belum pasang Windows Hello/Dongle (onboarding)
   //   - showPasswordFallback = 5+ percobaan gagal
+  //   - Kamera tidak tersedia untuk Windows Hello
+  const passwordAvailable = identifierNeedsSetup || showPasswordFallback || cameraPermission === false
+
   const authMethods = [
     {
       id: 'webauthn',
       label: 'Windows Hello',
-      description: 'Sidik jari, wajah, atau PIN Windows',
+      description: 'Sidik jari, wajah, atau PIN Windows (kamera wajib aktif)',
       icon: <FingerprintIcon />,
-      available: (webauthnSupported && webauthnPlatformAvailable) && !identifierNeedsSetup,
-      unavailableReason: identifierNeedsSetup
-        ? 'Windows Hello belum terdaftar untuk akun ini. Gunakan Kata Sandi untuk mengatur.'
+      available: (webauthnSupported && webauthnPlatformAvailable) && cameraPermission !== false,
+      unavailableReason: cameraPermission === false
+        ? 'Kamera tidak tersedia. Gunakan Kata Sandi untuk masuk.'
         : (webauthnSupported ? 'Windows Hello tidak tersedia di perangkat ini' : 'Browser tidak mendukung WebAuthn'),
       requireCamera: true,
     },
@@ -563,30 +608,31 @@ export default function LoginPage() {
     {
       id: 'password',
       label: 'Kata Sandi',
-      description: 'Username/email dan kata sandi',
+      description: passwordAvailable ? 'Username/email dan kata sandi' : 'Username/email dan kata sandi (tersedia setelah 5 percobaan gagal)',
       icon: <PasswordIcon />,
-      available: showPasswordFallback || identifierNeedsSetup,
-      unavailableReason: (showPasswordFallback || identifierNeedsSetup) ? undefined : 'Tersedia setelah 5 percobaan gagal',
+      available: passwordAvailable,
+      unavailableReason: passwordAvailable ? undefined : 'Tersedia setelah 5 percobaan gagal',
       requireCamera: false,
     },
   ]
 
   // Determine default method:
   // 1. User belum pasang keamanan → paksa Kata Sandi (onboarding)
-  // 2. Windows Hello tersedia → default
-  // 3. Tauri → dongle
-  // 4. Fallback password
+  // 2. Kamera tidak tersedia → paksa Kata Sandi
+  // 3. Windows Hello tersedia → default (direkomendasikan)
+  // 4. Tauri → dongle
+  // 5. Fallback password
   useEffect(() => {
-    if (showPasswordFallback || identifierNeedsSetup) {
+    if (identifierNeedsSetup || cameraPermission === false || showPasswordFallback) {
       setSelectedMethod('password')
     } else if (webauthnSupported && webauthnPlatformAvailable) {
       setSelectedMethod('webauthn')
     } else if (isTauri) {
       setSelectedMethod('dongle')
-    } else if (showPasswordFallback) {
+    } else {
       setSelectedMethod('password')
     }
-  }, [webauthnSupported, webauthnPlatformAvailable, isTauri, showPasswordFallback, identifierNeedsSetup])
+  }, [identifierNeedsSetup, cameraPermission, showPasswordFallback, webauthnSupported, webauthnPlatformAvailable, isTauri])
 
   return (
     <div className="auth-shell">
@@ -720,6 +766,39 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* ── Captured Photo Preview ────────────────────────────── */}
+        {authPhoto && (
+          <div className="photo-preview">
+            <div className="photo-preview-header">
+              <span className="photo-badge">
+                <CheckIcon />
+                Foto Tangkap
+              </span>
+              <button
+                type="button"
+                className="photo-capture-btn"
+                onClick={captureAuthPhoto}
+                title="Ulangi tangkap foto"
+                disabled={cameraChecking}
+              >
+                <RefreshIcon />
+                Ulangi
+              </button>
+            </div>
+            <img
+              src={authPhoto}
+              alt="Foto verifikasi wajah"
+              className="photo-thumbnail"
+              style={{ transform: 'scaleX(-1)' }}
+              loading="eager"
+              decoding="async"
+            />
+            <p className="photo-hint">
+              Foto wajah telah ditangkap dan akan dikirimkan bersama verifikasi login.
+            </p>
+          </div>
+        )}
+
         {/* ── Pilihan Metode Auth ────────────────────────────── */}
         <div className="auth-method-selector" role="radiogroup" aria-label="Pilih metode masuk">
           {authMethods.map((method) => (
@@ -750,9 +829,7 @@ export default function LoginPage() {
               )}
             </button>
           ))}
-
-          {/* Password fallback button when locked */}
-          {!showPasswordFallback && attemptsState.count > 0 && attemptsState.count < 5 && (
+          {attemptsState.count > 0 && (
             <div className="attempts-counter" role="status" aria-live="polite">
               <LockIcon />
               <span>
@@ -764,13 +841,13 @@ export default function LoginPage() {
               <ShieldIcon />
             </div>
           )}
-
           {showPasswordFallback && attemptsState.count >= 5 && (
             <div className="password-unlocked-notice" role="status">
               <LockIcon />
               <span>Kata sandi sekarang tersedia karena <strong>5 percobaan gagal</strong>.</span>
             </div>
           )}
+
         </div>
 
         {/* ── Form Password ──────────────────────────────────── */}

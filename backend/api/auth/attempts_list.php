@@ -89,7 +89,9 @@ $sql = "
         aa.ip_address,
         aa.user_agent,
         aa.photo_path,
-        aa.created_at,
+        -- created_at kolom TIMESTAMP → dibaca dalam timezone session MySQL (local).
+        -- Konversi ke Unix timestamp (UTC) agar toIso8601/frontend menampilkan waktu yang benar.
+        UNIX_TIMESTAMP(aa.created_at) AS created_at_ts,
         u.username,
         u.email,
         u.role
@@ -119,7 +121,9 @@ jsonResponse([
             'ip_address'   => $a['ip_address'],
             'user_agent'   => $a['user_agent'],
             'photo_path'   => $a['photo_path'],
-            'created_at'   => toIso8601($a['created_at']),
+            'created_at'   => $a['created_at_ts'] !== null
+                ? gmdate(DATE_ATOM, (int)$a['created_at_ts'])
+                : null,
             'user'         => $a['username'] ? [
                 'username' => $a['username'],
                 'email'    => $a['email'],

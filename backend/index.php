@@ -9,6 +9,9 @@
 
 require_once __DIR__ . '/helpers/logger.php';     // File logger → storage/logs/
 
+// Set zona waktu default ke WIB (Asia/Jakarta, UTC+7)
+date_default_timezone_set('Asia/Jakarta');
+
 // Access log - SEMUA request tercatat, termasuk preflight OPTIONS
 // (harus sebelum response.php yang meng-exit OPTIONS lebih awal)
 tc_log_info(sprintf(

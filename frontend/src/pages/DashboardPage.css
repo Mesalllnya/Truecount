@@ -606,6 +606,20 @@
   color: var(--muted);
 }
 
+/* ── Baris hasil pencarian user (4 kolom, bukan 6 seperti undangan) ── */
+@media (min-width: 860px) {
+  .user-search-row {
+    grid-template-columns: 1.1fr 1.5fr 0.6fr 0.8fr;
+  }
+}
+
+/* Email di hasil pencarian: jangan dipotong/tertutup badge Peran */
+.user-search-row .invite-date {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* ── Badge status ──────────────────────────────────────── */
 .badge {
   display: inline-flex;

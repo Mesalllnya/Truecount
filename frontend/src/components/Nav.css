@@ -122,7 +122,7 @@
   border-bottom: 2.5px solid var(--red);
 }
 
-/* ── Actions (right side): Masuk button ─────────────────── */
+/* ── Actions (right side): Masuk button / User menu ───────── */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -162,6 +162,43 @@
 
 .nav-masuk:hover .door-icon {
   transform: rotate(-55deg);
+}
+
+/* ── User menu (when authenticated) ───────────────────────── */
+.nav-user-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem 0.5rem 0;
+}
+
+.nav-user-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--black);
+  white-space: nowrap;
+}
+
+.nav-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 200ms var(--ease-out);
+  white-space: nowrap;
+}
+
+.nav-logout:hover {
+  background: var(--red);
+  color: var(--white);
+  border-color: var(--red);
 }
 
 /* ── Hamburger ──────────────────────────────────────────── */

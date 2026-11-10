@@ -17,6 +17,7 @@
 
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/datetime.php';
+require_once __DIR__ . '/../../helpers/election_scheduler.php';
 require_once __DIR__ . '/../../middleware/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 
@@ -35,7 +36,8 @@ if ($id <= 0) {
     jsonResponse(['error' => 'ID pemilihan tidak valid.'], 400);
 }
 
-$db   = getDB();
+$db = getDB();
+syncElectionStatuses($db);
 $stmt = $db->prepare(
     'SELECT e.id, e.title, e.description, e.start_time, e.end_time,
             e.status, e.created_by, e.created_at, e.updated_at,

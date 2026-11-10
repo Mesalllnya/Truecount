@@ -412,31 +412,28 @@ export default function VotePage() {
                     </span>
 
                     {/* Foto paslon atau Avatar default */}
-                    {c.photo_path ? (
-                      <div className="vote-card-photo" style={{
-                        width: '90px',
-                        height: '90px',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        marginBottom: '0.6rem',
-                        border: '2px solid var(--border)',
-                        background: '#f5f5f5',
-                      }}>
-                        <img
-                          src={`${API_BASE}${c.photo_path}`}
-                          alt={c.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#eee;">👤</div>';
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <span className="vote-card-icon" aria-hidden="true">
-                        <PersonIcon />
-                      </span>
-                    )}
+                    <div className="vote-card-photo" style={{
+                      width: '90px',
+                      height: '90px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      marginBottom: '0.6rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <CandidatePhoto
+                        candidate={c}
+                        electionId={election.id}
+                        token={token}
+                        style={{
+                          width: '90px',
+                          height: '90px',
+                          borderRadius: '12px',
+                        }}
+                        fallbackSize="2.2rem"
+                      />
+                    </div>
 
                     <span className="vote-card-name">{c.name}</span>
 

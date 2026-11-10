@@ -71,24 +71,9 @@ export function FailedAttemptsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const increment = useCallback(async (identifier: string, method: string, success: boolean, error?: string) => {
-    // Record attempt to server
-    try {
-      await fetch(`${API_BASE}/auth/attempts/log`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identifier,
-          method,
-          success,
-          error,
-          user_agent: navigator.userAgent,
-        }),
-      });
-    } catch {
-      // Silently fail - logging shouldn't block auth
-      console.warn('[TrueCount] Failed to log auth attempt');
-    }
-
+    // Catat ke server hanya untuk counter lokal (percobaan gagal, lockout, password fallback).
+    // Penulisan ke tabel auth_attempts ditangani sepenuhnya oleh backend (login.php, webauthn_login_verify.php,
+    // authenticate_verify.php) sebagai single source of truth, sehingga tidak ada duplikasi baris log.
     if (success) {
       // Reset on successful auth
       saveState({ count: 0, lastAttempt: new Date().toISOString(), lockedUntil: null });

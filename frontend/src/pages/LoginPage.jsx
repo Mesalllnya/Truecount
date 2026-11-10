@@ -196,6 +196,27 @@ export default function LoginPage() {
     return photo;
   }, [capturePhoto]);
 
+  // ── Matikan kamera saat meninggalkan halaman login ─────────────
+  // Mencegah kamera tetap menyala (indikator LED menyala) setelah
+  // navigasi ke dasbor atau halaman lain.
+  useEffect(() => {
+    return () => {
+      // Hentikan semua track kamera (mematikan indikator kamera)
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      // Lepaskan srcObject dari video elemen agar browser/WebView melepaskan kamera
+      if (previewVideoElement) {
+        previewVideoElement.srcObject = null;
+        previewVideoElement.removeAttribute('srcObject');
+      }
+      if (videoEl) {
+        videoEl.srcObject = null;
+        videoEl.removeAttribute('srcObject');
+      }
+    };
+  }, [stream, previewVideoElement, videoEl]);
+
   // ── Notifikasi "akun baru dibuat" ───────────────────────────
   const [notice, setNotice] = useState(
     () => (location.state?.registered ? 'Akun berhasil dibuat. Silakan masuk.' : '')

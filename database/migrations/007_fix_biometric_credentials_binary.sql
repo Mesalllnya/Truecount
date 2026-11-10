@@ -12,9 +12,3 @@ USE `truecount_db`;
 ALTER TABLE `biometric_credentials`
     MODIFY COLUMN `credential_id` VARBINARY(1024) NOT NULL,
     MODIFY COLUMN `public_key` VARBINARY(2048) NOT NULL;
-
--- Verify
-SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_SCHEMA = 'truecount_db' AND TABLE_NAME = 'biometric_credentials'
-  AND COLUMN_NAME IN ('credential_id', 'public_key');

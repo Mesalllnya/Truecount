@@ -35,7 +35,7 @@
 
 ---
 
-### Orang 2 - [Nama Orang 2]
+### Orang 2 - Muhamad Ifsal Fadhilah
 
 **Peran:** Election Management & Voting System  
 **Fokus:** Fitur inti pemungutan suara

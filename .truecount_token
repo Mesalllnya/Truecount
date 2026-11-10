@@ -1,9 +1,0 @@
-{
-    "v": 1,
-    "uid": 1,
-    "alg": "ES256",
-    "pk": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8UCDGBst9kfN925PBUYfugTYb9hYzF9Fa_92n8xKM7foJYNEYUOF-5xtKsYGcBgzMk4oZOSl99rt1r8Q9IbQLw",
-    "sk_enc": "E37UVJLP9cWszGZbpHdf8kTzRrl8-T0IyeyHZrJzcjmfj2GNQl7dhlORr958tKP8slvUKFChV_tBBwlr9Y34X4TTir8JWS5JX46_4jF3vu6bOKhfE792n63aCatvJIhrdZE1CZrt3iozwRPnt6XhrpcJvW5olF27jlsN8lis_sg95C7E0p5Y2XuoIvoGO1Z2GmozqyChO16OJA",
-    "salt": "owDGJwJlMUfx-zuXnKNAlA",
-    "iv": "2Hruttmzz5z0S_bZ"
-}

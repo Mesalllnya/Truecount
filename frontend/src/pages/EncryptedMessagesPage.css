@@ -1,0 +1,178 @@
+.encrypted-page {
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+}
+
+.encrypted-heading {
+  margin-bottom: 2rem;
+}
+
+.encrypted-eyebrow {
+  color: var(--red);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.encrypted-heading h1 {
+  margin: 0.5rem 0;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  color: var(--black);
+}
+
+.encrypted-heading p,
+.encrypted-card-heading p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.encrypted-card {
+  background: var(--white, #fff);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.encrypted-card-heading {
+  margin-bottom: 1.5rem;
+}
+
+.encrypted-card-heading h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--black);
+}
+
+.encrypted-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.encrypted-card label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--black);
+  margin-top: 0.5rem;
+}
+
+.encrypted-card input,
+.encrypted-card select,
+.encrypted-card textarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font: inherit;
+  color: var(--black);
+  background: #fff;
+}
+
+.encrypted-card textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.encrypted-card input:focus,
+.encrypted-card select:focus,
+.encrypted-card textarea:focus {
+  outline: 2px solid rgba(190, 35, 45, 0.2);
+  border-color: var(--red);
+}
+
+.encrypted-button,
+.encrypted-secondary-button {
+  border: 0;
+  border-radius: 9px;
+  padding: 0.85rem 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.encrypted-button {
+  background: var(--red);
+  color: white;
+  margin-top: 0.5rem;
+}
+
+.encrypted-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.encrypted-secondary-button {
+  background: #f1f1f1;
+  color: var(--black);
+  margin-top: 0.5rem;
+}
+
+.encrypted-alert,
+.encrypted-result,
+.encrypted-plaintext {
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.encrypted-alert.error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.encrypted-alert.success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.encrypted-result,
+.encrypted-plaintext {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  margin-top: 1.25rem;
+  color: var(--black);
+}
+
+.encrypted-result p,
+.encrypted-plaintext p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.encrypted-note {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .encrypted-page {
+    padding: 2rem 1rem 3rem;
+  }
+
+  .encrypted-card {
+    padding: 1.25rem;
+  }
+
+  .dash-nav {
+    height: auto;
+    min-height: var(--nav-h);
+    flex-wrap: wrap;
+  }
+
+  .dash-nav-links {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .dash-nav-item {
+    padding: 0 0.7rem;
+  }
+}

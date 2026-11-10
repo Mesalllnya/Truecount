@@ -10,6 +10,108 @@ async function readJson(res) {
   }
 }
 
+
+function CandidatePhoto({ candidate, electionId, token }) {
+  const [photoUrl, setPhotoUrl] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl = null;
+
+    // Foto lama masih menggunakan public path
+    if (!candidate.photo_file_id) {
+      setPhotoUrl(
+        candidate.photo_path ? `${API}${candidate.photo_path}` : ''
+      );
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // Foto terenkripsi diambil melalui endpoint dekripsi
+    setPhotoUrl('');
+
+    fetch(
+      `${API}/elections/${electionId}/candidates/${candidate.id}/photo`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    )
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Gagal mengambil foto kandidat.');
+        }
+
+        return response.blob();
+      })
+      .then(blob => {
+        if (cancelled) return;
+
+        objectUrl = URL.createObjectURL(blob);
+        setPhotoUrl(objectUrl);
+      })
+      .catch(error => {
+        if (!cancelled) {
+          console.error(
+            `[Candidate Photo ${candidate.id}]`,
+            error
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [
+    candidate.id,
+    candidate.photo_file_id,
+    candidate.photo_path,
+    electionId,
+    token,
+  ]);
+
+  if (!photoUrl) {
+    return (
+      <div style={{
+        width: '42px',
+        height: '42px',
+        borderRadius: '8px',
+        background: '#f0f0ec',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '1.2rem',
+        flexShrink: 0,
+      }}>
+        👤
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={photoUrl}
+      alt={candidate.name}
+      style={{
+        width: '42px',
+        height: '42px',
+        borderRadius: '8px',
+        objectFit: 'cover',
+        border: '1px solid var(--border)',
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+
 /* ── Modal Manajemen Kandidat / Paslon (Admin) ───────────── */
 export function CandidatesModal({ election, onClose, onRefreshElection }) {
   const [candidates, setCandidates] = useState([])
@@ -52,41 +154,97 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
 
   useEffect(() => { loadCandidates() }, [loadCandidates])
 
-  async function handleAddCandidate(e) {
-    e.preventDefault()
-    if (!name.trim()) return
-    setSubmitting(true)
-    setError('')
+  
+async function handleAddCandidate(e) {
+  e.preventDefault()
+  if (!name.trim()) return
 
-    try {
-      const formData = new FormData()
-      formData.append('name', name.trim())
-      formData.append('vision', vision.trim())
-      formData.append('mission', mission.trim())
-      if (photoFile) {
-        formData.append('photo', photoFile)
-      }
+  setSubmitting(true)
+  setError('')
 
-      const res = await fetch(`${API}/elections/${election.id}/candidates`, {
+  try {
+    // 1. Buat kandidat terlebih dahulu
+    const res = await fetch(
+      `${API}/elections/${election.id}/candidates`,
+      {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      })
-      const data = await readJson(res)
-      if (!res.ok) { setError(data.error || 'Gagal menambahkan kandidat.'); return }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          vision: vision.trim(),
+          mission: mission.trim(),
+        }),
+      }
+    )
 
-      setName('')
-      setVision('')
-      setMission('')
-      setPhotoFile(null)
-      loadCandidates()
-      onRefreshElection()
-    } catch (err) {
-      setError(err?.message || 'Gagal menambahkan kandidat.')
-    } finally {
-      setSubmitting(false)
+    const data = await readJson(res)
+
+    if (!res.ok) {
+      throw new Error(
+        data.error || 'Gagal menambahkan kandidat.'
+      )
     }
+
+    const candidateId = data.candidate?.id
+
+    if (!candidateId) {
+      throw new Error(
+        'Kandidat berhasil dibuat, tetapi ID kandidat tidak ditemukan.'
+      )
+    }
+
+    // 2. Upload foto melalui pipeline enkripsi + steganografi
+    if (photoFile) {
+      const formData = new FormData()
+      formData.append('photo', photoFile)
+
+      const photoResponse = await fetch(
+        `${API}/elections/${election.id}/candidates/${candidateId}/photo`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      )
+
+      const photoData = await readJson(photoResponse)
+
+      if (!photoResponse.ok) {
+        throw new Error(
+          photoData.error ||
+          'Kandidat berhasil dibuat, tetapi upload foto terenkripsi gagal.'
+        )
+      }
+    }
+
+    // 3. Reset form dan refresh data
+    setName('')
+    setVision('')
+    setMission('')
+    setPhotoFile(null)
+
+    await loadCandidates()
+    onRefreshElection()
+
+  } catch (err) {
+    setError(
+      err?.message || 'Gagal menambahkan kandidat.'
+    )
+
+    // Refresh untuk memastikan kandidat yang mungkin sudah
+    // terbuat tetap muncul meskipun upload foto gagal.
+    await loadCandidates()
+
+  } finally {
+    setSubmitting(false)
   }
+}
+
 
   // Membuka form edit kandidat
   function startEditCandidate(candidate) {
@@ -316,17 +474,11 @@ async function handleUpdateCandidate(e) {
                           #{i + 1}
                         </span>
 
-                        {c.photo_path ? (
-                          <img
-                            src={`${API}${c.photo_path}`}
-                            alt={c.name}
-                            style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }}
-                          />
-                        ) : (
-                          <div style={{ width: '42px', height: '42px', borderRadius: '8px', background: '#f0f0ec', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                            👤
-                          </div>
-                        )}
+                        <CandidatePhoto
+                          candidate={c}
+                          electionId={election.id}
+                          token={token}
+                        />
 
                         <div>
                           <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{c.name}</div>

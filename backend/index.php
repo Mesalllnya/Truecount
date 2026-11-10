@@ -320,6 +320,15 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    // GET foto kandidat terenkripsi
+    preg_match('#^/elections/(\d+)/candidates/(\d+)/photo$#', $uri, $m)
+    && $method === 'GET' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1]
+            . '/candidates/' . $m[2] . '/photo';
+
+        require_once __DIR__ . '/api/elections/candidates/show_photo.php';
+    })(),
+
     // Upload foto kandidat: POST /elections/{id}/candidates/{cid}/photo
     preg_match('#^/elections/(\d+)/candidates/(\d+)/photo$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
         $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates/' . $m[2] . '/photo';

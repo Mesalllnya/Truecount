@@ -199,6 +199,6 @@ Project ini dibuat untuk menuntaskan **Proyek Akhir Mata Kuliah Kriptografi**.
 | --- | ------ | ------- | -------------- |
 | 1 | **Rio Meidi Ataurrahman** | Authentication & User Management | Sprint 1 (Auth, Invite, Dashboard) · Sprint 4 (MFA: WebAuthn, USB Token) |
 | 2 | **Muhamad Ifsal Fadhilah** | Election Management & Voting System | Sprint 2 (Election CRUD, Voting, Results) |
-| 3 | **[Nama Orang 3]** | Cryptography & Advanced Security | Sprint 3 (Vigenere, AES-256-GCM, ChaCha20, Blockchain, Steganografi) |
+| 3 | **Erlan Rifqi Davin D** | Cryptography & Advanced Security | Sprint 3 (Vigenere, AES-256-GCM, ChaCha20, Blockchain, Steganografi) |
 
 > **Anggota:** Mahasiswa S1 Informatika UPN "Veteran" Yogyakarta Angkatan 2024

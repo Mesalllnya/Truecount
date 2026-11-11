@@ -13,6 +13,7 @@
 
 require_once __DIR__ . '/../../../helpers/response.php';
 require_once __DIR__ . '/../../../helpers/datetime.php';
+require_once __DIR__ . '/../../../helpers/election_scheduler.php';
 require_once __DIR__ . '/../../../middleware/auth.php';
 require_once __DIR__ . '/../../../config/database.php';
 
@@ -32,6 +33,7 @@ if ($electionId <= 0) {
 }
 
 $db   = getDB();
+syncElectionStatuses($db);
 $stmt = $db->prepare('SELECT id, status FROM elections WHERE id = ? LIMIT 1');
 $stmt->execute([$electionId]);
 $election = $stmt->fetch();

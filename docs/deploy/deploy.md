@@ -308,7 +308,7 @@ sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 
 ### Fungsionalitas
 
-- [ ] Migration berhasil - semua 10 tabel terbuat
+- [ ] Migration berhasil - semua tabel terbuat (cek `php database/migrate.php` tanpa error)
 - [ ] Health check `GET /health` mengembalikan `200 OK`
 - [ ] Register akun baru berhasil
 - [ ] Login berhasil dan mendapatkan JWT

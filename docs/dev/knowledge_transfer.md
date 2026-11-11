@@ -25,8 +25,8 @@
 | # | Nama | Peran | Fokus Sprint |
 | --- | ------ | ------- | -------------- |
 | 1 | **Rio Meidi Ataurrahman** | Authentication & User Management | Sprint 1 (Auth, Invite, Dashboard) · Sprint 4 (MFA: WebAuthn, USB Token) · **Sprint 4b (Auth Security Layer: Session Mgmt, Failed Attempts, Camera Enforcement)** |
-| 2 | **[Nama Orang 2]** | Election Management & Voting System | Sprint 2 (Election CRUD, Voting, Results) |
-| 3 | **[Nama Orang 3]** | Cryptography & Advanced Security | Sprint 3 (Vigenere, AES-256-GCM, ChaCha20, Blockchain, Steganografi) |
+| 2 | **Muhamad Ifsal Fadhilah** | Election Management & Voting System | **Sprint 2 (Election CRUD, Voting, Results) ✅ SELESAI** |
+| 3 | **[Nama Orang 3]** | Cryptography & Advanced Security | **Sprint 3 (Vigenere, AES-256-GCM, ChaCha20, Blockchain, Steganografi) ✅ SELESAI** |
 
 ---
 
@@ -127,14 +127,45 @@ backend/api/auth/webauthn_register_start.php - POST /auth/webauthn/register/star
 backend/api/auth/webauthn_register_verify.php - POST /auth/webauthn/register/verify - verify register WebAuthn
 backend/api/auth/webauthn_list.php       - GET /auth/webauthn/list - daftar Windows Hello
 backend/api/auth/webauthn_revoke.php     - POST /auth/webauthn/{id}/revoke - hapus Windows Hello
+backend/api/auth/security_setup.php  - GET /auth/security-setup - cek status keamanan user (wajib setup)
+backend/api/auth/security_status.php - POST /auth/security-status - cek status keamanan by identifier (publik)
+backend/api/auth/attempts_log.php    - POST /auth/attempts/log - log attempt login (internal backend)
+backend/api/auth/attempts_reset.php  - POST /auth/attempts/reset - reset failed attempts
+backend/api/auth/attempts_list.php   - GET /auth/attempts/list - daftar percobaan login (admin audit)
+backend/api/auth/attempts_photo.php  - GET /auth/attempts/{id}/photo - foto kamera percobaan login
 backend/api/invites/create.php  - POST /invites (admin) buat undangan
 backend/api/invites/list.php    - GET /invites (admin) daftar + stats status
 backend/api/invites/verify.php  - GET /invites/verify?token= (publik)
+backend/api/invites/revoke.php  - POST /invites/{id}/revoke - batalkan undangan
 backend/api/mfa/usb/register_start.php  - POST /mfa/usb/register/start - generate challenge
 backend/api/mfa/usb/register_verify.php - POST /mfa/usb/register/verify - verify ECDSA + simpan credential
+backend/api/mfa/usb/authenticate_start.php - POST /mfa/usb/authenticate/start - challenge login MFA USB
+backend/api/mfa/usb/authenticate_verify.php - POST /mfa/usb/authenticate/verify - verifikasi signature → JWT
 backend/api/mfa/usb/list.php    - GET /mfa/usb/list - daftar token user
 backend/api/mfa/usb/revoke.php  - POST /mfa/usb/{id}/revoke - nonaktifkan token
 backend/api/mfa/usb/label.php   - POST /mfa/usb/{id}/label - update label
+backend/api/elections/create.php    - POST /elections - buat pemilihan (admin)
+backend/api/elections/list.php      - GET /elections - daftar pemilihan
+backend/api/elections/show.php      - GET /elections/:id - detail pemilihan
+backend/api/elections/update.php    - PUT /elections/:id - ubah pemilihan (admin)
+backend/api/elections/delete.php    - DELETE /elections/:id - hapus pemilihan (admin)
+backend/api/elections/results.php   - GET /elections/:id/results - hasil tally
+backend/api/elections/vote.php      - POST /elections/:id/vote - kirim suara (voter)
+backend/api/elections/candidates/create.php    - POST /elections/:id/candidates - tambah kandidat
+backend/api/elections/candidates/list.php      - GET /elections/:id/candidates - daftar kandidat
+backend/api/elections/candidates/show_photo.php - GET /elections/:id/candidates/:cid/photo - foto kandidat
+backend/api/elections/candidates/upload_photo.php - POST /elections/:id/candidates/:cid/photo - upload foto
+backend/api/elections/candidates/update.php    - PUT /elections/:id/candidates/:cid - ubah kandidat
+backend/api/elections/candidates/delete.php    - DELETE /elections/:id/candidates/:cid - hapus kandidat
+backend/api/elections/voters/list.php      - GET /elections/:id/voters - daftar voter
+backend/api/elections/voters/register.php  - POST /elections/:id/voters - daftarkan voter
+backend/api/elections/voters/delete.php    - DELETE /elections/:id/voters/:userId - keluarkan voter
+backend/api/elections/blockchain-seal.php  - POST /elections/blockchain/seal - seal block
+backend/api/elections/blockchain-verify.php - GET /elections/blockchain/verify - verifikasi blockchain
+backend/api/users/voters.php    - GET /users/voters - daftar semua voter aktif (admin)
+backend/api/users/search.php    - GET /users/search?q= - cari pengguna (admin)
+backend/api/encrypted-messages/create.php  - POST /encrypted-messages - buat pesan terenkripsi
+backend/api/encrypted-messages/get.php     - GET /encrypted-messages/:id - ambil pesan terenkripsi
 ```
 
 ### Frontend
@@ -147,6 +178,7 @@ frontend/src/hooks/
   useAuth.ts              - Hook auth umum: changePassword, webauthn register/list/revoke
   useAuthSecurity.tsx     - **Hook keamanan auth: failed attempts tracking, camera permission, auth guard, security setup check**
   useAuthSession.tsx      - **Hook session management: AuthProvider, useAuth, useApi (auto 401 handling, token expiry)**
+  useFaceDetection.ts     - **Hook deteksi wajah/kamera: verifikasi frame tidak gelap/shutter tertutup (canvas sampling)**
 frontend/src/pages/
   LandingPage.jsx + .css        - Hero dengan raise_hand.jpg + nav link tengah, tombol Masuk (ikon) di kanan
   LoginPage.jsx                 - Form login (card center), fetch ke /auth/login + status dongle (DETEKSI USB ASLI via scanForTokens, polling 2 detik) + banner sukses registrasi + **password fallback setelah 5 gagal + kamera wajib untuk Windows Hello + camera auto-off saat pindah halaman**
@@ -158,12 +190,17 @@ frontend/src/pages/
   VotePage.jsx + .css          - Halaman pemilihan (/pilih): kandidat demo, tombol besar berwarna + ikon SVG + auth guard
   ProfileSettingsPage.jsx + .css - Halaman pengaturan (/pengaturan): change password, Windows Hello, USB token management
   UsbTokenTestPage.jsx + .css  - Halaman test USB token (/usb-token-test): deteksi, decrypt, challenge-response
+  AboutPage.jsx                - Halaman tentang aplikasi (/tentang): informasi proyek, tim, stack teknologi
+  ResultsPage.jsx + .css       - Halaman hasil pemilihan (/hasil/:id): tally suara, verifikasi blockchain, statistik partisipasi
+  EncryptedMessagesPage.jsx    - Halaman pesan terenkripsi (/pesan-terenkripsi): buat & lihat pesan terenkripsi (Vigenere, AES-256-GCM, ChaCha20)
 frontend/src/components/
   HealthMonitor.jsx             - Render null; polling /health di background, error → console (bukan UI)
   Skeleton.jsx + .css           - Komponen loading placeholder (SkeletonText, SkeletonCircle, SkeletonRow, SkeletonStat, SkeletonPane) - dipakai di Register, Dashboard, dan Vote pages saat fetch data
   UsbTokenPanel.jsx + .css      - Panel kelola USB token (digunakan di ProfileSettingsPage): daftar, register (modal flow), revoke, label
   AuthGuard.jsx                 - **Route guard: redirect ke /atur-keamanan jika user belum setup Windows Hello/Dongle**
   Nav.jsx                       - **Navigation dengan user menu + logout button saat authenticated**
+  DashNav.jsx                   - **Nav khusus halaman terlindungi (dasbor, pengaturan, dll): user menu + logout**
+  ElectionModals.jsx            - **Modal CRUD pemilihan & kandidat (buat/ubah/hapus) di dasbor admin**
 frontend/src/index.css          - Reset global + font family
 frontend/src/main.jsx           - ReactDOM.createRoot + impor `cursor.css` agar kursor kustom TrueCount berlaku di seluruh aplikasi
 frontend/src/styles/cursor.css  - Kumpulan aturan kursor kustom untuk state normal, link, tombol, teks, resize, grab, grabbing, zoom, copy, menu, wait, loading, help, dan nope (PNG 32/64px + fallback bawaan browser)
@@ -201,12 +238,17 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | Path | Komponen | Keterangan |
 | --- | --- | --- |
 | `/` | `LandingPage` | Halaman utama |
+| `/tentang` | `AboutPage` | Halaman tentang aplikasi (proyek, tim, stack) |
 | `/masuk` | `LoginPage` | Login |
 | `/daftar` | `RegisterPage` | Pendaftaran - invite-only, wajib query `?undangan=<token>`; tanpa token tampil state "hanya melalui undangan" |
 | `/atur-keamanan` | `SecuritySetupPage` | **Setup keamanan wajib (Windows Hello/Dongle) — redirect dari AuthGuard** |
-| `/dasbor` | `DashboardPage` | Dasbor (blank + easter egg, ada auth guard) |
-| `/pilih` | `VotePage` | Halaman pemilihan - demo kandidat, tombol besar berwarna (Sprint 2, ada auth guard) |
+| `/dasbor` | `DashboardPage` | Dasbor (easter egg 5-klik, panel undangan admin, ada auth guard) |
+| `/pilih` | `VotePage` | Halaman pemilihan - kandidat, tombol besar berwarna (Sprint 2 ✅, ada auth guard) |
+| `/hasil/:id` | `ResultsPage` | Hasil pemilihan + verifikasi blockchain (Sprint 2 ✅, ada auth guard) |
 | `/pengaturan` | `ProfileSettingsPage` | Pengaturan profil: change password, Windows Hello, USB token |
+| `/usb-token-test` | `UsbTokenTestPage` | Halaman test USB token: deteksi, decrypt, challenge-response (ada auth guard) |
+| `/pesan-terenkripsi` | `EncryptedMessagesPage` | Buat & lihat pesan terenkripsi (Sprint 3 ✅, ada auth guard) |
+| `/log-keamanan/:id` | `UserSecurityLogPage` | **Riwayat percobaan login + foto kamera (audit admin)** |
 | `/login` | Redirect → `/masuk` | Alias lama |
 | `/register` | Redirect → `/daftar` | Alias lama |
 | `/dashboard` | Redirect → `/dasbor` | Alias lama |
@@ -231,12 +273,15 @@ Base URL: `http://localhost:8000`
 | GET | `/auth/webauthn/list` | Bearer JWT | - | `200 {credentials}` - daftar Windows Hello user |
 | POST | `/auth/webauthn/{id}/revoke` | Bearer JWT | - | `200 {message}` - hapus Windows Hello |
 | GET | `/auth/security-setup` | Bearer JWT | - | `200 {has_webauthn, has_dongle, requires_setup, user_id}` - **cek status keamanan user** |
+| POST | `/auth/security-status` | - | `{identifier}` | `200 {found, has_webauthn, has_dongle, requires_setup}` - **cek status keamanan by identifier (publik)** |
 | POST | `/auth/attempts/log` | - | `{identifier, method, success, error?, user_agent?}` | `200 {message}` - **log attempt login ke DB (dipanggil oleh backend secara internal saat login; frontend TIDAK lagi memanggil ini langsung untuk mencegah duplikasi baris)** |
 | POST | `/auth/attempts/reset` | - | `{identifier}` | `200 {message}` - **reset failed attempts (dipanggil backend setelah login berhasil)** |
-| POST | `/auth/security-status` | - | `{identifier}` | `200 {found, has_webauthn, has_dongle, requires_setup}` - **cek status keamanan by identifier (publik)** |
+| GET | `/auth/attempts/list` | Bearer JWT (admin) | - | `200 {attempts}` - **daftar riwayat percobaan login (audit admin)** |
+| GET | `/auth/attempts/{id}/photo` | Bearer JWT (admin) | - | `image/*` - **foto kamera percobaan login** |
 | GET | `/invites` | Bearer JWT (admin) | - | `200 {stats, invites}` - status: `menunggu`/`diterima`/`kedaluwarsa`/`dibatalkan` |
 | POST | `/invites` | Bearer JWT (admin) | `{email?, role?}` | `201 {message, invite}` - `invite.link` = `/daftar?undangan=<token>` |
 | GET | `/invites/verify` | - | query `?token=` | `200 {valid, invite}` / `400` / `404` |
+| POST | `/invites/{id}/revoke` | Bearer JWT (admin) | - | `200 {message}` - batalkan undangan |
 | POST | `/mfa/usb/register/start` | Bearer JWT | - | `200 {challenge_id, challenge}` - challenge 32 byte random, TTL 5 menit |
 | POST | `/mfa/usb/register/verify` | Bearer JWT | `{challenge_id, signature, public_key, label?}` | `201 {message, credential}` - verifikasi ECDSA P-256 |
 | POST | `/mfa/usb/authenticate/start` | - (identifier-based) | `{identifier}` | `200 {challenge_id, challenge, allowCredentials[], user}` - mulai MFA login USB token |
@@ -244,6 +289,28 @@ Base URL: `http://localhost:8000`
 | GET | `/mfa/usb/list` | Bearer JWT | - | `200 {credentials}` - daftar USB token user |
 | POST | `/mfa/usb/{id}/revoke` | Bearer JWT | - | `200 {message}` - nonaktifkan token |
 | POST | `/mfa/usb/{id}/label` | Bearer JWT | `{label}` | `200 {message, label}` - update label |
+| GET | `/elections` | Bearer JWT | - | `200 {elections}` - daftar pemilihan |
+| POST | `/elections` | Bearer JWT (admin) | `{title, description, start_time, end_time, status?}` | `201 {election}` - buat pemilihan baru |
+| GET | `/elections/:id` | Bearer JWT | - | `200 {election, candidates}` - detail pemilihan + kandidat |
+| PUT | `/elections/:id` | Bearer JWT (admin) | `{title, description, start_time, end_time, status?}` | `200 {message}` - ubah pemilihan |
+| DELETE | `/elections/:id` | Bearer JWT (admin) | - | `200 {message}` - hapus pemilihan |
+| GET | `/elections/:id/candidates` | Bearer JWT | - | `200 {candidates}` - daftar kandidat |
+| POST | `/elections/:id/candidates` | Bearer JWT (admin) | `{name, vision, mission, photo_path?}` | `201 {candidate}` - tambah kandidat |
+| GET | `/elections/:id/candidates/:cid/photo` | Bearer JWT | - | `image/*` - foto kandidat terenkripsi |
+| POST | `/elections/:id/candidates/:cid/photo` | Bearer JWT (admin) | form-data `photo` | `200 {message, photo_path}` - upload foto kandidat |
+| PUT | `/elections/:id/candidates/:cid` | Bearer JWT (admin) | `{name, vision, mission}` | `200 {message}` - ubah kandidat |
+| DELETE | `/elections/:id/candidates/:cid` | Bearer JWT (admin) | - | `200 {message}` - hapus kandidat |
+| GET | `/elections/:id/voters` | Bearer JWT (admin) | - | `200 {voters}` - daftar voter terdaftar |
+| POST | `/elections/:id/voters` | Bearer JWT (admin) | `{user_id}` | `201 {voter}` - daftarkan voter ke pemilihan |
+| DELETE | `/elections/:id/voters/:userId` | Bearer JWT (admin) | - | `200 {message}` - keluarkan voter dari pemilihan |
+| GET | `/elections/:id/results` | Bearer JWT | - | `200 {results, total_votes}` - hasil tally pemilihan |
+| POST | `/elections/:id/vote` | Bearer JWT | `{candidate_id, encrypted_vote, nonce, integrity_hash}` | `201 {message}` - kirim suara (voter) |
+| POST | `/elections/blockchain/seal` | Bearer JWT (admin) | - | `200 {block}` - seal block blockchain |
+| GET | `/elections/blockchain/verify` | Bearer JWT | - | `200 {valid, blocks}` - verifikasi integritas blockchain |
+| GET | `/users/voters` | Bearer JWT (admin) | - | `200 {voters}` - daftar semua voter aktif di sistem |
+| GET | `/users/search?q=` | Bearer JWT (admin) | - | `200 {users}` - cari pengguna (admin, untuk log keamanan) |
+| POST | `/encrypted-messages` | Bearer JWT | `{algorithm, ciphertext, iv_nonce?}` | `201 {message}` - buat pesan terenkripsi |
+| GET | `/encrypted-messages/:id` | Bearer JWT | - | `200 {message}` - ambil pesan terenkripsi |
 
 ### Error Format
 
@@ -264,25 +331,26 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
  
 ## 7. Database Schema
  
-12 tabel total - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql`:
- 
+16 tabel - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql` + `007_auth_attempts.sql` + `008_sprint2_marker.sql` + `009_add_photo_path_to_auth_attempts.sql` + `010_add_crypto_version.sql` + `011_add_encrypted_files_columns.sql`:
+
 | Tabel | Sprint | Keterangan |
 | --- | --- | --- |
 | `users` | 1 ✅ | id, username, email, password_hash, role (admin/voter), is_active |
-| `invites` | 2 ✅ | Undangan pendaftaran - token, email (nullable), role, status (pending/accepted/revoked), expires_at, created_by, used_by |
-| `auth_attempts` | 4b | **Log percobaan login: user_id, identifier, method (webauthn/dongle/password), success, error, ip, user_agent, photo_path, created_at** |
 | `biometric_credentials` | 4 | WebAuthn/FIDO2 - FK ke users (termasuk last_used_at) |
-| `webauthn_challenges` | 4 | Challenge WebAuthn (TTL 5 menit, single-use) - registration & authentication |
+| `usb_tokens` | 4 | USB Token (legacy table dari migration 001) |
 | `usb_token_credentials` | 4 | **USB Token (software token di flashdisk) - ECDSA P-256 public key storage** |
+| `webauthn_challenges` | 4 | Challenge WebAuthn (TTL 5 menit, single-use) - registration & authentication |
 | `usb_challenges` | 4 | **Challenge sementara untuk register/authenticate USB token (TTL 5 menit, single-use)** |
-| `elections` | 2 | Pemilihan - FK ke users (created_by) |
-| `candidates` | 2 | Kandidat - FK ke elections |
-| `voters` | 2 | Partisipasi (has_voted tapi BUKAN isi suara) - FK ke users + elections |
-| `ballots` | 2 | **TIDAK ada FK ke users** - privacy by design |
-| `encrypted_messages` | 3 | Modul kriptografi |
-| `encrypted_files` | 3 | File terenkripsi |
-| `blocks` | 3 | Blockchain sederhana |
- 
+| `auth_attempts` | 4b | **Log percobaan login: user_id, identifier, method (webauthn/dongle/password), success, error, ip_address, user_agent, photo_path, created_at** |
+| `invites` | 2 ✅ | Undangan pendaftaran - token, email (nullable), role, status (pending/accepted/revoked), expires_at, created_by, used_by |
+| `elections` | 2 ✅ | Pemilihan - FK ke users (created_by) |
+| `candidates` | 2 ✅ | Kandidat - FK ke elections (termasuk photo_path) |
+| `voters` | 2 ✅ | Partisipasi (has_voted tapi BUKAN isi suara) - FK ke users + elections |
+| `ballots` | 2 ✅ | **TIDAK ada FK ke users** - privacy by design (encrypted_vote, nonce, integrity_hash) |
+| `encrypted_messages` | 3 ✅ | Modul kriptografi (Vigenere, AES-256-GCM, ChaCha20) |
+| `encrypted_files` | 3 ✅ | File terenkripsi (nonce, auth_tag, file_size, mime_type via migration 011) |
+| `blocks` | 3 ✅ | Blockchain sederhana (seal & verify hasil pemilihan) |
+
 **Penting:** `ballots` tidak punya FK ke `users` atau `voters` secara sengaja - suara dan identitas pemilih terpisah.
 
 ---
@@ -637,34 +705,37 @@ Kriptografi: PBKDF2-HMAC-SHA256 (100k iterasi, PIN → key) → AES-256-GCM (pri
 
 ## 12. State Sprint
 
-### Sprint 1 - SELESAI ✅
+### Sprint 1 - SELESAI ✅ (Rio Meidi Ataurrahman)
 
-- Struktur proyek (backend + frontend)
-- Database schema (11 tabel) + migration runner
-- Auth API: register, login, logout, me
-- **Pendaftaran via undangan (invite-only) ✅** - publik ditutup, admin buat undangan via `/invites`, halaman `/daftar` hanya terbuka lewat tautan `?undangan=<token>`, dasbor admin punya panel referal (stats: menunggu/diterima/kedaluwarsa + form buat undangan + salin tautan)
+- Struktur proyek (backend + frontend monorepo)
+- Database schema (10 tabel di migration 001) + migration runner (`database/migrate.php`)
+- Auth API: register, login, logout, me, change-password
+- **Pendaftaran via undangan (invite-only) ✅** - publik ditutup, admin buat undangan via `/invites`, halaman `/daftar` hanya terbuka lewat tautan `?undangan=<token>`, dasbor admin punya panel referal (stats: menunggu/diterima/kedaluwarsa/dibatalkan + form buat undangan + salin tautan)
 - Landing Page (artsy, raise_hand.jpg, Jakarta Sans, #F13C35) - tombol Daftar dihapus, hanya Masuk (dengan ikon) di kanan nav
 - Login + Register pages (split layout, animasi)
-- Dashboard (easter egg + panel undangan admin)
+- Dashboard (easter egg 5-klik + panel undangan admin)
 - Test otomatis: `php tests/api_test.php` (41 test, 100% pass)
 
-### Sprint 2 - Election Management ([Nama Orang 2])
+### Sprint 2 - SELESAI ✅ (Muhamad Ifsal Fadhilah)
 
-Endpoints yang perlu dibangun:
+- **Election Management & Voting System sudah diimplementasikan sepenuhnya**
+- Endpoint: `GET/POST /elections`, `GET/PUT/DELETE /elections/:id`, `GET/POST /elections/:id/candidates`, `GET/POST /elections/:id/candidates/:cid/photo`, `PUT/DELETE /elections/:id/candidates/:cid`, `GET/POST /elections/:id/voters`, `DELETE /elections/:id/voters/:userId`, `GET /elections/:id/results`, `POST /elections/:id/vote`, `POST/GET /elections/blockchain/seal|verify`
+- Frontend: `VotePage` (`/pilih`), `ResultsPage` (`/hasil/:id`), `ElectionModals.jsx` (CRUD modal), `DashNav.jsx`
+- Tabel: `elections`, `candidates`, `voters`, `ballots` (privacy by design: ballots tanpa FK ke users)
+- Integrasi auth guard di halaman voting, JWT middleware
+- Enkripsi ballot (AES-256-GCM) + blockchain seal/verify untuk integritas hasil
 
-- `GET /elections` - daftar pemilihan aktif
-- `POST /elections` - buat pemilihan (admin)
-- `GET /elections/:id` - detail pemilihan + kandidat
-- `POST /elections/:id/vote` - berikan suara (voter)
-- `GET /elections/:id/results` - hasil pemilihan
+### Sprint 3 - SELESAI ✅ ([Nama Orang 3])
 
-### Sprint 3 - Cryptography ([Nama Orang 3])
+- **Modul Kriptografi & Keamanan Lanjutan sudah diimplementasikan sepenuhnya**
+- Enkripsi pesan: Vigenere, AES-256-GCM, ChaCha20-Poly1305
+- Enkripsi file upload (ChaCha20-Poly1305 dengan nonce, auth_tag, file_size, mime_type)
+- Simple Blockchain (logging aktivitas pemilihan)
+- Frontend: `EncryptedMessagesPage` (`/pesan-terenkripsi`)
+- Tabel: `encrypted_messages`, `encrypted_files`, `blocks`
+- Endpoint: `POST/GET /encrypted-messages`, `POST/GET /elections/blockchain/seal|verify`
 
-- Enkripsi pesan: Vigenere, AES-256-GCM, ChaCha20
-- Enkripsi file upload
-- Blockchain log sederhana
-
-### Sprint 4 - MFA (Rio Meidi Ataurrahman)
+### Sprint 4 - SELESAI ✅ (Rio Meidi Ataurrahman)
 
 - WebAuthn biometrics (Windows Hello) ✅ — register, list, revoke via `/auth/webauthn/*`
 - **Profile Settings Page ✅** (`/pengaturan`) — halaman terpusat untuk:
@@ -673,7 +744,7 @@ Endpoints yang perlu dibangun:
   - USB Token management (dipindahkan dari dasbor)
 - **USB Token Test System ✅** (deteksi auto, decrypt, challenge-response test di `/usb-token-test`)
 - **USB Token Login MFA ✅** (login pakai USB token via `/mfa/usb/authenticate/*` - identifier-based challenge → sign → verify → JWT)
-- **USB Token Management ✅** (daftar/revoke/label token di halaman pengaturan via `/mfa/usb/*` - register flow sudah end-to-end: challenge → sign → verify)
+- **USB Token Management ✅** (daftar/revoke/label token via `/mfa/usb/*` - register flow end-to-end: challenge → sign → verify)
 - **USB Token Creation ✅** (User bikin token sendiri via UI "＋ Buat Token di USB" — generate keypair + encrypt + tulis file — **tanpa registrasi**, registrasi terpisah via "Daftarkan USB Baru")
 - Auto-spawn PHP dari Tauri untuk standalone desktop ✅ (selesai - catatan: masih butuh PHP terinstall di sistem user; bundling `php.exe` sebagai sidecar belum dilakukan)
 - **Auth Security Layer (Sprint 4b) ✅**:
@@ -683,8 +754,8 @@ Endpoints yang perlu dibangun:
   - **SecuritySetupPage** (`pages/SecuritySetupPage.tsx`) — halaman setup keamanan wajib (Windows Hello/Dongle)
   - **LoginPage Updated** — password fallback logic, camera verification, photo capture (fixed: use captured photo directly, not stale state), **camera auto-off saat pindah halaman**, useAuth login()
   - **Nav Updated** — user menu + logout button saat authenticated
-  - **Backend**: `/auth/security-setup`, `/auth/attempts/log`, `/auth/attempts/reset`, `/auth/security-status`
-  - **Database**: `auth_attempts` table (migration 007)
+  - **Backend**: `/auth/security-setup`, `/auth/security-status`, `/auth/attempts/log`, `/auth/attempts/reset`, `/auth/attempts/list`, `/auth/attempts/{id}/photo`
+  - **Database**: `auth_attempts` table (migration 007 + 009 photo_path)
   - **Camera enforcement**: real-time frame validation via canvas sampling, periodic re-check, Lenovo shutter detection
   - **Password fallback**: hanya muncul setelah 5 gagal (lock 15 menit) atau user belum setup keamanan (onboarding)
   - **Audit logging**: semua attempt di-log ke DB oleh backend secara internal (single source of truth, mencegah duplikasi baris); frontend simpan counter lokal untuk UI lockout/password fallback + photo capture

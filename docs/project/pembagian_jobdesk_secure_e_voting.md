@@ -28,10 +28,11 @@
 - Integrasi WebAuthn / Windows Hello (biometrik) - Sprint 4
 - USB Dongle Verification - Sprint 4
 - Auto-spawn PHP backend via Tauri (desktop) - Sprint 4 ✅
-- Pengelolaan tabel: `users`, `biometric_credentials`, `usb_tokens`, `invites`
+- **Auth Security Layer (Sprint 4b): Session Mgmt, Failed Attempts, Camera Enforcement, Security Setup wajib ✅**
+- Pengelolaan tabel: `users`, `biometric_credentials`, `usb_tokens`, `invites`, `auth_attempts`
 - Pengujian keamanan autentikasi (41 test case pass)
 
-**Output:** Authentication Module + Invite System + MFA (Sprint 4)
+**Output:** Authentication Module + Invite System + MFA (Sprint 4) + Auth Security Layer (Sprint 4b)
 
 ---
 
@@ -54,7 +55,7 @@
 - Perhitungan hasil pemilihan
 - Pengelolaan tabel: `elections`, `candidates`, `voters`, `ballots`
 
-**Output:** Election Management & Voting Module (Sprint 2)
+**Output:** Election Management & Voting Module (Sprint 2) ✅ SELESAI
 
 ---
 
@@ -77,7 +78,7 @@
 - Pengujian enkripsi, steganografi, blockchain
 - Pengelolaan tabel: `encrypted_messages`, `encrypted_files`, `blocks`
 
-**Output:** Cryptography, Steganography & Blockchain Module (Sprint 3)
+**Output:** Cryptography, Steganography & Blockchain Module (Sprint 3) ✅ SELESAI
 
 ---
 
@@ -112,19 +113,19 @@ Semua anggota:
 
 - **Orang 1:** Auth API, invite system, dashboard, landing page, login/register UI, easter egg, Tauri auto-spawn PHP
 
-### Tahap 3 - Sprint 2: Election Management & Voting (Orang 2)
+### Tahap 3 - Sprint 2: Election Management & Voting (Orang 2) ✅ SELESAI
 
 - **Orang 2:** Election CRUD, Candidate CRUD, Voter registration, Voting page, Result tallying
 - **Orang 1:** Integrasi auth guard di halaman voting, JWT middleware
 - **Orang 3:** Siapkan interface enkripsi ballot
 
-### Tahap 4 - Sprint 3: Cryptography & Security (Orang 3)
+### Tahap 4 - Sprint 3: Cryptography & Security (Orang 3) ✅ SELESAI
 
 - **Orang 3:** Vigenere, AES-256-GCM, ChaCha20, File encryption, Steganografi, Blockchain
 - **Orang 2:** Integrasi enkripsi ke proses voting & ballot
 - **Orang 1:** Integrasi auth dengan modul kriptografi
 
-### Tahap 5 - Sprint 4: MFA & Desktop Polish (Orang 1)
+### Tahap 5 - Sprint 4 & 4b: MFA, Desktop Polish & Auth Security Layer (Orang 1) ✅ SELESAI
 
 - **Orang 1:** WebAuthn biometrik, USB token, Tauri desktop build polish, PHP sidecar bundling
 - **Orang 2 & 3:** Testing integrasi, bug fixing, dokumentasi final

@@ -7,6 +7,7 @@
  */
 
 require_once __DIR__ . '/../../helpers/response.php';
+require_once __DIR__ . '/../../helpers/election_scheduler.php';
 require_once __DIR__ . '/../../middleware/auth.php';
 require_once __DIR__ . '/../../services/crypto/BallotService.php';
 
@@ -39,6 +40,9 @@ $electionId = isset($matches[1]) ? (int) $matches[1] : 0;
 if ($electionId <= 0) {
     jsonResponse(['error' => 'ID pemilihan tidak valid.'], 400);
 }
+
+$db = getDB();
+syncElectionStatuses($db);
 
 // Parse JSON request.
 $input = json_decode(file_get_contents('php://input'), true);

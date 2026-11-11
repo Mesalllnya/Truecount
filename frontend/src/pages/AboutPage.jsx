@@ -109,7 +109,7 @@ const team = [
   },
   {
     number: '03',
-    name: '[Nama Orang 3]',
+    name: 'Erlan Rifqi Davin D',
     role: 'Cryptography & Advanced Security',
     sprints: 'Sprint 3',
     focus: ['Vigenere Cipher', 'AES-256-GCM', 'ChaCha20-Poly1305', 'Steganography LSB', 'Blockchain Log'],

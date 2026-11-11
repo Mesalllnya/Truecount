@@ -243,11 +243,11 @@ export function useCameraPermission() {
     // 1. At least 15% non-black pixels
     // 2. Average brightness > 20 (not just sensor noise)
     // 3. Contrast > 30 (real face has shadows/highlights)
-    // 4. StdDev > 25 (real face has high variance; Lenovo gray shutter is uniform)
+    // 4. StdDev > 15 (real face has variance; covered/black shutter has near-zero variance)
     const hasEnoughPixels = nonBlackPercent >= 15;
     const hasBrightness = avgBrightness > 20;
     const hasContrast = contrast > 30;
-    const hasVariance = stdDev > 25;
+    const hasVariance = stdDev > 15;
     const result = hasEnoughPixels && hasBrightness && hasContrast && hasVariance;
     
     // Log as individual lines (not collapsed object)
@@ -469,7 +469,7 @@ export function useCameraPermission() {
       const hasEnoughPixels = nonBlackPercent >= 15;
       const hasBrightness = avgBrightness > 20;
       const hasContrast = contrast > 30;
-      const hasVariance = stdDev > 25;
+      const hasVariance = stdDev > 15;
       const result = hasEnoughPixels && hasBrightness && hasContrast && hasVariance;
 
       console.log('[Camera] Verification:', {

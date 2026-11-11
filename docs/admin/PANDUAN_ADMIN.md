@@ -26,9 +26,10 @@ TrueCount adalah aplikasi **e-voting akademik** dengan fitur keamanan berbasis k
 | --- | --- |
 | Login & registrasi via undangan (invite-only) | ✅ |
 | Dasbor admin (kelola undangan) | ✅ |
-| **USB Token MFA** (daftar, kelola, pakai flashdisk sebagai faktor kedua) | ✅ |
-| Pemilihan / voting | ⏳ Sprint 2 |
-| Enkripsi pesan & file, blockchain | ⏳ Sprint 3 |
+| USB Token MFA (daftar, kelola, pakai flashdisk sebagai faktor kedua) | ✅ |
+| Pemilihan / voting (Election CRUD, kandidat, suara, hasil) | ✅ Sprint 2 |
+| Enkripsi pesan & file, blockchain | ✅ Sprint 3 |
+| Keamanan auth (Windows Hello, kamera, failed attempts, log keamanan) | ✅ Sprint 4b |
 
 **Prinsip pendaftaran:** Publik **tidak bisa** daftar sendiri. Calon pengguna hanya bisa membuat akun lewat **tautan undangan** yang dibuat admin.
 
@@ -75,7 +76,7 @@ npm run dev:full           # PHP :8000 + Vite :5173
 | `pemilih1` | `Pemilih@123` | Pemilih | Akun uji coba |
 | `pemilih2` | `Pemilih@123` | Pemilih | Akun uji coba |
 
-> **Ganti kata sandi admin** sebelum dipakai serius. (Fitur ganti kata sandi: ⏳ akan datang)
+> **Ganti kata sandi admin** sebelum dipakai serius. Fitur ganti kata sandi tersedia di halaman **Pengaturan** (`/pengaturan`) setelah login.
 
 ---
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import DashNav from '../components/DashNav'
+import { CandidatePhoto } from '../components/ElectionModals'
 import './DashboardPage.css'   // reuse .dash-nav / .dash-brand / .dash-logout
 import './VotePage.css'
 

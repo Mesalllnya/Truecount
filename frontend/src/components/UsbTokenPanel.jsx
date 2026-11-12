@@ -557,7 +557,15 @@ export default function UsbTokenPanel() {
                   onClick={handleSubmitPin}
                   disabled={!pin || registerStep === 'signing'}
                 >
-                  {registerStep === 'signing' ? '⏳ Memproses…' : '🔐 Daftarkan Token'}
+                  {registerStep === 'signing' ? '⏳ Memproses…' : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'inline-block', marginRight: '0.4rem', verticalAlign: 'middle' }}>
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                      Daftarkan Token
+                    </>
+                  )}
                 </button>
                 <button className="usb-secondary-btn" onClick={handleCloseRegister}>Batal</button>
               </div>

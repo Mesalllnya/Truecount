@@ -456,7 +456,8 @@ export async function startUsbAuthenticate(identifier: string): Promise<Authenti
 export async function verifyUsbAuthenticate(
   challengeId: number,
   credentialId: string,
-  signatureB64: string
+  signatureB64: string,
+  authPhoto?: string | null
 ): Promise<{ message: string; token: string; user: { id: number; username: string; email: string; role: string } } | null> {
   try {
     const res = await fetch(`${API_BASE}/mfa/usb/authenticate/verify`, {
@@ -466,8 +467,9 @@ export async function verifyUsbAuthenticate(
         challenge_id: challengeId,
         credential_id: credentialId,
         signature: signatureB64,
+        auth_photo: authPhoto ?? null,
       }),
-    })
+    });
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Verifikasi USB token gagal.')
     return data

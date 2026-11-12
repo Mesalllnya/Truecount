@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
+import { useAuth } from '../hooks/useAuthSession'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import './Nav.css'
 
@@ -107,6 +108,7 @@ const NAV_LINKS = [
 export default function Nav({ className = '' }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user, logout, isAuthenticated } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -138,10 +140,24 @@ export default function Nav({ className = '' }) {
       </nav>
 
       <div className="nav-actions">
-        <Link to="/masuk" className="nav-masuk" onClick={() => setMenuOpen(false)}>
-          <Icon name="door" size={17} className="door-icon" />
-          <span>Masuk</span>
-        </Link>
+        {isAuthenticated && user ? (
+          <div className="nav-user-menu">
+            <span className="nav-user-name">{user.username}</span>
+            <button
+              className="nav-logout"
+              onClick={() => { logout(); setMenuOpen(false); }}
+              aria-label="Keluar"
+            >
+              <Icon name="door" size={17} />
+              <span>Keluar</span>
+            </button>
+          </div>
+        ) : (
+          <Link to="/masuk" className="nav-masuk" onClick={() => setMenuOpen(false)}>
+            <Icon name="door" size={17} className="door-icon" />
+            <span>Masuk</span>
+          </Link>
+        )}
       </div>
 
       <button

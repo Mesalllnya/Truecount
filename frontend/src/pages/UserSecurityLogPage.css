@@ -1,0 +1,181 @@
+/* ── User Security Log Page ─────────────────────────────────── */
+
+.log-back-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.log-back-row .copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Kartu info user */
+.log-user-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.log-user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2a7a3b 0%, #1f5c2c 100%);
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.log-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.log-user-name {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.log-user-name strong {
+  font-size: 1.05rem;
+  color: var(--black);
+}
+
+.log-user-email {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Baris log */
+.log-row {
+  font-size: 0.82rem;
+  align-items: center;
+}
+
+/* Foto percobaan login */
+.log-photo-btn {
+  display: block;
+  width: 84px;
+  height: 58px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f5f4ef;
+  cursor: zoom-in;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.log-photo-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.log-photo-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.log-photo-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 58px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #f5f4ef;
+}
+
+.log-photo-loading {
+  display: inline-block;
+  width: 84px;
+  height: 58px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, #f0efe9 25%, #faf9f5 50%, #f0efe9 75%);
+  background-size: 200% 100%;
+  animation: logShimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes logShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Lightbox */
+.log-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(15, 20, 15, 0.82);
+  backdrop-filter: blur(4px);
+  animation: logFadeIn 180ms ease;
+}
+
+@keyframes logFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.log-lightbox-img {
+  max-width: min(720px, 92vw);
+  max-height: 86vh;
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+.log-lightbox-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.log-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* Responsif: tumpuk sel baris log di layar sempit */
+@media (max-width: 720px) {
+  .log-row {
+    flex-wrap: wrap;
+  }
+}

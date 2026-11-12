@@ -11,6 +11,8 @@ frontend/dist/
 # ── Storage (file upload / temp) ─────────────────────────
 backend/storage/encrypted/
 backend/storage/temp/
+storage/
+!storage/.gitkeep
 
 # ── OS / IDE ──────────────────────────────────────────────
 .DS_Store

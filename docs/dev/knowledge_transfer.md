@@ -24,7 +24,7 @@
 
 | # | Nama | Peran | Fokus Sprint |
 | --- | ------ | ------- | -------------- |
-| 1 | **Rio Meidi Ataurrahman** | Authentication & User Management | Sprint 1 (Auth, Invite, Dashboard) · Sprint 4 (MFA: WebAuthn, USB Token) |
+| 1 | **Rio Meidi Ataurrahman** | Authentication & User Management | Sprint 1 (Auth, Invite, Dashboard) · Sprint 4 (MFA: WebAuthn, USB Token) · **Sprint 4b (Auth Security Layer: Session Mgmt, Failed Attempts, Camera Enforcement)** |
 | 2 | **[Nama Orang 2]** | Election Management & Voting System | Sprint 2 (Election CRUD, Voting, Results) |
 | 3 | **[Nama Orang 3]** | Cryptography & Advanced Security | Sprint 3 (Vigenere, AES-256-GCM, ChaCha20, Blockchain, Steganografi) |
 
@@ -139,17 +139,21 @@ backend/api/mfa/usb/label.php   - POST /mfa/usb/{id}/label - update label
 
 ### Frontend
 
-```
-frontend/src/App.jsx            - BrowserRouter + Routes
+``` 
+frontend/src/App.jsx            - BrowserRouter + Routes + AuthProvider + FailedAttemptsProvider
 frontend/src/hooks/
   useUsbToken.ts          - Hook USB token: listen event Tauri, decrypt, sign, register API
   useWebAuthn.ts          - Hook WebAuthn (Windows Hello): login & register flow
   useAuth.ts              - Hook auth umum: changePassword, webauthn register/list/revoke
+  useAuthSecurity.tsx     - **Hook keamanan auth: failed attempts tracking, camera permission, auth guard, security setup check**
+  useAuthSession.tsx      - **Hook session management: AuthProvider, useAuth, useApi (auto 401 handling, token expiry)**
 frontend/src/pages/
   LandingPage.jsx + .css        - Hero dengan raise_hand.jpg + nav link tengah, tombol Masuk (ikon) di kanan
-  LoginPage.jsx                 - Form login (card center), fetch ke /auth/login + status dongle (DETEKSI USB ASLI via scanForTokens, polling 2 detik - hanya deteksi, TIDAK mengubah flow login) + banner sukses registrasi
+  LoginPage.jsx                 - Form login (card center), fetch ke /auth/login + status dongle (DETEKSI USB ASLI via scanForTokens, polling 2 detik) + banner sukses registrasi + **password fallback setelah 5 gagal + kamera wajib untuk Windows Hello + camera auto-off saat pindah halaman**
+  UserSecurityLogPage.jsx + .css - **Halaman Log Keamanan Pengguna (/log-keamanan/:id): riwayat percobaan login beserta foto kamera, hanya bisa diakses admin via pencarian user di dasbor**
   RegisterPage.jsx              - Form register INVITE-ONLY: verifikasi ?undangan=<token> via GET /invites/verify, state "pendaftaran ditutup" tanpa token
-  AuthPage.css                  - Shared CSS untuk Login + Register + state panel undangan
+  SecuritySetupPage.tsx         - **Halaman setup keamanan wajib (/atur-keamanan): user pilih Windows Hello atau Dongle sebelum akses dashboard**
+  AuthPage.css                  - Shared CSS untuk Login + Register + SecuritySetup + state panel undangan
   DashboardPage.jsx + .css      - Dasbor + easter egg 5-klik + auth guard; admin lihat panel undangan (stats + tabel status + form buat undangan + salin tautan)
   VotePage.jsx + .css          - Halaman pemilihan (/pilih): kandidat demo, tombol besar berwarna + ikon SVG + auth guard
   ProfileSettingsPage.jsx + .css - Halaman pengaturan (/pengaturan): change password, Windows Hello, USB token management
@@ -158,6 +162,8 @@ frontend/src/components/
   HealthMonitor.jsx             - Render null; polling /health di background, error → console (bukan UI)
   Skeleton.jsx + .css           - Komponen loading placeholder (SkeletonText, SkeletonCircle, SkeletonRow, SkeletonStat, SkeletonPane) - dipakai di Register, Dashboard, dan Vote pages saat fetch data
   UsbTokenPanel.jsx + .css      - Panel kelola USB token (digunakan di ProfileSettingsPage): daftar, register (modal flow), revoke, label
+  AuthGuard.jsx                 - **Route guard: redirect ke /atur-keamanan jika user belum setup Windows Hello/Dongle**
+  Nav.jsx                       - **Navigation dengan user menu + logout button saat authenticated**
 frontend/src/index.css          - Reset global + font family
 frontend/src/main.jsx           - ReactDOM.createRoot + impor `cursor.css` agar kursor kustom TrueCount berlaku di seluruh aplikasi
 frontend/src/styles/cursor.css  - Kumpulan aturan kursor kustom untuk state normal, link, tombol, teks, resize, grab, grabbing, zoom, copy, menu, wait, loading, help, dan nope (PNG 32/64px + fallback bawaan browser)
@@ -197,6 +203,7 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | `/` | `LandingPage` | Halaman utama |
 | `/masuk` | `LoginPage` | Login |
 | `/daftar` | `RegisterPage` | Pendaftaran - invite-only, wajib query `?undangan=<token>`; tanpa token tampil state "hanya melalui undangan" |
+| `/atur-keamanan` | `SecuritySetupPage` | **Setup keamanan wajib (Windows Hello/Dongle) — redirect dari AuthGuard** |
 | `/dasbor` | `DashboardPage` | Dasbor (blank + easter egg, ada auth guard) |
 | `/pilih` | `VotePage` | Halaman pemilihan - demo kandidat, tombol besar berwarna (Sprint 2, ada auth guard) |
 | `/pengaturan` | `ProfileSettingsPage` | Pengaturan profil: change password, Windows Hello, USB token |
@@ -223,6 +230,10 @@ Base URL: `http://localhost:8000`
 | POST | `/auth/webauthn/register/verify` | Bearer JWT | `{challenge_id, credential_id, attestation_object, client_data_json}` | `201 {message, credential_id}` - verifikasi registrasi WebAuthn |
 | GET | `/auth/webauthn/list` | Bearer JWT | - | `200 {credentials}` - daftar Windows Hello user |
 | POST | `/auth/webauthn/{id}/revoke` | Bearer JWT | - | `200 {message}` - hapus Windows Hello |
+| GET | `/auth/security-setup` | Bearer JWT | - | `200 {has_webauthn, has_dongle, requires_setup, user_id}` - **cek status keamanan user** |
+| POST | `/auth/attempts/log` | - | `{identifier, method, success, error?, user_agent?}` | `200 {message}` - **log attempt login ke DB (dipanggil oleh backend secara internal saat login; frontend TIDAK lagi memanggil ini langsung untuk mencegah duplikasi baris)** |
+| POST | `/auth/attempts/reset` | - | `{identifier}` | `200 {message}` - **reset failed attempts (dipanggil backend setelah login berhasil)** |
+| POST | `/auth/security-status` | - | `{identifier}` | `200 {found, has_webauthn, has_dongle, requires_setup}` - **cek status keamanan by identifier (publik)** |
 | GET | `/invites` | Bearer JWT (admin) | - | `200 {stats, invites}` - status: `menunggu`/`diterima`/`kedaluwarsa`/`dibatalkan` |
 | POST | `/invites` | Bearer JWT (admin) | `{email?, role?}` | `201 {message, invite}` - `invite.link` = `/daftar?undangan=<token>` |
 | GET | `/invites/verify` | - | query `?token=` | `200 {valid, invite}` / `400` / `404` |
@@ -259,6 +270,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | --- | --- | --- |
 | `users` | 1 ✅ | id, username, email, password_hash, role (admin/voter), is_active |
 | `invites` | 2 ✅ | Undangan pendaftaran - token, email (nullable), role, status (pending/accepted/revoked), expires_at, created_by, used_by |
+| `auth_attempts` | 4b | **Log percobaan login: user_id, identifier, method (webauthn/dongle/password), success, error, ip, user_agent, photo_path, created_at** |
 | `biometric_credentials` | 4 | WebAuthn/FIDO2 - FK ke users (termasuk last_used_at) |
 | `webauthn_challenges` | 4 | Challenge WebAuthn (TTL 5 menit, single-use) - registration & authentication |
 | `usb_token_credentials` | 4 | **USB Token (software token di flashdisk) - ECDSA P-256 public key storage** |
@@ -284,10 +296,30 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
    (pending + belum kedaluwarsa) → password di-hash Argon2id → simpan ke DB
    → undangan ditandai accepted (UPDATE bersyarat, atomik)
 4. User POST /auth/login → verifikasi Argon2id → generate JWT HS256
-5. Frontend simpan token di localStorage key: 'tc_token'
+5. Frontend simpan token di localStorage key: 'tc_token' + AuthContext
 6. Request ke endpoint protected → kirim header: Authorization: Bearer <token>
 7. middleware/auth.php → requireAuth() / requireAdmin() → verifyJwt() → return payload
 8. Logout → frontend hapus 'tc_token' dari localStorage
+
+=== Auth Security Layer (Sprint 4b) ===
+9. Saat akses route protected (/dasbor, /pilih, /pengaturan, dll):
+   - AuthGuard cek GET /auth/security-setup (pakai JWT)
+   - Jika requires_setup=true → redirect ke /atur-keamanan (simpan returnTo)
+10. Di /atur-keamanan:
+    - User WAJIB setup minimal 1 metode: Windows Hello (butuh kamera) ATAU Dongle
+    - Setelah setup → redirect balik ke returnTo (default /dasbor)
+11. Saat login di /masuk:
+    - Default: Windows Hello (jika tersedia & kamera aktif)
+    - Dongle: jika Tauri desktop
+    - Kata Sandi: HIDDEN by default
+      → Muncul jika: 5+ percobaan gagal (lock 15 menit) ATAU user belum setup keamanan (onboarding)
+    - Semua attempt (success/gagal) di-log ke DB **oleh backend secara internal** di `login.php`, `webauthn_login_verify.php`, dan `authenticate_verify.php` (single source of truth — frontend hanya simpan counter lokal untuk UI lockout/password fallback)
+    - Kamera wajib aktif untuk Windows Hello (verifikasi frame bukan gelap/shutter tertutup)
+    - Foto kamera ditangkap sebelum auth dikirim (simpan ke `auth_attempts.photo_path`)
+12. Auto-session management:
+    - Cek JWT expiry client-side tiap 30 detik → auto-logout jika expired
+    - Intercept fetch → 401 → auto-logout + redirect /masuk
+    - Nav bar: tampil user menu + logout button saat authenticated
 ```
 
 **Tanpa undangan valid, `POST /auth/register` → 403** - pendaftaran publik ditutup.
@@ -644,8 +676,18 @@ Endpoints yang perlu dibangun:
 - **USB Token Management ✅** (daftar/revoke/label token di halaman pengaturan via `/mfa/usb/*` - register flow sudah end-to-end: challenge → sign → verify)
 - **USB Token Creation ✅** (User bikin token sendiri via UI "＋ Buat Token di USB" — generate keypair + encrypt + tulis file — **tanpa registrasi**, registrasi terpisah via "Daftarkan USB Baru")
 - Auto-spawn PHP dari Tauri untuk standalone desktop ✅ (selesai - catatan: masih butuh PHP terinstall di sistem user; bundling `php.exe` sebagai sidecar belum dilakukan)
-
-**Catatan MFA USB:**
+- **Auth Security Layer (Sprint 4b) ✅**:
+  - **AuthProvider & useAuth** (`hooks/useAuthSession.tsx`) — session management global, auto-expiry check, fetch interceptor 401
+  - **useAuthSecurity** (`hooks/useAuthSecurity.tsx`) — failed attempts tracking, camera permission + frame validation, security setup check
+  - **AuthGuard** (`components/AuthGuard.jsx`) — route guard redirect ke `/atur-keamanan` jika user belum setup keamanan
+  - **SecuritySetupPage** (`pages/SecuritySetupPage.tsx`) — halaman setup keamanan wajib (Windows Hello/Dongle)
+  - **LoginPage Updated** — password fallback logic, camera verification, photo capture (fixed: use captured photo directly, not stale state), **camera auto-off saat pindah halaman**, useAuth login()
+  - **Nav Updated** — user menu + logout button saat authenticated
+  - **Backend**: `/auth/security-setup`, `/auth/attempts/log`, `/auth/attempts/reset`, `/auth/security-status`
+  - **Database**: `auth_attempts` table (migration 007)
+  - **Camera enforcement**: real-time frame validation via canvas sampling, periodic re-check, Lenovo shutter detection
+  - **Password fallback**: hanya muncul setelah 5 gagal (lock 15 menit) atau user belum setup keamanan (onboarding)
+  - **Audit logging**: semua attempt di-log ke DB oleh backend secara internal (single source of truth, mencegah duplikasi baris); frontend simpan counter lokal untuk UI lockout/password fallback + photo capture
 - Flow register token memakai ECDSA P-256 signature (raw r||s 64 bytes → backend convert ke DER untuk openssl_verify)
 - PHP 8.4: `openssl_pkey_get_public/private` TIDAK menerima DER binary langsung, harus wrap PEM
 - Challenge disimpan di tabel `usb_challenges` (TTL 5 menit, single-use)
@@ -654,6 +696,122 @@ Endpoints yang perlu dibangun:
 - **Validasi format token** — `scan_usb_tokens` return `is_valid` flag; frontend tampilkan status **kuning (warning)** kalau file corrupt/format invalid
 - **Overwrite protection** — UI wajib centang konfirmasi sebelum menimpa token lama di flashdisk yang sudah berisi token
 - Generator CLI `database/generate_test_token.php` tetap ada sebagai alternatif dev
+
+---
+
+## 11.6. Auth Security Layer (Sprint 4b)
+
+> **Tujuan:** Memastikan user memiliki keamanan berlapis (Windows Hello ATAU Dongle) sebelum akses dashboard, dengan fallback password yang terkendali dan logging audit trail lengkap.
+
+### Fitur Utama
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Mandatory Security Setup** | User WAJIB setup Windows Hello atau Dongle di `/atur-keamanan` sebelum akses dashboard |
+| **Camera Enforcement** | Windows Hello butuh kamera aktif & frame valid (bukan gelap/shutter tertutup) — verifikasi real-time via canvas sampling |
+| **Password Fallback Controlled** | Kata Sandi hanya muncul setelah: 5+ percobaan gagal (lock 15 menit) ATAU user belum setup keamanan (onboarding) |
+| **Failed Attempts Tracking** | Semua attempt (success/gagal) di-log ke DB oleh backend secara internal; frontend hanya menyimpan counter lokal untuk UI lockout & password fallback, mencegah duplikasi baris log |
+| **Auto Session Management** | Cek JWT expiry tiap 30 detik → auto-logout; intercept fetch 401 → auto-logout + redirect |
+| **Audit Photo Capture** | Ambil foto webcam sebelum auth attempt (simpan ke `auth_attempts.photo_path`) |
+
+### Arsitektur
+
+| Komponen | File | Fungsi |
+|----------|------|--------|
+| **AuthProvider** | `hooks/useAuthSession.tsx` | Global auth state via Context: login/logout/refreshUser, auto-expiry check, fetch interceptor 401 |
+| **useAuth** | `hooks/useAuthSession.tsx` | Hook akses auth state: user, token, isAuthenticated, login(), logout() |
+| **useApi** | `hooks/useAuthSession.tsx` | Wrapper fetch dengan auto auth header + 401 handling |
+| **useAuthSecurity** | `hooks/useAuthSecurity.tsx` | Failed attempts tracking (localStorage + server), camera permission + frame validation, security setup check |
+| **AuthGuard** | `components/AuthGuard.jsx` | Route guard: cek `/auth/security-setup`, redirect ke `/atur-keamanan` jika requires_setup |
+| **SecuritySetupPage** | `pages/SecuritySetupPage.tsx` | UI setup keamanan wajib: pilih Windows Hello (butuh kamera) atau Dongle (butuh Tauri) |
+| **LoginPage** | `pages/LoginPage.jsx` | Updated: password fallback logic, camera verification, photo capture, useAuth login() |
+
+### Database Migration Baru
+
+```sql
+-- database/migrations/007_auth_attempts.sql
+CREATE TABLE `auth_attempts` (
+    `id` INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    `user_id` INT UNSIGNED NULL,
+    `identifier` VARCHAR(255) NOT NULL,
+    `method` ENUM('webauthn', 'dongle', 'password') NOT NULL,
+    `success` TINYINT(1) NOT NULL DEFAULT 0,
+    `error` TEXT NULL,
+    `ip_address` VARCHAR(45) NULL,
+    `user_agent` TEXT NULL,
+    `photo_path` VARCHAR(500) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_identifier` (`identifier`),
+    INDEX `idx_created_at` (`created_at`),
+    
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### Backend Endpoints Baru
+
+| Method | Path | Auth | Deskripsi |
+|--------|------|------|-----------|
+| GET | `/auth/security-setup` | Bearer JWT | Cek status keamanan user (has_webauthn, has_dongle, requires_setup) |
+| POST | `/auth/attempts/log` | - | Log attempt login (identifier, method, success, error, user_agent, photo) |
+| POST | `/auth/attempts/reset` | - | Reset failed attempts untuk identifier |
+| POST | `/auth/security-status` | - | Cek status keamanan by identifier (publik, untuk login page) |
+
+### Flow Login dengan Security Layer
+
+```
+1. User buka /masuk
+2. Default method: Windows Hello (jika supported + platform available + kamera aktif)
+   Dongle (jika Tauri desktop)
+   Kata Sandi: HIDDEN
+3. User input identifier (username/email)
+4. POST /auth/security-status → cek user punya Windows Hello/Dongle?
+   - Belum punya → identifierNeedsSetup = true → Kata Sandi TAMPIL (onboarding)
+5. User pilih method:
+   a. Windows Hello:
+      - Kamera wajib aktif (verifyCameraActive via canvas sampling)
+      - Ambil foto (captureAuthPhoto)
+      - loginWithWindowsHello(identifier, photo)
+      - Success → login(token, user) via useAuth → navigate /dasbor
+   b. Dongle:
+      - Start USB auth → wait USB → input PIN → sign challenge → verify
+      - Success → login(token, user) → navigate /dasbor
+   c. Kata Sandi (jika tersedia):
+      - Kamera tetap diverifikasi aktif
+      - POST /auth/login + photo
+      - Success → login(token, user) → navigate /dasbor
+6. Semua attempt → `increment()` di frontend (counter lokal untuk UI lockout/password fallback) + backend log ke `auth_attempts` secara internal (tidak ada duplikasi baris)
+7. Gagal 5x → lock 15 menit → `showPasswordFallback = true` → Kata Sandi TAMPIL
+8. Berhasil → `reset()` → counter lokal direset + backend `POST /auth/attempts/reset` (hapus baris gagal untuk identifier tersebut)
+
+Protected Routes (/dasbor, /pilih, /pengaturan, dll):
+- AuthGuard → GET /auth/security-setup (pakai JWT)
+- requires_setup=true → redirect /atur-keamanan (state returnTo)
+- Di /atur-keamanan: user setup Windows Hello/Dongle → complete → navigate returnTo
+```
+
+### Camera Verification Logic
+
+```typescript
+// Frame sampling via canvas (checkFrameHasContent)
+- Sample ~1000 pixels per frame
+- Check: nonBlackPercent ≥ 15%, avgBrightness > 20, contrast > 30, stdDev > 25
+- Need ≥ 2 valid frames out of 5 checks
+- Periodic re-check every 3s when shutter closed (auto-recover)
+- Continuous monitoring every 2s during active session (detect shutter close mid-session)
+- Lenovo gray shutter detection: low variance (stdDev ≤ 25) = FAIL
+```
+
+### Password Fallback Rules
+
+| Kondisi | Kata Sandi Tampil? |
+|---------|-------------------|
+| User belum setup Windows Hello/Dongle | ✅ Ya (onboarding) |
+| 5+ percobaan gagal (lock aktif) | ✅ Ya (emergency fallback) |
+| Lock expired tapi count ≥ 5 | ✅ Ya |
+| Normal (punya keamanan, <5 gagal) | ❌ Tidak |
 
 ---
 
@@ -682,3 +840,9 @@ Saat menambahkan endpoint baru, selalu update:
 9. **Tauri `default-features = false`** - jangan enable fitur `dialog` Tauri (butuh `TaskDialogIndirect`, error di Windows lama). Kalau butuh dialog native, pakai plugin terpisah.
 10. **Path `\\?\`** - Tauri resource dir mengembalikan Windows extended path; selalu strip prefix `\\?\` sebelum dipakai sebagai argumen proses PHP.
 11. **Pendaftaran publik ditutup** - akun baru hanya lewat undangan admin (`POST /invites`). Undangan kedaluwarsa otomatis sesuai `INVITE_EXPIRE_DAYS` (default 7 hari, bisa diatur di `.env`). Jangan buka `POST /auth/register` tanpa validasi `invite_token`.
+
+12. **Auth Security Layer (Sprint 4b)** - User WAJIB setup Windows Hello atau Dongle di `/atur-keamanan` sebelum akses dashboard. Password hanya muncul setelah 5 gagal (lock 15 menit) atau onboarding. Semua attempt di-log ke DB + photo. Kamera wajib aktif untuk Windows Hello (verifikasi frame real-time). Auto-session expiry check tiap 30 detik + fetch interceptor 401.
+13. **Log Waktu Lokal (WIB)** - Semua log backend (app.log) menggunakan zona waktu Asia/Jakarta (UTC+7/WIB) via `date_default_timezone_set('Asia/Jakarta')` di `backend/index.php` dan `backend/helpers/logger.php`. Akses log dan error log mencatat semua request termasuk timestamp WIB.
+14. **Verifikasi Gambar/Foto** - LoginPage menampilkan pratinjau foto yang ditangkap (`photo-preview` dengan `photo-thumbnail`) sebelum auth dikirimkan, sehingga user dapat memastikan gambar benar-benar tertangkap. Ada tombol "Ulangi" untuk menangkap foto ulang.
+15. **Fix: Waktu Log Keamanan (WIB)** - Kolom `auth_attempts.created_at` bertipe `TIMESTAMP` dibaca MySQL dalam zona waktu server (UTC+7), lalu diformat backend sebagai UTC → waktu tampil maju 7 jam di browser. Perbaikan di `backend/api/auth/attempts_list.php`: baca sebagai Unix timestamp (UTC) lalu format `gmdate(DATE_ATOM)`.
+16. **Fix: Duplikasi Baris Log Login** - Sebelumnya setiap login membuat 2 baris di `auth_attempts` (frontend POST `/auth/attempts/log` + backend `logAuthAttempt()` internal). Perbaikan di `frontend/src/hooks/useAuthSecurity.tsx`: frontend `increment()` hanya simpan counter lokal (UI lockout/password fallback), DB logging sepenuhnya tanggung backend sebagai single source of truth.

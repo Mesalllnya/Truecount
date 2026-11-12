@@ -99,6 +99,26 @@ if (isset($body['status'])) {
     if (!in_array($body['status'], ['draft', 'active', 'closed'], true)) {
         jsonResponse(['error' => 'Status tidak valid. Gunakan draft, active, atau closed.'], 422);
     }
+
+    // Jika admin ingin mengubah status ke active, periksa apakah waktu mulai sudah tiba
+    if ($body['status'] === 'active') {
+        $startTime = isset($body['start_time']) ? strtotime($body['start_time']) : strtotime($election['start_time'] . ' UTC');
+        $endTime   = isset($body['end_time']) ? strtotime($body['end_time']) : strtotime($election['end_time'] . ' UTC');
+        $now       = time();
+
+        if ($now < $startTime) {
+            jsonResponse([
+                'error' => 'Pemilihan belum dapat dimulai karena belum memasuki waktu mulai (' . toIso8601($election['start_time']) . ').'
+            ], 422);
+        }
+
+        if ($now >= $endTime) {
+            jsonResponse([
+                'error' => 'Pemilihan tidak dapat diaktifkan karena waktu pemilihan sudah berakhir.'
+            ], 422);
+        }
+    }
+
     $setClauses[] = 'status = ?';
     $params[]     = $body['status'];
 }

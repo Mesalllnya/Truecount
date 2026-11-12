@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import { SkeletonRow } from '../components/ui/Skeleton'
-import { CandidatesModal, VotersModal } from '../components/ElectionModals'
+import { CandidatesModal, VotersModal, CandidatePhoto } from '../components/ElectionModals'
+import DashNav, { BallotNavIcon } from '../components/DashNav'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
@@ -13,18 +14,6 @@ function BallotIcon() {
       <line x1="8" y1="9"  x2="16" y2="9"/>
       <line x1="8" y1="13" x2="16" y2="13"/>
       <line x1="8" y1="17" x2="12" y2="17"/>
-    </svg>
-  )
-}
-
-function ExitIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {/* door frame */}
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-      {/* arrow out */}
-      <polyline points="16 17 21 12 16 7"/>
-      <line x1="21" y1="12" x2="9" y2="12"/>
     </svg>
   )
 }
@@ -66,52 +55,6 @@ function RevokeIcon() {
 }
 
 /* Nav icons */
-function DashboardIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="7" rx="1"/>
-      <rect x="14" y="3" width="7" height="7" rx="1"/>
-      <rect x="3" y="14" width="7" height="7" rx="1"/>
-      <rect x="14" y="14" width="7" height="7" rx="1"/>
-    </svg>
-  )
-}
-
-function VoteIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4" y="3" width="16" height="18" rx="2"/>
-      <line x1="8" y1="9"  x2="16" y2="9"/>
-      <line x1="8" y1="13" x2="16" y2="13"/>
-      <line x1="8" y1="17" x2="12" y2="17"/>
-    </svg>
-  )
-}
-
-function SettingsIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-    </svg>
-  )
-}
-
-function BallotNavIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {/* lembar kertas suara yang dilipat */}
-      <rect x="6" y="3" width="12" height="18" rx="1" />
-      <path d="M6 3 l6 4" />
-      <path d="M12 3 l6 4" />
-      {/* garis pada kertas */}
-      <line x1="8" y1="7" x2="16" y2="7"/>
-      <line x1="8" y1="10" x2="14" y2="10"/>
-      <line x1="8" y1="13" x2="12" y2="13"/>
-    </svg>
-  )
-}
-
 /* ── Web Audio beep ──────────────────────────────────────── */
 function playBeep() {
   try {
@@ -558,6 +501,134 @@ function InvitesPanel() {
   )
 }
 
+/* ── Panel Pencarian User (admin) ──────────────────────────── */
+/* Klik user → navigasi ke halaman Log Keamanan User (/log-keamanan/:id) */
+function UserSecuritySearchPanel() {
+  const navigate = useNavigate()
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [searched, setSearched] = useState(false)
+
+  const token = localStorage.getItem('tc_token')
+  const API = 'http://localhost:8000'
+
+  const loadUsers = useCallback(async (q) => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${API}/users/search?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await readJson(res)
+      if (!res.ok) { setError(data.error || 'Gagal mencari pengguna.'); return }
+      setUsers(data.users ?? [])
+      setSearched(true)
+    } catch (err) {
+      setError(err?.message === 'Failed to fetch'
+        ? 'Tidak dapat terhubung ke server.'
+        : (err?.message || 'Gagal mencari pengguna.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [token, API])
+
+  // Cari otomatis (debounce 400ms) saat query berubah
+  useEffect(() => {
+    const q = query.trim()
+    if (q === '') {
+      setUsers([])
+      setSearched(false)
+      setError('')
+      return
+    }
+    const timer = setTimeout(() => loadUsers(q), 400)
+    return () => clearTimeout(timer)
+  }, [query, loadUsers])
+
+  return (
+    <section className="admin-panel" aria-label="Pencarian pengguna" style={{ marginTop: '3rem' }}>
+      <div className="admin-head">
+        <div className="admin-title">
+          <h1>Log Keamanan Pengguna</h1>
+          <p>Cari pengguna untuk melihat riwayat percobaan login beserta foto kamera pada setiap percobaan.</p>
+        </div>
+      </div>
+
+      {/* ── Search Bar ── */}
+      <div className="invite-toolbar">
+        <div className="toolbar-search" style={{ flex: '1 1 300px' }}>
+          <label htmlFor="user-search" className="visually-hidden">Cari pengguna</label>
+          <input
+            id="user-search"
+            type="search"
+            placeholder="Cari username atau email…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="search-input"
+          />
+        </div>
+        {searched && !loading && (
+          <span className="toolbar-count">
+            {users.length} pengguna ditemukan
+          </span>
+        )}
+      </div>
+
+      {error && <p className="invite-error" role="alert">{error}</p>}
+
+      {/* ── Daftar hasil pencarian ── */}
+      <div className="invite-card">
+        {loading && (
+          <div className="skeleton-pane">
+            <div className="skeleton skeleton-text--title" />
+            <SkeletonRow />
+            <SkeletonRow />
+          </div>
+        )}
+
+        {!loading && searched && users.length === 0 && (
+          <p className="invite-list-note">Tidak ada pengguna yang cocok dengan pencarian.</p>
+        )}
+
+        {!loading && !searched && (
+          <p className="invite-list-note">Ketik username atau email untuk mulai mencari.</p>
+        )}
+
+        {!loading && users.map(u => (
+          <button
+            type="button"
+            className="invite-row user-search-row"
+            key={u.id}
+            onClick={() => navigate(`/log-keamanan/${u.id}`)}
+            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            <div className="invite-cell invite-cell--email">
+              <span className="invite-cell-label">Pengguna</span>
+              <span className="invite-email">{u.username}</span>
+            </div>
+            <div className="invite-cell">
+              <span className="invite-cell-label">Email</span>
+              <span className="invite-date">{u.email ?? '-'}</span>
+            </div>
+            <div className="invite-cell">
+              <span className="invite-cell-label">Peran</span>
+              <span className={`badge ${u.role === 'admin' ? 'badge--active' : 'badge--draft'}`}>
+                {u.role === 'admin' ? 'Admin' : 'Pemilih'}
+              </span>
+            </div>
+            <div className="invite-cell invite-cell--action">
+              <span className="invite-cell-label">Aksi</span>
+              <span className="copy-btn" aria-hidden="true">Lihat Log →</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 /* ── Main ────────────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════
    ELECTIONS PANEL - manajemen pemilihan untuk admin
@@ -860,6 +931,14 @@ function ElectionsPanel() {
     title: '', description: '', start_time: '', end_time: '',
   })
 
+  // ── Form edit election (draft) ────────────────────────────
+  const [editingElection,  setEditingElection]  = useState(null)
+  const [updatingElection, setUpdatingElection] = useState(false)
+  const [editErr,          setEditErr]          = useState('')
+  const [editForm, setEditForm] = useState({
+    title: '', description: '', start_time: '', end_time: '',
+  })
+
   // ── Edit status / inline ──────────────────────────────────
   const [updatingId, setUpdatingId] = useState(null)
 
@@ -936,6 +1015,69 @@ function ElectionsPanel() {
       alert(err?.message || 'Gagal memperbarui status.')
     } finally {
       setUpdatingId(null)
+    }
+  }
+
+  function toDatetimeLocal(isoStr) {
+    if (!isoStr) return ''
+    try {
+      const d = new Date(isoStr)
+      if (isNaN(d.getTime())) return ''
+      const pad = n => String(n).padStart(2, '0')
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    } catch {
+      return ''
+    }
+  }
+
+  function startEditElection(election) {
+    setEditingElection(election)
+    setEditErr('')
+    setEditForm({
+      title: election.title ?? '',
+      description: election.description ?? '',
+      start_time: toDatetimeLocal(election.start_time),
+      end_time: toDatetimeLocal(election.end_time),
+    })
+  }
+
+  function cancelEditElection() {
+    setEditingElection(null)
+    setEditErr('')
+  }
+
+  async function handleUpdateElection(e) {
+    e.preventDefault()
+    if (!editingElection) return
+    setUpdatingElection(true)
+    setEditErr('')
+
+    const payload = {
+      title: editForm.title.trim(),
+      description: editForm.description.trim(),
+      start_time: editForm.start_time ? new Date(editForm.start_time).toISOString() : '',
+      end_time:   editForm.end_time   ? new Date(editForm.end_time).toISOString()   : '',
+    }
+
+    try {
+      const res = await fetch(`${API}/elections/${editingElection.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+      const data = await readJson(res)
+      if (!res.ok) {
+        setEditErr(data.error || 'Gagal memperbarui pemilihan.')
+        return
+      }
+      setEditingElection(null)
+      loadElections()
+    } catch (err) {
+      setEditErr(err?.message === 'Failed to fetch'
+        ? 'Tidak dapat terhubung ke server.'
+        : (err?.message || 'Gagal memperbarui pemilihan.'))
+    } finally {
+      setUpdatingElection(false)
     }
   }
 
@@ -1036,6 +1178,73 @@ function ElectionsPanel() {
         </form>
       )}
 
+      {/* ── Form edit election (draft only) ── */}
+      {editingElection && (
+        <form className="create-panel" onSubmit={handleUpdateElection} style={{ border: '2px solid #3468b0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#3468b0' }}>
+              Edit Pemilihan (Draft): {editingElection.title}
+            </h3>
+            <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+              Hanya pemilihan berstatus draft yang dapat diedit
+            </span>
+          </div>
+          {editErr && <p className="invite-error" role="alert">{editErr}</p>}
+          <div className="create-fields el-create-fields">
+            <div className="create-field" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="edit-el-title">Judul pemilihan <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                id="edit-el-title"
+                type="text"
+                placeholder="Contoh: Pemilihan Ketua BEM 2026"
+                value={editForm.title}
+                required
+                maxLength={255}
+                onChange={e => { setEditForm(p => ({ ...p, title: e.target.value })); setEditErr('') }}
+              />
+            </div>
+            <div className="create-field" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="edit-el-desc">Deskripsi (opsional)</label>
+              <input
+                id="edit-el-desc"
+                type="text"
+                placeholder="Keterangan singkat tentang pemilihan ini"
+                value={editForm.description}
+                onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+            <div className="create-field">
+              <label htmlFor="edit-el-start">Waktu mulai <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                id="edit-el-start"
+                type="datetime-local"
+                value={editForm.start_time}
+                required
+                onChange={e => setEditForm(p => ({ ...p, start_time: e.target.value }))}
+              />
+            </div>
+            <div className="create-field">
+              <label htmlFor="edit-el-end">Waktu selesai <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                id="edit-el-end"
+                type="datetime-local"
+                value={editForm.end_time}
+                required
+                onChange={e => setEditForm(p => ({ ...p, end_time: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="create-actions">
+            <button type="submit" className="create-submit" disabled={updatingElection}>
+              {updatingElection ? 'Menyimpan perubahan…' : 'Simpan Perubahan'}
+            </button>
+            <button type="button" className="create-cancel" onClick={cancelEditElection}>
+              Batal
+            </button>
+          </div>
+        </form>
+      )}
+
       {listError && <p className="invite-error" role="alert">{listError}</p>}
 
       {/* ── Daftar election ── */}
@@ -1091,15 +1300,27 @@ function ElectionsPanel() {
               {/* Aksi status */}
               <div className="invite-cell invite-cell--action el-actions">
                 {el.status === 'draft' && (
-                  <button
-                    className="create-submit"
-                    style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem' }}
-                    disabled={isUpdating}
-                    onClick={() => handleSetStatus(el, 'active')}
-                    title="Buka pemilihan untuk voting"
-                  >
-                    {isUpdating ? '…' : 'Buka'}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', fontWeight: 600 }}
+                      disabled={isUpdating}
+                      onClick={() => startEditElection(el)}
+                      title="Edit informasi pemilihan"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      className="create-submit"
+                      style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem' }}
+                      disabled={isUpdating}
+                      onClick={() => handleSetStatus(el, 'active')}
+                      title="Buka pemilihan untuk voting"
+                    >
+                      {isUpdating ? '…' : 'Buka'}
+                    </button>
+                  </>
                 )}
                 {el.status === 'active' && (
                   <button
@@ -1346,38 +1567,17 @@ function VoterDashboardView() {
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                          {c.photo_path ? (
-                            <img
-                              src={`${API}${c.photo_path}`}
-                              alt={c.name}
-                              style={{
-                                width: '64px',
-                                height: '64px',
-                                borderRadius: '10px',
-                                objectFit: 'cover',
-                                border: '1px solid var(--border)',
-                                flexShrink: 0,
-                              }}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = '<div style="width:64px;height:64px;border-radius:10px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:1.8rem;">👤</div>';
-                              }}
-                            />
-                          ) : (
-                            <div style={{
+                          <CandidatePhoto
+                            candidate={c}
+                            electionId={el.id}
+                            token={token}
+                            style={{
                               width: '64px',
                               height: '64px',
                               borderRadius: '10px',
-                              background: '#e5e7eb',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '1.8rem',
-                              flexShrink: 0,
-                            }}>
-                              👤
-                            </div>
-                          )}
+                            }}
+                            fallbackSize="1.8rem"
+                          />
                           <div style={{ minWidth: 0 }}>
                             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.05em' }}>
                               PASLON {String(i + 1).padStart(2, '0')}
@@ -1491,47 +1691,39 @@ export default function DashboardPage() {
         />
       )}
 
-      <header className="dash-nav">
-        {/* Brand - klik 5x untuk easter egg */}
-        <button
-          className="dash-brand"
-          onClick={handleBrandClick}
-          aria-label={`TrueCount - klik ${5 - clicks} kali lagi`}
-          title="TrueCount"
-        >
-          <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
-          {clicks > 0 && clicks < 5 && (
-            <span className="dash-brand-dots" aria-hidden="true">
-              {Array.from({ length: 5 }, (_, i) => (
-                <span key={i} className={`dash-brand-dot${i < clicks ? ' active' : ''}`} />
-              ))}
-            </span>
-          )}
-        </button>
-
-        <nav className="dash-nav-links" aria-label="Navigasi dasbor">
-          <span className="dash-nav-item dash-nav-active"><DashboardIcon /> Dasbor</span>
-          <Link to="/pilih" className="dash-nav-item"><VoteIcon /> Pemilihan</Link>
-          <Link to="/pesan-terenkripsi" className="dash-nav-item">
-          <span aria-hidden="true">🔐</span> Pesan Terenkripsi </Link>
-          <Link to="/pengaturan" className="dash-nav-item"><SettingsIcon /> Pengaturan</Link>
-          <span className="dash-nav-item"><BallotNavIcon /> Surat Suara Saya</span>
-        </nav>
-
-        {/* ── Server status sudah dihapus dari UI - HealthMonitor global
-               mencatat kondisi server/DB ke error log (console + app.log) ── */}
-
-        <button className="dash-logout" onClick={handleLogout}>
-          <ExitIcon />
-          Keluar
-        </button>
-      </header>
+      <DashNav
+        active="/dasbor"
+        brand={
+          <button
+            className="dash-brand"
+            onClick={handleBrandClick}
+            aria-label={`TrueCount - klik ${5 - clicks} kali lagi`}
+            title="TrueCount"
+          >
+            <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
+            {clicks > 0 && clicks < 5 && (
+              <span className="dash-brand-dots" aria-hidden="true">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <span key={i} className={`dash-brand-dot${i < clicks ? ' active' : ''}`} />
+                ))}
+              </span>
+            )}
+          </button>
+        }
+        extraNavItems={
+          isAdmin ? null : (
+            <span className="dash-nav-item"><BallotNavIcon /> Surat Suara Saya</span>
+          )
+        }
+        onLogout={handleLogout}
+      />
 
       {isAdmin ? (
         <main className="dash-main dash-main--admin">
           <ElectionsPanel />
           <BlockchainAuditPanel />
           <InvitesPanel />
+          <UserSecuritySearchPanel />
         </main>
       ) : (
         <VoterDashboardView />

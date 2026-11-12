@@ -199,6 +199,29 @@ Output sukses:
 | Tidak bisa daftar akun | Pendaftaran ditutup publik — minta tautan undangan ke admin |
 | Tautan undangan "tidak valid" | Undangan mungkin kedaluwarsa (7 hari) atau sudah dipakai/dibatalkan |
 | Server tidak tersambung | Pastikan backend jalan (`npm run dev:full` atau app desktop otomatis spawn PHP) |
+| Kamera tetap menyala setelah pindah dari halaman login | Masalah sudah diatasi: kamera otomatis dimatikan saat navigasi keluar halaman login. Kalau masih terjadi, tutup buka ulang aplikasi. |
+| Foto tidak muncul di Log Keamanan | Foto hanya disimpan untuk percobaan login **setelah** perbaikan diterapkan. Percobaan lama tidak memiliki foto (placeholder kamera akan ditampilkan). |
+
+---
+
+## 9. Log Keamanan (Audit Login)
+
+Admin dapat melihat riwayat percobaan login setiap pengguna, lengkap dengan foto kamera yang diambil saat mencoba masuk.
+
+### 9.1. Cara Melihat Log Keamanan
+
+1. Login sebagai **admin** → buka **Dasbor**
+2. Di panel pencarian user (bagian bawah dasbor), cari username atau email pengguna
+3. Klik baris pengguna → akan dibuka halaman **"Log Keamanan Pengguna"**
+4. Halaman menampilkan tabel riwayat:
+   - **Foto** — tangkapan kamera saat percobaan login (klik untuk memperbesar)
+   - **Waktu** — tanggal & jam percobaan
+   - **Metode** — Windows Hello / Dongle USB / Kata Sandi
+   - **Status** — Berhasil / Gagal
+   - **IP Address** — alamat IP pengguna saat login
+   - **Keterangan** — pesan hasil login (mis. "Login berhasil" atau "Autentikasi dibatalkan...")
+
+> **Catatan:** Foto hanya tersimpan untuk percobaan login yang dilakukan **setelah** fitur kamera aktif. Percobaan lama sebelum fitur ini akan menampilkan placeholder kamera (tanpa gambar).
 
 ---
 

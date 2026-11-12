@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUsbToken, startUsbAuthenticate, verifyUsbAuthenticate, base64urlToBytes, bytesToBase64url } from '../hooks/useUsbToken'
-import { useWebAuthnLogin } from '../hooks/useWebAuthn'
+import { useWebAuthnLogin, isWebAuthnSupported } from '../hooks/useWebAuthn'
+import { useFailedAttempts, useCameraPermission } from '../hooks/useAuthSecurity.tsx'
+import { useAuth } from '../hooks/useAuthSession'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import './AuthPage.css'
 
@@ -91,17 +93,129 @@ function EyeOffIcon() {
   )
 }
 
+function CameraIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  )
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  )
+}
+
+function LockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v3" />
+    </svg>
+  )
+}
+
+function LoaderIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+      <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round">
+        <animateTransform attributeName="transform" type="rotate" dur="1s" from="0 12 12" to="360 12 12" repeatCount="indefinite" />
+      </path>
+    </svg>
+  )
+}
+
+function RefreshIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1 4v6a6 6 0 0 0 6 6h6" />
+      <path d="M23 20v-6a6 6 0 0 0 -6 -6h-6" />
+      <polyline points="17 20 23 20 23 14" />
+      <polyline points="7 4 1 4 1 10" />
+    </svg>
+  )
+}
+
 /* ── Komponen utama ─────────────────────────────────────────── */
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // ── Auth Session ──────────────────────────────────────────────
+  const { login } = useAuth()
+
+  // ── Failed Attempts Tracking ────────────────────────────────
+  const { state: attemptsState, increment } = useFailedAttempts()
+
+  // ── Camera Permission (required for Windows Hello) ──────────
+  const { hasPermission: cameraPermission, isChecking: cameraChecking, error: cameraError, requestPermission, stream, videoEl, capturePhoto, verifyCameraActive } = useCameraPermission()
+
+  // Video element for preview - use this for verification since it's the live one
+  const [previewVideoElement, setPreviewVideoElement] = useState(null)
+
+  // ── Toast untuk kamera (muncul setiap kali pemeriksaan kamera berjalan) ──
+  const [toast, setToast] = useState(null)
+
+  const showAuthToast = useCallback((message) => {
+    setToast(message)
+    setTimeout(() => setToast(null), 3500)
+  }, [])
+
+  // Show toast when camera check completes (including periodic re-checks)
+  useEffect(() => {
+    if (cameraChecking) return
+    if (cameraPermission === true) {
+      showAuthToast('Kamera siap ✓')
+    } else if (cameraPermission === false) {
+      showAuthToast(cameraError || 'Kamera tidak aktif. Buka shutter kamera untuk Windows Hello.')
+    }
+  }, [cameraPermission, cameraChecking, cameraError, showAuthToast])
+
   // ── State umum ──────────────────────────────────────────────
-  const [selectedMethod, setSelectedMethod] = useState('password')
+  const [selectedMethod, setSelectedMethod] = useState('webauthn') // Default to Windows Hello
   const [form, setForm] = useState({ identifier: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [authPhoto, setAuthPhoto] = useState(null)
+  // True jika user (berdasarkan identifier) belum pasang Windows Hello/Dongle
+  const [identifierNeedsSetup, setIdentifierNeedsSetup] = useState(false)
+  // Kata sandi tersedia setelah 5x percobaan gagal
+  const showPasswordFallback = attemptsState.count >= 5
+
+  // ── Capture photo before auth attempt ─────────────────────────
+  const captureAuthPhoto = useCallback(async () => {
+    if (!capturePhoto) return null;
+    const photo = await capturePhoto();
+    setAuthPhoto(photo);
+    return photo;
+  }, [capturePhoto]);
+
+  // ── Matikan kamera saat meninggalkan halaman login ─────────────
+  // Mencegah kamera tetap menyala (indikator LED menyala) setelah
+  // navigasi ke dasbor atau halaman lain.
+  useEffect(() => {
+    return () => {
+      // Hentikan semua track kamera (mematikan indikator kamera)
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      // Lepaskan srcObject dari video elemen agar browser/WebView melepaskan kamera
+      if (previewVideoElement) {
+        previewVideoElement.srcObject = null;
+        previewVideoElement.removeAttribute('srcObject');
+      }
+      if (videoEl) {
+        videoEl.srcObject = null;
+        videoEl.removeAttribute('srcObject');
+      }
+    };
+  }, [stream, previewVideoElement, videoEl]);
 
   // ── Notifikasi "akun baru dibuat" ───────────────────────────
   const [notice, setNotice] = useState(
@@ -113,7 +227,19 @@ export default function LoginPage() {
     }
   }, [navigate, location.state])
 
-  // ── Dongle status (deteksi USB asli) ────────────────────────
+  // ── WebAuthn (Windows Hello + Security Key) ────────────────────────────────
+  const {
+    isSupported: webauthnSupported,
+    isPlatformAvailable: webauthnPlatformAvailable,
+    isLoading: webauthnLoading,
+    error: webauthnError,
+    loginWithWindowsHello,
+    clearError: clearWebAuthnError,
+  } = useWebAuthnLogin()
+
+  // ── USB Token (Dongle) ───────────────────────────────────────────
+  // Hanya di desktop app (Tauri) - deteksi USB asli via Rust monitor
+  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
   const { scanForTokens } = useUsbToken()
   const [dongleStatus, setDongleStatus] = useState({
     connected: false,
@@ -122,15 +248,9 @@ export default function LoginPage() {
     formatValid: null,
   })
 
-  // ── Toast untuk metode login yang tidak tersedia ──
-  const [toast, setToast] = useState(null)
-
-  const showAuthToast = useCallback((message) => {
-    setToast(message)
-    setTimeout(() => setToast(null), 3500)
-  }, [])
-
+  // Poll USB token status every 2 seconds (only in Tauri)
   useEffect(() => {
+    if (!isTauri) return
     let cancelled = false
     const poll = async () => {
       const tokens = await scanForTokens()
@@ -153,73 +273,9 @@ export default function LoginPage() {
       cancelled = true
       window.clearInterval(intervalId)
     }
-  }, [scanForTokens])
-
-  // ── WebAuthn (Windows Hello) ────────────────────────────────
-  const {
-    isSupported: webauthnSupported,
-    isPlatformAvailable: webauthnPlatformAvailable,
-    isLoading: webauthnLoading,
-    error: webauthnError,
-    loginWithWindowsHello,
-    clearError: clearWebAuthnError,
-  } = useWebAuthnLogin()
-
-  // ── Handler umum ────────────────────────────────────────────
-  function handleChange(e) {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
-    setError('')
-    clearWebAuthnError()
-  }
-
-  function handleBack() {
-    navigate('/')
-  }
-
-  // ── Submit password ─────────────────────────────────────────
-  async function handlePasswordSubmit(e) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    try {
-      const res = await fetch('http://localhost:8000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await readJson(res)
-      if (!res.ok) { setError(data.error || 'Login gagal. Silakan coba lagi.'); return }
-      localStorage.setItem('tc_token', data.token)
-      navigate('/dasbor')
-    } catch (err) {
-      setError(
-        err instanceof Error && err.message !== 'Failed to fetch'
-          ? err.message
-          : 'Tidak dapat terhubung ke server. Periksa koneksi Anda.'
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // ── Submit Windows Hello ────────────────────────────────────
-  async function handleWebAuthnLogin() {
-    if (!form.identifier.trim()) {
-      setError('Masukkan username atau email terlebih dahulu')
-      return
-    }
-    setLoading(true)
-    setError('')
-    const result = await loginWithWindowsHello(form.identifier.trim())
-    if (result) {
-      localStorage.setItem('tc_token', result.token)
-      navigate('/dasbor')
-    }
-    setLoading(false)
-  }
+  }, [scanForTokens, isTauri])
 
   // ── USB Token Auth (MFA Login) ───────────────────────────────
-  // scanForTokens sudah di-destructuring di atas (line ~116)
   const {
     decryptPrivateKey,
     importPrivateKey,
@@ -272,7 +328,8 @@ export default function LoginPage() {
   }, [usbAuthStep, usbAuthSelectedDrive, scanForTokens])
 
   const handleUsbAuthStart = async () => {
-    if (!form.identifier.trim()) {
+    const identifier = form.identifier.trim()
+    if (!identifier) {
       setError('Masukkan username atau email terlebih dahulu')
       return
     }
@@ -282,7 +339,7 @@ export default function LoginPage() {
     setUsbAuthSelectedDrive('')
     setUsbAuthChallengeData(null)
 
-    const data = await startUsbAuthenticate(form.identifier.trim())
+    const data = await startUsbAuthenticate(identifier)
     if (!data) {
       setUsbAuthStep('error')
       setUsbAuthError('Gagal memulai autentikasi. Coba lagi.')
@@ -293,9 +350,21 @@ export default function LoginPage() {
   }
 
   const handleUsbAuthSubmitPin = async () => {
+    const identifier = form.identifier.trim()
     if (!usbAuthSelectedDrive || !usbAuthPin || !usbAuthChallengeData) return
     setUsbAuthStep('signing')
     setUsbAuthError('')
+
+    // Verify camera is still active before auth
+    const cameraActive = await verifyCameraActive(previewVideoElement)
+    if (!cameraActive) {
+      setUsbAuthStep('error')
+      setUsbAuthError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
+      return
+    }
+
+    // Capture photo before auth
+    const photo = await captureAuthPhoto()
 
     try {
       // 1. Decrypt private key dari USB
@@ -325,22 +394,41 @@ export default function LoginPage() {
       // 4. Kirim ke backend untuk verifikasi
       const result = await verifyUsbAuthenticate(
         usbAuthChallengeData.challenge_id,
-        usbAuthChallengeData.allowCredentials[0]?.id || '', // credential_id dari allowCredentials
-        signatureB64
+        usbAuthChallengeData.allowCredentials[0]?.id || '',
+        signatureB64,
+        photo
       )
 
       if (!result) {
         setUsbAuthStep('error')
         setUsbAuthError('Verifikasi gagal di server.')
+        try {
+          await increment(identifier, 'dongle', false, 'Verifikasi gagal di server')
+        } catch (incErr) {
+          console.warn('[Login] Failed to log dongle attempt:', incErr)
+        }
         return
       }
 
       // Success!
-      localStorage.setItem('tc_token', result.token)
+      login(result.token, result.user)
+      try {
+        await increment(identifier, 'dongle', true)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log dongle attempt:', incErr)
+      }
       navigate('/dasbor')
     } catch (err) {
       setUsbAuthStep('error')
-      setUsbAuthError(err?.message || 'Terjadi kesalahan.')
+      const errMsg = err?.message || 'Terjadi kesalahan.'
+      setUsbAuthError(errMsg)
+      try {
+        await increment(identifier, 'dongle', false, errMsg)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log dongle attempt:', incErr)
+      }
+    } finally {
+      setAuthPhoto(null)
     }
   }
 
@@ -352,22 +440,182 @@ export default function LoginPage() {
     setUsbAuthChallengeData(null)
   }
 
-  // ── Deteksi lingkungan: Tauri desktop vs browser web ──
-  // window.__TAURI__ butuh withGlobalTauri: true di tauri.conf.json.
-  // window.__TAURI_INTERNALS__ selalu tersedia saat berjalan di Tauri (dev & build),
-  // konsisten dengan deteksi di hooks/useUsbToken.ts.
-  const isTauri =
-    typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+  // ── Handler umum ────────────────────────────────────────────
+  function handleChange(e) {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    setError('')
+    clearWebAuthnError()
+  }
+
+  function handleBack() {
+    navigate('/')
+  }
+
+  // ── Cek status keamanan user saat identifier diketik ──────────
+  // Jika user belum pasang Windows Hello/Dongle, tampilkan Kata Sandi
+  // untuk alur onboarding (setelah login akan diarahkan ke /atur-keamanan).
+  useEffect(() => {
+    const identifier = form.identifier.trim()
+    if (!identifier) {
+      setIdentifierNeedsSetup(false)
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('http://localhost:8000/auth/security-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier }),
+        })
+        const data = await res.json()
+        if (res.ok && data.found) {
+          setIdentifierNeedsSetup(data.requires_setup === true)
+        } else {
+          setIdentifierNeedsSetup(false)
+        }
+      } catch {
+        setIdentifierNeedsSetup(false)
+      }
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [form.identifier])
+
+  // ── Submit password ─────────────────────────────────────────
+  async function handlePasswordSubmit(e) {
+    e.preventDefault()
+    const identifier = form.identifier.trim()
+    if (!identifier) {
+      setError('Masukkan username atau email terlebih dahulu')
+      return
+    }
+
+    // Verify camera is still active before auth
+    const cameraActive = await verifyCameraActive(previewVideoElement)
+    if (!cameraActive) {
+      setError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
+      return
+    }
+
+    // Capture photo before auth
+    const photo = await captureAuthPhoto()
+
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('http://localhost:8000/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, auth_photo: photo }),
+      })
+      const data = await readJson(res)
+      if (!res.ok) {
+        const errMsg = data.error || 'Login gagal. Silakan coba lagi.'
+        setError(errMsg)
+        await increment(identifier, 'password', false, errMsg)
+        return
+      }
+      login(data.token, data.user)
+      try {
+        await increment(identifier, 'password', true)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log password attempt:', incErr)
+      }
+      navigate('/dasbor')
+    } catch (err) {
+      const errMsg =
+        err instanceof Error && err.message !== 'Failed to fetch'
+          ? err.message
+          : 'Tidak dapat terhubung ke server. Periksa koneksi Anda.'
+      setError(errMsg)
+      try {
+        await increment(identifier, 'password', false, errMsg)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log password attempt:', incErr)
+      }
+    } finally {
+      setLoading(false)
+      setAuthPhoto(null)
+    }
+  }
+
+  // ── Submit Windows Hello ────────────────────────────────────
+  async function handleWebAuthnLogin() {
+    const identifier = form.identifier.trim()
+    if (!identifier) {
+      setError('Masukkan username atau email terlebih dahulu')
+      return
+    }
+    if (cameraChecking) return
+    if (cameraPermission === false) {
+      setError(cameraError || 'Izin kamera diperlukan untuk Windows Hello')
+      // Hitung sebagai percobaan gagal agar Kata Sandi terbuka setelah 5x gagal
+      await increment(identifier, 'webauthn', false, cameraError || 'Kamera tidak tersedia')
+      return
+    }
+
+    // Verify camera is still active before auth
+    const cameraActive = await verifyCameraActive(previewVideoElement)
+    if (!cameraActive) {
+      setError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
+      return
+    }
+
+    // Capture photo before auth
+    const photo = await captureAuthPhoto()
+
+    setLoading(true)
+    setError('')
+    try {
+      const result = await loginWithWindowsHello(identifier, photo)
+      if (result) {
+        login(result.token, result.user)
+        try {
+          await increment(identifier, 'webauthn', true)
+        } catch (incErr) {
+          console.warn('[Login] Failed to log webauthn attempt:', incErr)
+        }
+        navigate('/dasbor')
+      } else {
+        const errMsg = webauthnError || 'Autentikasi Windows Hello gagal'
+        setError(errMsg)
+        try {
+          await increment(identifier, 'webauthn', false, errMsg)
+        } catch (incErr) {
+          console.warn('[Login] Failed to log webauthn attempt:', incErr)
+        }
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Terjadi kesalahan'
+      setError(errMsg)
+      try {
+        await increment(identifier, 'webauthn', false, errMsg)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log webauthn attempt:', incErr)
+      }
+    } finally {
+      setLoading(false)
+      setAuthPhoto(null)
+    }
+  }
 
   // ── Konfigurasi metode auth ─────────────────────────────────
+  // Kata Sandi tersedia jika:
+  //   - identifierNeedsSetup = user belum pasang Windows Hello/Dongle (onboarding)
+  //   - showPasswordFallback = 5+ percobaan gagal
+  //   - Kamera tidak tersedia untuk Windows Hello
+  const passwordAvailable = identifierNeedsSetup || showPasswordFallback || cameraPermission === false
+
   const authMethods = [
     {
       id: 'webauthn',
       label: 'Windows Hello',
-      description: 'Sidik jari, wajah, atau PIN Windows',
+      description: 'Sidik jari, wajah, atau PIN Windows (kamera wajib aktif)',
       icon: <FingerprintIcon />,
-      available: webauthnSupported && webauthnPlatformAvailable,
-      unavailableReason: webauthnSupported ? 'Windows Hello tidak tersedia di perangkat ini' : 'Browser tidak mendukung WebAuthn',
+      available: (webauthnSupported && webauthnPlatformAvailable) && cameraPermission !== false,
+      unavailableReason: cameraPermission === false
+        ? 'Kamera tidak tersedia. Gunakan Kata Sandi untuk masuk.'
+        : (webauthnSupported ? 'Windows Hello tidak tersedia di perangkat ini' : 'Browser tidak mendukung WebAuthn'),
+      requireCamera: true,
     },
     {
       id: 'dongle',
@@ -376,16 +624,36 @@ export default function LoginPage() {
       icon: <KeyIcon />,
       available: isTauri,
       unavailableReason: isTauri ? undefined : 'Dongle USB hanya tersedia di aplikasi desktop',
+      requireCamera: false,
     },
     {
       id: 'password',
       label: 'Kata Sandi',
-      description: 'Username/email dan kata sandi',
+      description: passwordAvailable ? 'Username/email dan kata sandi' : 'Username/email dan kata sandi (tersedia setelah 5 percobaan gagal)',
       icon: <PasswordIcon />,
-      available: true,
-      unavailableReason: undefined,
+      available: passwordAvailable,
+      unavailableReason: passwordAvailable ? undefined : 'Tersedia setelah 5 percobaan gagal',
+      requireCamera: false,
     },
   ]
+
+  // Determine default method:
+  // 1. User belum pasang keamanan → paksa Kata Sandi (onboarding)
+  // 2. Kamera tidak tersedia → paksa Kata Sandi
+  // 3. Windows Hello tersedia → default (direkomendasikan)
+  // 4. Tauri → dongle
+  // 5. Fallback password
+  useEffect(() => {
+    if (identifierNeedsSetup || cameraPermission === false || showPasswordFallback) {
+      setSelectedMethod('password')
+    } else if (webauthnSupported && webauthnPlatformAvailable) {
+      setSelectedMethod('webauthn')
+    } else if (isTauri) {
+      setSelectedMethod('dongle')
+    } else {
+      setSelectedMethod('password')
+    }
+  }, [identifierNeedsSetup, cameraPermission, showPasswordFallback, webauthnSupported, webauthnPlatformAvailable, isTauri])
 
   return (
     <div className="auth-shell">
@@ -432,6 +700,126 @@ export default function LoginPage() {
           </p>
         )}
 
+        {/* ── Camera Requirement Notice ─────────────────────────────────── */}
+        {(selectedMethod === 'webauthn' || (webauthnSupported && webauthnPlatformAvailable)) && (
+          <div 
+            className={`camera-notice 
+              ${cameraPermission === false ? 'camera-notice--error' : ''} 
+              ${cameraPermission === true ? 'camera-notice--success' : ''}
+              ${cameraChecking ? 'camera-notice--checking' : ''}`}
+            role="status"
+            aria-live="polite"
+          >
+            <div className="camera-notice-icon" aria-hidden="true">
+              <CameraIcon />
+            </div>
+            <div className="camera-notice-content">
+              <div className="camera-notice-title">
+                <strong>Kamera aktif</strong> untuk verifikasi
+              </div>
+              <div className="camera-notice-subtitle">
+                {cameraChecking ? (
+                  <>
+                    <span className="camera-notice-spinner" aria-hidden="true"></span>
+                    Memeriksa kamera...
+                  </>
+                ) : cameraPermission === false ? (
+                  <>
+                    <span className="camera-notice-error-icon" aria-hidden="true">!</span>
+                    {cameraError}
+                  </>
+                ) : (
+                  <>
+                    <span className="camera-notice-success-icon" aria-hidden="true">✓</span>
+                    Kamera siap
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="camera-notice-actions">
+              {cameraPermission === false && (
+                <button 
+                  type="button" 
+                  className="camera-retry camera-retry--primary" 
+                  onClick={requestPermission}
+                  disabled={cameraChecking}
+                  aria-busy={cameraChecking}
+                >
+                  <CameraIcon />
+                  {cameraChecking ? 'Memeriksa...' : 'Periksa Lagi (Buka Shutter)'}
+                </button>
+              )}
+              {cameraPermission === true && (
+                <span className="camera-ok-badge" aria-hidden="true">
+                  <span className="badge-ring"></span>
+                  Kamera Aktif
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Live Camera Preview ────────────────────────────── */}
+        {cameraPermission === true && stream && videoEl && (
+          <div className="camera-preview" role="region" aria-label="Pratinjau kamera">
+            <div className="camera-preview-container">
+              <video
+                ref={(el) => {
+                  setPreviewVideoElement(el)
+                  if (el && stream) el.srcObject = stream
+                }}
+                autoPlay
+                playsInline
+                muted
+                className="camera-preview-video"
+                aria-hidden="true"
+              />
+              <div className="camera-preview-overlay">
+                <div className="camera-status-indicator active">
+                  <span className="status-dot" aria-hidden="true"></span>
+                  <span>Kamera Aktif - Verifikasi</span>
+                </div>
+              </div>
+            </div>
+            <p className="camera-preview-hint">
+              Kamera merekam untuk verifikasi wajah saat login.
+            </p>
+          </div>
+        )}
+
+        {/* ── Captured Photo Preview ────────────────────────────── */}
+        {authPhoto && (
+          <div className="photo-preview">
+            <div className="photo-preview-header">
+              <span className="photo-badge">
+                <CheckIcon />
+                Foto Tangkap
+              </span>
+              <button
+                type="button"
+                className="photo-capture-btn"
+                onClick={captureAuthPhoto}
+                title="Ulangi tangkap foto"
+                disabled={cameraChecking}
+              >
+                <RefreshIcon />
+                Ulangi
+              </button>
+            </div>
+            <img
+              src={authPhoto}
+              alt="Foto verifikasi wajah"
+              className="photo-thumbnail"
+              style={{ transform: 'scaleX(-1)' }}
+              loading="eager"
+              decoding="async"
+            />
+            <p className="photo-hint">
+              Foto wajah telah ditangkap dan akan dikirimkan bersama verifikasi login.
+            </p>
+          </div>
+        )}
+
         {/* ── Pilihan Metode Auth ────────────────────────────── */}
         <div className="auth-method-selector" role="radiogroup" aria-label="Pilih metode masuk">
           {authMethods.map((method) => (
@@ -458,40 +846,30 @@ export default function LoginPage() {
               </div>
               <ChevronRightIcon />
               {!method.available && (
-                <span className="auth-method-badge">Tidak tersedia</span>
+                <span className="auth-method-badge">{method.requireCamera ? 'Butuh Kamera' : 'Tidak tersedia'}</span>
               )}
             </button>
           ))}
-        </div>
+          {attemptsState.count > 0 && (
+            <div className="attempts-counter" role="status" aria-live="polite">
+              <LockIcon />
+              <span>
+                Percobaan gagal: <strong>{attemptsState.count}/5</strong>
+                {attemptsState.lockedUntil && (
+                  <> • Terkunci hingga {new Date(attemptsState.lockedUntil).toLocaleTimeString('id-ID')}</>
+                )}
+              </span>
+              <ShieldIcon />
+            </div>
+          )}
+          {showPasswordFallback && attemptsState.count >= 5 && (
+            <div className="password-unlocked-notice" role="status">
+              <LockIcon />
+              <span>Kata sandi sekarang tersedia karena <strong>5 percobaan gagal</strong>.</span>
+            </div>
+          )}
 
-        {/* ── Status Dongle (real-time) ──────────────────────── */}
-        {selectedMethod === 'dongle' && (
-          <div
-            className={`dongle-status
-              ${dongleStatus.connected
-                ? (dongleStatus.formatValid === false ? ' dongle-status--warn' : ' dongle-status--ok')
-                : ''}`}
-            role="status"
-            aria-live="polite"
-          >
-            <span className="dongle-dot" aria-hidden="true" />
-            <span className="dongle-icon" aria-hidden="true">
-              <KeyIcon />
-            </span>
-            <span className="dongle-info">
-              <span className="dongle-name">
-                {dongleStatus.connected ? 'Dongle terpasang' : 'Dongle tidak terdeteksi'}
-              </span>
-              <span className="dongle-sub">
-                {dongleStatus.connected
-                  ? (dongleStatus.formatValid === false
-                      ? `Format token tidak valid · ${dongleStatus.drive}`
-                      : `TrueCount Token · ${dongleStatus.drive}`)
-                  : 'Colokkan dongle TrueCount untuk masuk'}
-              </span>
-            </span>
-          </div>
-        )}
+        </div>
 
         {/* ── Form Password ──────────────────────────────────── */}
         {selectedMethod === 'password' && (
@@ -517,7 +895,7 @@ export default function LoginPage() {
                 name="password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="i'm Password"
+                placeholder="Kata sandi Anda"
                 value={form.password}
                 onChange={handleChange}
                 required
@@ -528,7 +906,7 @@ export default function LoginPage() {
 
             <button type="submit" className="btn-submit" disabled={loading}>
               {loading
-                ? <span className="btn-loading"><span className="spinner" />Memproses…</span>
+                ? <span className="btn-loading"><LoaderIcon />Memproses…</span>
                 : 'Masuk'}
             </button>
           </form>
@@ -558,10 +936,10 @@ export default function LoginPage() {
               type="button"
               className="btn-submit btn-submit--webauthn"
               onClick={handleWebAuthnLogin}
-              disabled={loading || webauthnLoading || !form.identifier.trim()}
+              disabled={loading || webauthnLoading || !form.identifier.trim() || cameraPermission === false || cameraChecking}
             >
               {loading || webauthnLoading ? (
-                <span className="btn-loading"><span className="spinner" />Memverifikasi…</span>
+                <span className="btn-loading"><LoaderIcon />Memverifikasi…</span>
               ) : (
                 <>
                   <FingerprintIcon />
@@ -607,7 +985,7 @@ export default function LoginPage() {
                   disabled={loading || !form.identifier.trim()}
                 >
                   {loading ? (
-                    <span className="btn-loading"><span className="spinner" />Memulai…</span>
+                    <span className="btn-loading"><LoaderIcon />Memulai…</span>
                   ) : (
                     <>
                       <KeyIcon />
@@ -685,7 +1063,7 @@ export default function LoginPage() {
                   disabled={!usbAuthPin || usbAuthStep === 'signing' || usbDecrypting}
                 >
                   {usbAuthStep === 'signing' || usbDecrypting ? (
-                    <span className="btn-loading"><span className="spinner" />Memverifikasi…</span>
+                    <span className="btn-loading"><LoaderIcon />Memverifikasi…</span>
                   ) : (
                     <>
                       <KeyIcon />

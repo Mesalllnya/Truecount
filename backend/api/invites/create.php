@@ -7,7 +7,7 @@
  *   Authorization: Bearer <token admin>
  *
  * Body JSON:
- *   { "email": "calon@contoh.com" | optional, "role": "voter"|"admin"|"dev" | optional }
+ *   { "email": "calon@contoh.com" | optional, "role": "voter"|"admin" | optional }
  *
  * Response 201:
  *   { "message": "Undangan berhasil dibuat.",
@@ -36,8 +36,8 @@ if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     jsonResponse(['error' => 'Format email tidak valid.'], 422);
 }
 
-if (!in_array($role, ['voter', 'admin', 'dev'], true)) {
-    jsonResponse(['error' => 'Peran tidak valid. Gunakan "voter", "admin", atau "dev".'], 422);
+if (!in_array($role, ['voter', 'admin'], true)) {
+    jsonResponse(['error' => 'Peran tidak valid. Gunakan "voter" atau "admin".'], 422);
 }
 
 // ── Buat undangan ─────────────────────────────────────────

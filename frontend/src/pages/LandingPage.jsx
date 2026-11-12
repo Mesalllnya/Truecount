@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import raiseHand from '/raise_hand.jpg'
+import Picture from '/Picture.jpg'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import './LandingPage.css'
 import Icon from '../components/Icon'
@@ -169,7 +170,7 @@ export default function LandingPage() {
           </Link>
         </div>
         <div className="security-visual" aria-hidden="true">
-          <img src={raiseHand} alt="" className="security-img" />
+          <img src={Picture} alt="" className="security-img" />
         </div>
       </section>
 

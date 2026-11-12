@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './AuthPage.css'
 import { SkeletonText, SkeletonCircle } from '../components/ui/Skeleton'
+import Icon from '../components/Icon'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
  *  jangan pernah tampilkan mentah ke user. */
@@ -41,6 +42,7 @@ export default function RegisterPage() {
   const [form, setForm]   = useState({ username: '', email: '', password: '', confirm: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPass, setShowPass] = useState({ password: false, confirm: false })
 
   // ── Verifikasi undangan saat halaman dibuka ──────────────
   useEffect(() => {
@@ -257,30 +259,50 @@ export default function RegisterPage() {
 
           <div className="field">
             <label htmlFor="password">Kata sandi</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="Min. 8 karakter"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
+            <div className="password-input-wrapper">
+              <input
+                id="password"
+                name="password"
+                type={showPass.password ? 'text' : 'password'}
+                autoComplete="new-password"
+                placeholder="Min. 8 karakter"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPass(p => ({ ...p, password: !p.password }))}
+                aria-label={showPass.password ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+              >
+                {showPass.password ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
+              </button>
+            </div>
           </div>
 
           <div className="field">
             <label htmlFor="confirm">Konfirmasi kata sandi</label>
-            <input
-              id="confirm"
-              name="confirm"
-              type="password"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              value={form.confirm}
-              onChange={handleChange}
-              required
-            />
+            <div className="password-input-wrapper">
+              <input
+                id="confirm"
+                name="confirm"
+                type={showPass.confirm ? 'text' : 'password'}
+                autoComplete="new-password"
+                placeholder="••••••••"
+                value={form.confirm}
+                onChange={handleChange}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPass(p => ({ ...p, confirm: !p.confirm }))}
+                aria-label={showPass.confirm ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+              >
+                {showPass.confirm ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
+              </button>
+            </div>
           </div>
 
           {error && <p className="field-error" role="alert">{error}</p>}

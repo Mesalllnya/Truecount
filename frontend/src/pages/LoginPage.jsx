@@ -184,6 +184,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ identifier: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passwordShow, setPasswordShow] = useState(false)
   const [authPhoto, setAuthPhoto] = useState(null)
   // True jika user (berdasarkan identifier) belum pasang Windows Hello/Dongle
   const [identifierNeedsSetup, setIdentifierNeedsSetup] = useState(false)
@@ -905,16 +906,26 @@ export default function LoginPage() {
           <form onSubmit={handlePasswordSubmit} noValidate>
             <div className="field">
               <label htmlFor="password">Kata sandi</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Kata sandi Anda"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="password-input-wrapper">
+                <input
+                  id="password"
+                  name="password"
+                  type={passwordShow ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="Kata sandi Anda"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setPasswordShow(s => !s)}
+                  aria-label={passwordShow ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                >
+                  {passwordShow ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
             </div>
 
             {error && <p className="field-error" role="alert"><AlertIcon />{error}</p>}

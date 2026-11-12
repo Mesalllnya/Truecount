@@ -1,0 +1,704 @@
+/* ════════════════════════════════════════════════════════════════════════
+   DevPage.css - Halaman Dev TrueCount (Admin + Dev)
+   Konsisten dengan design system: palette #F13C35 / #0D0D0D / #FAFAF8,
+   font Plus Jakarta Sans, CSS custom properties self-contained per file,
+   animasi cubic-bezier(0.22, 1, 0.36, 1).
+   Diagram flow isometrik (2.5D) dengan SVG edge — tanpa library eksternal.
+   ════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Design system tokens (sama dengan halaman lain) ── */
+  --black:     #0d0d0d;
+  --red:       #F13C35;
+  --red-dark:  #c72e27;
+  --red-pale:  #fde8e7;
+  --white:     #ffffff;
+  --cream:     #fafaf8;
+  --border:    #e4e4e1;
+  --muted:     #6a6a67;
+  --gray-100:  #efefed;
+  --gray-300:  #c8c8c4;
+  --gray-500:  #6a6a67;
+  --gray-700:  #3a3a38;
+  --font:      'Plus Jakarta Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --mono:      ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Shell ── */
+.dev-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--cream);
+  font-family: var(--font);
+  color: var(--black);
+  overflow-x: hidden;
+}
+
+.dev-shell ::selection {
+  background: var(--red);
+  color: var(--white);
+}
+
+/* ── Main ── */
+.dev-main {
+  flex: 1;
+  padding: 3rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (min-width: 768px)  { .dev-main { padding: 4rem 3rem; } }
+@media (min-width: 1024px) { .dev-main { padding: 5rem 4rem; } }
+
+/* ── Page head ── */
+.dev-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.dev-page-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.dev-page-icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--red-pale);
+  color: var(--red);
+}
+
+.dev-page-title h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.dev-page-title p {
+  color: var(--muted);
+  margin: 0.3rem 0 0;
+  max-width: 62ch;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.dev-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--gray-700);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* ── Tab navigasi (segmented control) ── */
+.dev-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--white);
+  margin-bottom: 2.5rem;
+  max-width: 100%;
+}
+
+.dev-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font);
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: color 150ms, background 150ms, box-shadow 150ms;
+  white-space: nowrap;
+}
+
+.dev-tab:hover {
+  color: var(--black);
+  background: var(--gray-100);
+}
+
+.dev-tab--active {
+  color: var(--white);
+  background: var(--red);
+  box-shadow: 0 2px 8px rgba(241, 60, 53, 0.28);
+}
+
+.dev-tab:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+/* ── Section ── */
+.iso-section {
+  margin-bottom: 3rem;
+}
+
+.iso-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--black);
+  margin: 0 0 0.5rem 0;
+}
+
+.iso-section-desc {
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin: 0 0 1.5rem 0;
+  max-width: 62ch;
+  line-height: 1.6;
+}
+
+/* ── Canvas flow (diagram) ── */
+.iso-canvas-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--white);
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-300) transparent;
+}
+
+.iso-canvas-wrap::-webkit-scrollbar {
+  height: 10px;
+}
+
+.iso-canvas-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.iso-canvas-wrap::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 999px;
+}
+
+.iso-canvas {
+  position: relative;
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+.iso-edge-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ── Node isometrik (2.5D: kartu depan + lid miring) ── */
+.iso-node {
+  position: absolute;
+  cursor: pointer;
+  transform: translateY(0);
+  transition: transform 0.25s var(--ease-out);
+  outline: none;
+}
+
+.iso-node:hover {
+  transform: translateY(-4px);
+}
+
+.iso-node--active {
+  transform: translateY(-4px);
+}
+
+.iso-top {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  transform: skewX(-30deg);
+  transform-origin: bottom left;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid transparent;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.iso-front {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(13, 13, 13, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.iso-node--active .iso-front {
+  border-color: var(--color);
+  box-shadow: 0 14px 30px rgba(13, 13, 13, 0.14);
+}
+
+.iso-node:focus-visible .iso-front {
+  outline: 2px solid var(--color, var(--black));
+  outline-offset: 3px;
+}
+
+.iso-node-icon {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.iso-node-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--black);
+  line-height: 1.25;
+  max-width: 92%;
+}
+
+/* ── Detail panel (muncul saat node aktif) ── */
+.iso-detail-panel {
+  margin-top: 1.25rem;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 16px 32px rgba(13, 13, 13, 0.06);
+  animation: iso-fade-in 0.28s var(--ease-out);
+}
+
+@keyframes iso-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.iso-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.iso-detail-head h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.iso-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+}
+
+.iso-detail-close {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: color 150ms, background 150ms, border-color 150ms;
+}
+
+.iso-detail-close:hover {
+  color: var(--black);
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+.iso-detail-close:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+.iso-detail-text {
+  margin: 0.75rem 0 0;
+  color: var(--gray-700);
+  line-height: 1.6;
+  max-width: 65ch;
+  font-size: 0.92rem;
+}
+
+.iso-detail-tech {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--gray-100);
+}
+
+.iso-detail-tech-label {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+  margin-bottom: 0.6rem;
+}
+
+.iso-detail-tech-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.iso-detail-tech-list li {
+  position: relative;
+  padding-left: 1.15rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--gray-700);
+}
+
+.iso-detail-tech-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--red);
+  opacity: 0.65;
+}
+
+/* ── Legend ── */
+.iso-legend {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.iso-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.iso-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* ── Crypto grid ── */
+.iso-crypto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.25rem;
+}
+
+.iso-crypto-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  cursor: pointer;
+  position: relative;
+  outline: none;
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), border-color 0.25s;
+}
+
+.iso-crypto-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+  border-color: var(--gray-300);
+}
+
+.iso-crypto-card--active {
+  border-color: var(--color);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+}
+
+.iso-crypto-card:focus-visible {
+  outline: 2px solid var(--color, var(--black));
+  outline-offset: 3px;
+}
+
+.iso-crypto-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.iso-crypto-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+}
+
+.iso-crypto-chevron {
+  color: var(--gray-500);
+  transition: transform 0.25s var(--ease-out), color 0.25s;
+  display: inline-flex;
+}
+
+.iso-crypto-card--active .iso-crypto-chevron {
+  transform: rotate(180deg);
+  color: var(--color);
+}
+
+.iso-crypto-name {
+  margin: 0 0 0.3rem 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--black);
+}
+
+.iso-crypto-purpose {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.iso-crypto-detail {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--gray-100);
+  animation: iso-fade-in 0.25s var(--ease-out);
+}
+
+.iso-crypto-detail p {
+  margin: 0 0 0.9rem 0;
+  font-size: 0.86rem;
+  color: var(--gray-700);
+  line-height: 1.55;
+}
+
+.iso-crypto-meta {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.iso-crypto-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.iso-crypto-meta-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-500);
+}
+
+.iso-crypto-meta-value {
+  font-size: 0.8rem;
+  color: var(--black);
+}
+
+.iso-crypto-file {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  word-break: break-all;
+  color: var(--gray-700);
+}
+
+/* ── Loading & error ── */
+.iso-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--muted);
+}
+
+.iso-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--red);
+  border-radius: 50%;
+  animation: iso-spin 0.8s linear infinite;
+  margin-bottom: 0.75rem;
+}
+
+@keyframes iso-spin {
+  to { transform: rotate(360deg); }
+}
+
+.iso-error {
+  color: var(--red-dark);
+  text-align: center;
+  border: 1px solid #f5c6c3;
+  background: var(--red-pale);
+  border-radius: 10px;
+  padding: 1.5rem;
+  max-width: 420px;
+  margin: 2rem auto;
+}
+
+.iso-error p {
+  margin: 0 0 0.9rem 0;
+  line-height: 1.5;
+}
+
+.iso-retry {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--font);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--red);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.iso-retry:hover {
+  background: var(--red);
+  color: var(--white);
+}
+
+.iso-retry:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+/* ── Footer catatan audit ── */
+.dev-footer {
+  margin-top: 3rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px dashed var(--gray-300);
+  border-radius: 12px;
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.dev-footer p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.dev-footer p strong {
+  color: var(--black);
+}
+
+.dev-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--black);
+  cursor: pointer;
+  transition: border-color 150ms, background 150ms;
+  white-space: nowrap;
+}
+
+.dev-btn-back:hover {
+  border-color: var(--black);
+  background: var(--gray-100);
+}
+
+.dev-btn-back:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .iso-node,
+  .iso-crypto-card,
+  .dev-tab,
+  .iso-detail-panel,
+  .iso-crypto-detail,
+  .iso-crypto-chevron {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .dev-main { padding: 2rem 1.25rem; }
+  .dev-page-head { flex-direction: column; gap: 0.75rem; }
+  .dev-tabs { width: 100%; display: flex; }
+  .dev-tab { flex: 1; justify-content: center; }
+  .dev-footer { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 480px) {
+  .iso-crypto-grid { grid-template-columns: 1fr; }
+  .dev-tab { padding: 0.55rem 0.75rem; font-size: 0.85rem; }
+  .dev-page-title h1 { font-size: 1.35rem; }
+}

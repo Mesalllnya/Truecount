@@ -220,14 +220,18 @@ frontend/src/pages/
   AboutPage.jsx                - Halaman tentang aplikasi (/tentang): informasi proyek, tim, stack teknologi
   ResultsPage.jsx + .css       - Halaman hasil pemilihan (/hasil/:id): tally suara, verifikasi blockchain, statistik partisipasi
   EncryptedMessagesPage.jsx    - Halaman pesan terenkripsi (/pesan-terenkripsi): buat & lihat pesan terenkripsi (Vigenere, AES-256-GCM, ChaCha20)
+  DevPage.jsx + DevPage.css    - **Halaman Dev (/dev): visualisasi 3D isometrik flow aplikasi + algoritma kriptografi, hanya Admin + Dev**
 frontend/src/components/
   HealthMonitor.jsx             - Render null; polling /health di background, error → console (bukan UI)
-  Skeleton.jsx + .css           - Komponen loading placeholder (SkeletonText, SkeletonCircle, SkeletonRow, SkeletonStat, SkeletonPane) - dipakai di Register, Dashboard, dan Vote pages saat fetch data
-  UsbTokenPanel.jsx + .css      - Panel kelola USB token (digunakan di ProfileSettingsPage): daftar, register (modal flow), revoke, label
-  AuthGuard.jsx                 - **Route guard: redirect ke /atur-keamanan jika user belum setup Windows Hello/Dongle**
-  Nav.jsx                       - **Navigation dengan user menu + logout button saat authenticated**
-  DashNav.jsx                   - **Nav khusus halaman terlindungi (dasbor, pengaturan, dll): user menu + logout**
-  ElectionModals.jsx            - **Modal CRUD pemilihan & kandidat (buat/ubah/hapus) di dasbor admin**
+  Skeleton.jsx + .css           - Komponen loading placeholder
+  UsbTokenPanel.jsx + .css      - Panel kelola USB token
+  AuthGuard.jsx                 - **Route guard: redirect ke /atur-keamanan jika belum setup Windows Hello/Dongle**
+  RoleGuard.jsx                 - **Route guard: hanya izinkan role yang diizinkan (admin/dev untuk /dev)**
+  Nav.jsx                       - **Navigation dengan user menu + logout saat authenticated**
+  DashNav.jsx                   - **Nav khusus halaman terlindungi**
+  ElectionModals.jsx            - **Modal CRUD pemilihan & kandidat di dasbor admin**
+  IsometricFlow.jsx             - **Visualisasi 3D isometrik: Flow Aplikasi (GET /dev/flow)**
+  IsometricCrypto.jsx           - **Visualisasi 3D isometrik: Algoritma Kriptografi (GET /dev/crypto)**
 frontend/src/index.css          - Reset global + font family
 frontend/src/main.jsx           - ReactDOM.createRoot + impor `cursor.css` agar kursor kustom TrueCount berlaku di seluruh aplikasi
 frontend/src/styles/cursor.css  - Kumpulan aturan kursor kustom untuk state normal, link, tombol, teks, resize, grab, grabbing, zoom, copy, menu, wait, loading, help, dan nope (PNG 32/64px + fallback bawaan browser)
@@ -277,6 +281,7 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | `/usb-token-test` | `UsbTokenTestPage` | Halaman test USB token: deteksi, decrypt, challenge-response (ada auth guard) |
 | `/pesan-terenkripsi` | `EncryptedMessagesPage` | Buat & lihat pesan terenkripsi (Sprint 3 ✅, ada auth guard) |
 | `/log-keamanan/:id` | `UserSecurityLogPage` | **Riwayat percobaan login + foto kamera (audit admin)** |
+| `/dev` | `DevPage` | **Halaman Dev - visualisasi 3D isometrik flow + kriptografi (hanya admin + dev)** |
 | `/login` | Redirect → `/masuk` | Alias lama |
 | `/register` | Redirect → `/daftar` | Alias lama |
 | `/dashboard` | Redirect → `/dasbor` | Alias lama |
@@ -339,6 +344,8 @@ Base URL: `http://localhost:8000`
 | GET | `/users/search?q=` | Bearer JWT (admin) | - | `200 {users}` - cari pengguna (admin, untuk log keamanan) |
 | POST | `/encrypted-messages` | Bearer JWT | `{algorithm, ciphertext, iv_nonce?}` | `201 {message}` - buat pesan terenkripsi |
 | GET | `/encrypted-messages/:id` | Bearer JWT | - | `200 {message}` - ambil pesan terenkripsi |
+| GET | `/dev/flow` | Bearer JWT (admin/dev) | - | `200 {flow: [...]}` - data alur aplikasi (nodes & edges) untuk halaman dev |
+| GET | `/dev/crypto` | Bearer JWT (admin/dev) | - | `200 {algorithms: [...]}` - data algoritma kriptografi untuk halaman dev |
 
 ### Error Format
 
@@ -980,6 +987,48 @@ Protected Routes (/dasbor, /pilih, /pengaturan, dll):
 | 5+ percobaan gagal (lock aktif) | ✅ Ya (emergency fallback) |
 | Lock expired tapi count ≥ 5 | ✅ Ya |
 | Normal (punya keamanan, <5 gagal) | ❌ Tidak |
+
+---
+
+## 12. Dev Page (Sprint 5) — Halaman Eksklusif Admin + Dev
+
+### Tujuan
+
+Halaman eksklusif untuk role `admin` dan `dev` di URL `/dev` (alias `/pengembang`). Berisi visualisasi 3D isometrik interaktif yang menjelaskan cara kerja aplikasi TrueCount dari awal hingga akhir, serta algoritma kriptografi yang diterapkan. Cocok digunakan sebagai dokumentasi teknis untuk tim dan materi presentasi (pitch deck) untuk evaluator.
+
+### Akses & Middleware
+
+- Role `dev` ditambahkan ke migration `012_add_dev_role.sql` (`ALTER TABLE users MODIFY role ENUM('admin','voter','dev')` + index `idx_users_role`) dan seed `003_dev_user.sql` (user `dev` / `Dev@1234` / role `dev`).
+- Backend middleware `requireDevOrAdmin()` di `backend/middleware/auth.php` — paksa autentikasi + role admin atau dev, jika bukan → 403 Forbidden.
+- Frontend `RoleGuard` (`components/RoleGuard.jsx`) — cek `user.role` dari JWT, jika bukan `admin`/`dev` redirect ke `/masuk` atau tampilkan 403.
+- Route di `frontend/src/App.jsx` — `RoleGuard allowedRoles={['admin','dev']}` di dalam `AuthGuard`.
+
+### Endpoint Data
+
+| Method | Path | Auth | Keterangan |
+|--------|------|------|------------|
+| GET | `/dev/flow` | Bearer JWT (admin/dev) | Data alur aplikasi (nodes & edges) — dari `backend/api/dev/flow.php` |
+| GET | `/dev/crypto` | Bearer JWT (admin/dev) | Data algoritma kriptografi — dari `backend/api/dev/crypto.php` |
+
+### Komponen Frontend Baru
+
+| File | Fungsi |
+|------|--------|
+| `frontend/src/pages/DevPage.jsx` | Halaman utama dev — 2 tab: Flow Aplikasi + Algoritma Kriptografi |
+| `frontend/src/pages/DevPage.css` | Styling CSS 3D isometrik (kubus via CSS Transform, tidak butuh library eksternal) |
+| `frontend/src/components/RoleGuard.jsx` | Route guard untuk role admin/dev |
+| `frontend/src/components/IsometricFlow.jsx` | Visualisasi 3D isometrik: Flow Aplikasi (6 node: Pengguna → Login → Setup Keamanan → Dasbor → Input Suara → Hasil + Blockchain) |
+| `frontend/src/components/IsometricCrypto.jsx` | Visualisasi 3D isometrik: 8 algoritma kripto (Argon2id, JWT HS256, AES-256-GCM, ChaCha20-Poly1305, Vigenere, Steganografi LSB, Blockchain, ECDSA P-256) |
+
+### Teknologi 3D
+
+CSS 3D Transform + SVG (rekomendasi dari `docs/dev/dev-page-plan.md`): ringan, tidak butuh build step tambahan, cocok untuk diagram alur isometrik, konsisten dengan stack saat ini (belum ada Three.js).
+
+### Catatan Penting
+
+- Halaman dev bersifat **read-only**, tidak boleh mengubah data produksi.
+- Visualisasi 3D tetap ringan agar tidak mengganggu performa halaman lain.
+- Cocok sebagai materi presentasi (pitch deck) saat sidang proyek akhir.
 
 ---
 

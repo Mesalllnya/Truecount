@@ -263,6 +263,7 @@ Terdapat 3 tab:
 | `/usb-token-test` | Login + setup | Test USB token |
 | `/pesan-terenkripsi` | Login + setup | Buat/lihat pesan terenkripsi |
 | `/log-keamanan/:id` | Admin only | Audit log login + foto kamera |
+| `/dev` | Admin + Dev | Halaman dev - visualisasi flow & kriptografi (3D isometrik) |
 
 Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis ke path baru.
 

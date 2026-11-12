@@ -89,7 +89,16 @@ Akun admin default (setelah `--seed`):
 | Password | `Admin@1234`       |
 | Role     | `admin`            |
 
-> ⚠️ **Ganti password admin** setelah pertama kali login.
+Akun developer default (setelah `--seed`):
+
+| Field    | Value              |
+|----------|--------------------|
+| Username | `dev`              |
+| Email    | `dev@truecount.local` |
+| Password | `Dev@1234`         |
+| Role     | `dev`              |
+
+> ⚠️ **Ganti password admin dan dev** setelah pertama kali login.
 
 ### 1.4 Jalankan Backend (PHP Built-in Server)
 

@@ -238,7 +238,8 @@ frontend/src/styles/cursor.css  - Kumpulan aturan kursor kustom untuk state norm
 ```
 database/migrations/001_init.sql  - 10 tabel (lihat seksi DB)
 database/seeds/001_admin.sql      - Admin: username=admin, password=Admin@1234
-database/seeds/002_dummy_users.sql - User dummy: rio, pemilih1, pemilih2 (lihat seksi 4.5)
+database/seeds/002_dummy_users.sql - User dummy: pemilih1, pemilih2 (lihat seksi 4.5)
+database/seeds/003_dev_user.sql    - User dev: username=dev, password=Dev@1234, role=dev
 database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 ```
 
@@ -247,9 +248,9 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | Username | Password | Role | Email | Keterangan |
 | --- | --- | --- | --- | --- |
 | `admin` | `Admin@1234` | admin | admin@truecount.local | Akun utama (seed 001) |
-| `rio` | `Rio@12345` | voter | rio@truecount.local | Dummy - testing MFA USB token |
 | `pemilih1` | `Pemilih@123` | voter | pemilih1@truecount.local | Dummy - testing pemilihan |
 | `pemilih2` | `Pemilih@123` | voter | pemilih2@truecount.local | Dummy - testing pemilihan |
+| `dev` | `Dev@1234` | dev | dev@truecount.local | Akses halaman dev (`/dev`) - seed 003 |
 
 - Semua password di-hash dengan **Argon2id** (memory=65536, time=4, threads=2)
 - Seed dijalankan via `php database/migrate.php --seed`
@@ -358,7 +359,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
  
 ## 7. Database Schema
  
-16 tabel - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql` + `007_auth_attempts.sql` + `008_sprint2_marker.sql` + `009_add_photo_path_to_auth_attempts.sql` + `010_add_crypto_version.sql` + `011_add_encrypted_files_columns.sql`:
+16 tabel - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql` + `007_auth_attempts.sql` + `008_sprint2_marker.sql` + `009_add_photo_path_to_auth_attempts.sql` + `010_add_crypto_version.sql` + `011_add_encrypted_files_columns.sql` + `012_add_dev_role.sql`:
 
 | Tabel | Sprint | Keterangan |
 | --- | --- | --- |
@@ -999,7 +1000,7 @@ Saat menambahkan endpoint baru, selalu update:
 
 1. **CORS** - origin web dikunci di `.env` key `FRONTEND_ORIGIN`. Kalau port frontend berubah, update ini. Origin Tauri (`http://tauri.localhost`, `tauri://localhost`, `http://localhost`, `http://127.0.0.1`) sudah diizinkan otomatis di `helpers/response.php` untuk desktop app.
 2. **JWT Secret** - ada di `.env` key `JWT_SECRET`. Nilai default di `.env.example` JANGAN dipakai di production.
-3. **Password admin default** - `Admin@1234`. Hash-nya di-generate ulang setiap `php database/migrate.php --seed` dijalankan.
+3. **Password akun seed (HARDCODED)** - `admin`=`Admin@1234`, `dev`=`Dev@1234`, `pemilih1`/`pemilih2`=`Pemilih@123`. Hash Argon2id-nya **hardcoded** di `database/seeds/*.sql` (bukan di-generate ulang saat `--seed`). Jika ingin mengubah password default, generate hash baru via `password_hash('...', PASSWORD_ARGON2ID, ['memory_cost'=>65536,'time_cost'=>4,'threads'=>2])` lalu update file seed-nya — pastikan hash sesuai password (jangan copy-paste antar seed, karena bisa menyebabkan login gagal seperti kasus user `dev`).
 4. **`ballots` tidak punya FK ke users** - ini by design, jangan ditambahkan.
 5. **Tauri icons** - sudah di-generate dari `frontend/public/icon/TrueCount_logo_transparent.png`. Kalau ganti desain logo: copy file PNG baru ke `src-tauri/icons/icon.png`, lalu jalankan `npx tauri icon src-tauri/icons/icon.png` untuk generate semua format platform (`.ico` Windows, `.icns` macOS, PNG, dll.).
 6. **axios belum dipakai** - diinstall tapi Sprint 1 pakai `fetch` native. Sprint 2 boleh migrasi ke axios atau tetap pakai fetch.

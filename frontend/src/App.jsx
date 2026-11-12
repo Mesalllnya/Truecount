@@ -16,6 +16,10 @@ import EncryptedMessagesPage from './pages/EncryptedMessagesPage'
 import AuthGuard from './components/AuthGuard'
 import { FailedAttemptsProvider } from './hooks/useAuthSecurity'
 import { AuthProvider } from './hooks/useAuthSession'
+import { Home, Info, LayoutDashboard, Vote, Mail, Settings } from 'lucide-react'
+
+/* Ikon navbar (lucide, outline: tengah kosong) — ukuran & ketebalan seragam */
+const navIcon = { size: 18, strokeWidth: 1.5 }
 
 /** Alias lama /register → /daftar, dengan query (?undangan=...) tetap dibawa */
 function RegisterRedirect() {
@@ -39,15 +43,15 @@ function ProtectedRoutes() {
 }
 
 const PUBLIC_LINKS = [
-  { href: '/', label: 'Beranda' },
-  { href: '/tentang', label: 'Tentang' },
+  { href: '/', label: 'Beranda', icon: <Home {...navIcon} /> },
+  { href: '/tentang', label: 'Tentang', icon: <Info {...navIcon} /> },
 ]
 
 const PROTECTED_LINKS = [
-  { href: '/dasbor', label: 'Dasbor' },
-  { href: '/pilih', label: 'Pemilihan' },
-  { href: '/pesan-terenkripsi', label: 'Pesan Terenkripsi' },
-  { href: '/pengaturan', label: 'Pengaturan' },
+  { href: '/dasbor', label: 'Dasbor', icon: <LayoutDashboard {...navIcon} /> },
+  { href: '/pilih', label: 'Pemilihan', icon: <Vote {...navIcon} /> },
+  { href: '/pesan-terenkripsi', label: 'Pesan Terenkripsi', icon: <Mail {...navIcon} /> },
+  { href: '/pengaturan', label: 'Pengaturan', icon: <Settings {...navIcon} /> },
 ]
 
 function AppRoutes() {

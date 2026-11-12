@@ -2,65 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './AboutPage.css'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
-
-/* ── SVG Icons ───────────────────────────────────────────── */
-function Icon({ name, size = 20 }) {
-  const icons = {
-    user: (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    ),
-    school: (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 10v6a2 2 0 0 1-2 2h-2" />
-        <path d="M10 10.5 8 15H6a2 2 0 0 1-2-2v-5.5" />
-        <path d="M12 2l10 5.5v5.5" />
-        <path d="M2 10.5 12 5l10 5.5" />
-        <path d="M8 15h2" />
-      </svg>
-    ),
-    code: (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
-      </svg>
-    ),
-    shield: (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      </svg>
-    ),
-    arrow: (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="5" y1="12" x2="19" y2="12" />
-        <polyline points="12 5 19 12 12 19" />
-      </svg>
-    ),
-    check: (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="20 6 9 17 4 12" />
-      </svg>
-    ),
-    users: (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-    award: (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="8" r="7" />
-        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-        <line x1="12" y1="17" x2="12.01" y2="17" />
-      </svg>
-    ),
-  }
-  return icons[name] ?? null
-}
+import Icon from '../components/Icon'
 
 /* ── Scroll-reveal hook ─────────────────────────────────── */
 function useReveal(threshold = 0.12) {

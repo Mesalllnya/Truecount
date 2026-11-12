@@ -99,6 +99,11 @@ if ($existing) {
     jsonResponse(['error' => 'Username atau email sudah digunakan.'], 409);
 }
 
+// Role 'dev' hanya bisa ditambahkan langsung via database/seed, tidak lewat undangan
+if ($invite['role'] === 'dev') {
+    jsonResponse(['error' => 'Peran developer tidak dapat dibuat melalui undangan.'], 403);
+}
+
 // ── Hash password (Argon2id) ──────────────────────────────
 $hash = password_hash($password, PASSWORD_ARGON2ID, [
     'memory_cost' => ARGON2_MEMORY_COST,

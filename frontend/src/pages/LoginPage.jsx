@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUsbToken, startUsbAuthenticate, verifyUsbAuthenticate, base64urlToBytes, bytesToBase64url } from '../hooks/useUsbToken'
 import { useWebAuthnLogin, isWebAuthnSupported } from '../hooks/useWebAuthn'
@@ -151,7 +151,7 @@ export default function LoginPage() {
   const { login } = useAuth()
 
   // ── Failed Attempts Tracking ────────────────────────────────
-  const { state: attemptsState, increment } = useFailedAttempts()
+  const { state: attemptsState, increment, reset } = useFailedAttempts()
 
   // ── Camera Permission (required for Windows Hello) ──────────
   const { hasPermission: cameraPermission, isChecking: cameraChecking, error: cameraError, requestPermission, stream, videoEl, capturePhoto, verifyCameraActive } = useCameraPermission()
@@ -190,6 +190,16 @@ export default function LoginPage() {
   const [identifierChecked, setIdentifierChecked] = useState(false)
   // Kata sandi tersedia setelah 5x percobaan gagal
   const showPasswordFallback = attemptsState.count >= 5
+
+  // Reset hitungan percobaan gagal saat username/email diganti (per-identifier).
+  // `syncServer=false` agar log keamanan di server tidak ikut terhapus saat mengetik.
+  const prevIdentifierRef = useRef(form.identifier)
+  useEffect(() => {
+    if (prevIdentifierRef.current !== form.identifier) {
+      prevIdentifierRef.current = form.identifier
+      reset(form.identifier.trim(), false)
+    }
+  }, [form.identifier, reset])
 
   // ── Capture photo before auth attempt ─────────────────────────
   const captureAuthPhoto = useCallback(async () => {
@@ -358,15 +368,7 @@ export default function LoginPage() {
     setUsbAuthStep('signing')
     setUsbAuthError('')
 
-    // Verify camera is still active before auth
-    const cameraActive = await verifyCameraActive(previewVideoElement)
-    if (!cameraActive) {
-      setUsbAuthStep('error')
-      setUsbAuthError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
-      return
-    }
-
-    // Capture photo before auth
+    // Capture photo before auth (opsional — tidak memblokir login jika kamera mati)
     const photo = await captureAuthPhoto()
 
     try {
@@ -495,14 +497,7 @@ export default function LoginPage() {
       return
     }
 
-    // Verify camera is still active before auth
-    const cameraActive = await verifyCameraActive(previewVideoElement)
-    if (!cameraActive) {
-      setError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
-      return
-    }
-
-    // Capture photo before auth
+    // Capture photo before auth (opsional — tidak memblokir login jika kamera mati)
     const photo = await captureAuthPhoto()
 
     setLoading(true)

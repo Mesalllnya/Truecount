@@ -85,6 +85,7 @@
 .nav-link {
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
   padding: 0.4rem 0;
   font-size: 1rem;
   font-weight: 500;
@@ -111,6 +112,17 @@
   height: 2.5px;
   background: var(--red);
   border-radius: 2px;
+}
+
+/* Ikon navbar - outline merah aksen (tengah kosong, tidak solid) */
+.nav-link svg {
+  color: var(--red);
+  fill: none;
+}
+
+.nav-link--active svg {
+  color: var(--red);
+  fill: none;
 }
 
 /* ── Actions (kanan): Masuk button / User menu ────────────── */

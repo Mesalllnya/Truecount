@@ -25,6 +25,7 @@ export interface SecuritySetupStatus {
 
 /** Failed attempts counter state */
 interface FailedAttemptsState {
+  identifier: string;
   count: number;
   lastAttempt: string | null;
   lockedUntil: string | null;
@@ -34,41 +35,21 @@ interface FailedAttemptsState {
 const FailedAttemptsContext = createContext<{
   state: FailedAttemptsState;
   increment: (identifier: string, method: string, success: boolean, error?: string) => Promise<void>;
-  reset: (identifier: string) => Promise<void>;
+  reset: (identifier: string, syncServer?: boolean) => Promise<void>;
   canUsePassword: (identifier: string) => boolean;
 } | null>(null);
 
 /** Provider component */
 export function FailedAttemptsProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<FailedAttemptsState>({
+    identifier: '',
     count: 0,
     lastAttempt: null,
     lockedUntil: null,
   });
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem('tc_failed_attempts');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        // Check if lock has expired
-        if (parsed.lockedUntil && new Date(parsed.lockedUntil) > new Date()) {
-          setState(parsed);
-        } else if (parsed.count > 0) {
-          // Reset expired lock but keep count for reference
-          setState({ ...parsed, lockedUntil: null });
-        }
-      } catch {
-        // Invalid stored data, ignore
-      }
-    }
-  }, []);
-
-  const saveState = useCallback((newState: FailedAttemptsState) => {
-    setState(newState);
-    localStorage.setItem('tc_failed_attempts', JSON.stringify(newState));
-  }, []);
+  // State disimpan di memori saja (tidak dipersist ke localStorage/session)
+  // supaya counter otomatis reset setiap kali halaman dimuat ulang.
 
   const increment = useCallback(async (identifier: string, method: string, success: boolean, error?: string) => {
     // Catat ke server hanya untuk counter lokal (percobaan gagal, lockout, password fallback).
@@ -76,38 +57,45 @@ export function FailedAttemptsProvider({ children }: { children: ReactNode }) {
     // authenticate_verify.php) sebagai single source of truth, sehingga tidak ada duplikasi baris log.
     if (success) {
       // Reset on successful auth
-      saveState({ count: 0, lastAttempt: new Date().toISOString(), lockedUntil: null });
+      setState({ identifier, count: 0, lastAttempt: new Date().toISOString(), lockedUntil: null });
       return;
     }
 
-    // Increment failed count
-    const newCount = state.count + 1;
     const now = new Date().toISOString();
-    
-    // Lock for 15 minutes after 5 failed attempts
-    const lockedUntil = newCount >= 5 
-      ? new Date(Date.now() + 15 * 60 * 1000).toISOString() 
+    // Hitungan gagal bersifat per-identifier: bila username/email berubah, mulai dari awal.
+    const sameIdentifier = state.identifier === identifier;
+    const previousCount = sameIdentifier ? state.count : 0;
+
+    // Cap di 5 agar tampilan tidak pernah melebihi "5/5" (mencegah anomali 11/5).
+    const newCount = Math.min(previousCount + 1, 5);
+
+    // Kunci hanya bila sudah gagal LEBIH dari 5 kali (percobaan ke-6 dan seterusnya).
+    const lockedUntil = previousCount + 1 > 5
+      ? new Date(Date.now() + 15 * 60 * 1000).toISOString()
       : null;
 
-    saveState({
+    setState({
+      identifier,
       count: newCount,
       lastAttempt: now,
       lockedUntil,
     });
-  }, [state.count, saveState]);
+  }, [state.count, state.identifier]);
 
-  const reset = useCallback(async (identifier: string) => {
-    try {
-      await fetch(`${API_BASE}/auth/attempts/reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier }),
-      });
-    } catch {
-      console.warn('[TrueCount] Failed to reset attempts on server');
+  const reset = useCallback(async (identifier: string, syncServer = true) => {
+    if (syncServer) {
+      try {
+        await fetch(`${API_BASE}/auth/attempts/reset`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier }),
+        });
+      } catch {
+        console.warn('[TrueCount] Failed to reset attempts on server');
+      }
     }
-    saveState({ count: 0, lastAttempt: null, lockedUntil: null });
-  }, [saveState]);
+    setState({ identifier: '', count: 0, lastAttempt: null, lockedUntil: null });
+  }, []);
 
   const canUsePassword = useCallback((identifier: string) => {
     // Allow password if:

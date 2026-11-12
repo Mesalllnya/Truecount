@@ -9,9 +9,9 @@
 
 USE `truecount_db`;
 
--- Hanya sisakan admin, pemilih1, pemilih2 — hapus user dummy lain
+-- Hanya sisakan admin, pemilih1, pemilih2, dev — hapus user dummy lain
 DELETE FROM `users`
-WHERE `username` NOT IN ('admin','pemilih1','pemilih2');
+WHERE `username` NOT IN ('admin','pemilih1','pemilih2','dev');
 
 -- Pastikan pemilih1 & pemilih2 ada
 INSERT INTO `users` (`username`, `email`, `password_hash`, `role`)

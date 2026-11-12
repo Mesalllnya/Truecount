@@ -72,7 +72,7 @@ npm run dev:full           # PHP :8000 + Vite :5173
 | Username | Kata Sandi | Peran | Keterangan |
 | --- | --- | --- | --- |
 | `admin` | `Admin@1234` | Admin | Akun utama — buat undangan, kelola sistem |
-| `rio` | `Rio@12345` | Pemilih | Akun uji coba |
+| `dev` | `Dev@1234` | Dev | Akses ke halaman dev (`/dev`) — visualisasi flow & kriptografi |
 | `pemilih1` | `Pemilih@123` | Pemilih | Akun uji coba |
 | `pemilih2` | `Pemilih@123` | Pemilih | Akun uji coba |
 
@@ -88,7 +88,7 @@ Pendaftaran publik ditutup — semua akun baru masuk lewat undangan.
 2. Di panel **Undangan**, klik **"+ Buat undangan"**
 3. Isi formulir:
    - **Email calon** (opsional) — kalau diisi, undangan **hanya bisa dipakai email itu**
-   - **Peran akun** — `Pemilih` atau `Admin`
+   - **Peran akun** — `Pemilih`, `Admin`, atau `Dev`
 4. Klik **"Buat undangan"**
 5. Tautan undangan muncul → klik **"Salin"** → kirim ke calon pengguna
 

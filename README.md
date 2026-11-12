@@ -43,10 +43,11 @@ Truecount/
 │   │   ├── 008_sprint2_marker.sql
 │   │   ├── 009_add_photo_path_to_auth_attempts.sql · 009_add_photo_file_id_to_candidates.sql
 │   │   ├── 010_add_crypto_version.sql
-│   │   └── 011_add_encrypted_files_columns.sql
+│   │   └── 012_add_dev_role.sql
 │   ├── seeds/
 │   │   ├── 001_admin.sql       # Akun admin default
-│   │   └── 002_dummy_users.sql # rio, pemilih1, pemilih2
+│   │   ├── 002_dummy_users.sql # pemilih1, pemilih2
+│   │   └── 003_dev_user.sql    # Akun dev default (Dev@1234)
 │   ├── migrate.php         # CLI runner (--seed, --fresh)
 │   └── generate_test_token.php # CLI generate file token USB (.truecount_token)
 │
@@ -107,9 +108,9 @@ php database/migrate.php --seed
 | Username | Password | Role | Email | Keterangan |
 | --- | --- | --- | --- | --- |
 | `admin` | `Admin@1234` | admin | admin@truecount.local | Akun utama |
-| `rio` | `Rio@12345` | voter | rio@truecount.local | Testing MFA USB token |
 | `pemilih1` | `Pemilih@123` | voter | pemilih1@truecount.local | Testing pemilihan |
 | `pemilih2` | `Pemilih@123` | voter | pemilih2@truecount.local | Testing pemilihan |
+| `dev` | `Dev@1234` | dev | dev@truecount.local | Akses halaman dev (`/dev`) |
 
 ### 3. Backend + Frontend
 

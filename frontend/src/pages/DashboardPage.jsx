@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import { SkeletonRow } from '../components/ui/Skeleton'
 import { CandidatesModal, VotersModal, CandidatePhoto } from '../components/ElectionModals'
-import DashNav, { BallotNavIcon } from '../components/DashNav'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
@@ -1636,7 +1634,6 @@ function VoterDashboardView() {
 
 export default function DashboardPage() {
   const navigate   = useNavigate()
-  const [clicks, setClicks]   = useState(0)
   const [showEgg, setShowEgg] = useState(false)
 
   // Ambil username + role dari token yang tersimpan
@@ -1663,18 +1660,6 @@ export default function DashboardPage() {
     return <Navigate to="/masuk" replace />
   }
 
-  function handleBrandClick() {
-    setClicks(prev => {
-      const next = prev + 1
-      if (next >= 5) {
-        playBeep()
-        setShowEgg(true)
-        return 0   // reset counter
-      }
-      return next
-    })
-  }
-
   function handleLogout() {
     localStorage.removeItem('tc_token')
     navigate('/masuk')
@@ -1690,33 +1675,6 @@ export default function DashboardPage() {
           onClose={() => setShowEgg(false)}
         />
       )}
-
-      <DashNav
-        active="/dasbor"
-        brand={
-          <button
-            className="dash-brand"
-            onClick={handleBrandClick}
-            aria-label={`TrueCount - klik ${5 - clicks} kali lagi`}
-            title="TrueCount"
-          >
-            <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
-            {clicks > 0 && clicks < 5 && (
-              <span className="dash-brand-dots" aria-hidden="true">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <span key={i} className={`dash-brand-dot${i < clicks ? ' active' : ''}`} />
-                ))}
-              </span>
-            )}
-          </button>
-        }
-        extraNavItems={
-          isAdmin ? null : (
-            <span className="dash-nav-item"><BallotNavIcon /> Surat Suara Saya</span>
-          )
-        }
-        onLogout={handleLogout}
-      />
 
       {isAdmin ? (
         <main className="dash-main dash-main--admin">

@@ -456,6 +456,22 @@ match (true) {
         require_once __DIR__ . '/api/elections/blockchain-verify.php';
     })(),
 
+    // ── Dev Page (Admin + Dev only) ───────────────────────────
+
+    $uri === '/dev/flow' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/dev/flow.php';
+    })(),
+    $uri === '/dev/flow' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    $uri === '/dev/crypto' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/dev/crypto.php';
+    })(),
+    $uri === '/dev/crypto' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
     // 404
     default => jsonResponse(['error' => 'Endpoint tidak ditemukan.'], 404),
 };

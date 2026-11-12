@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import DashNav from '../components/DashNav'
-import './DashboardPage.css'
 import './UserSecurityLogPage.css'
 
 const API_BASE = 'http://localhost:8000'
@@ -161,26 +159,8 @@ export default function UserSecurityLogPage() {
 
   if (!token) return <Navigate to="/masuk" replace />
 
-  function handleLogout() {
-    localStorage.removeItem('tc_token')
-    navigate('/masuk')
-  }
-
-  const nav = (
-    <DashNav
-      brand={<Link to="/dasbor" className="dash-brand">TrueCount</Link>}
-      items={[
-        { to: '/dasbor', label: 'Dasbor' },
-        { to: null, label: 'Log Keamanan', active: true },
-      ]}
-      onLogout={handleLogout}
-    />
-  )
-
   return (
     <div className="dash-shell">
-      {nav}
-
       <main className="dash-main dash-main--admin">
         <div className="log-back-row">
           <button type="button" className="copy-btn" onClick={() => navigate('/dasbor')}>

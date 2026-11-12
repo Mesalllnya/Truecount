@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUsbToken, startUsbAuthenticate, verifyUsbAuthenticate, base64urlToBytes, bytesToBase64url } from '../hooks/useUsbToken'
 import { useWebAuthnLogin, isWebAuthnSupported } from '../hooks/useWebAuthn'
@@ -151,7 +151,7 @@ export default function LoginPage() {
   const { login } = useAuth()
 
   // ── Failed Attempts Tracking ────────────────────────────────
-  const { state: attemptsState, increment } = useFailedAttempts()
+  const { state: attemptsState, increment, reset } = useFailedAttempts()
 
   // ── Camera Permission (required for Windows Hello) ──────────
   const { hasPermission: cameraPermission, isChecking: cameraChecking, error: cameraError, requestPermission, stream, videoEl, capturePhoto, verifyCameraActive } = useCameraPermission()
@@ -161,9 +161,11 @@ export default function LoginPage() {
 
   // ── Toast untuk kamera (muncul setiap kali pemeriksaan kamera berjalan) ──
   const [toast, setToast] = useState(null)
+  const [toastType, setToastType] = useState('success')
 
-  const showAuthToast = useCallback((message) => {
+  const showAuthToast = useCallback((message, type = 'success') => {
     setToast(message)
+    setToastType(type)
     setTimeout(() => setToast(null), 3500)
   }, [])
 
@@ -171,22 +173,34 @@ export default function LoginPage() {
   useEffect(() => {
     if (cameraChecking) return
     if (cameraPermission === true) {
-      showAuthToast('Kamera siap ✓')
+      showAuthToast('Kamera siap ✓', 'success')
     } else if (cameraPermission === false) {
-      showAuthToast(cameraError || 'Kamera tidak aktif. Buka shutter kamera untuk Windows Hello.')
+      showAuthToast(cameraError || 'Kamera tidak aktif. Buka shutter kamera untuk Windows Hello.', 'error')
     }
   }, [cameraPermission, cameraChecking, cameraError, showAuthToast])
 
   // ── State umum ──────────────────────────────────────────────
-  const [selectedMethod, setSelectedMethod] = useState('webauthn') // Default to Windows Hello
+  const [selectedMethod, setSelectedMethod] = useState(null)
   const [form, setForm] = useState({ identifier: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passwordShow, setPasswordShow] = useState(false)
   const [authPhoto, setAuthPhoto] = useState(null)
   // True jika user (berdasarkan identifier) belum pasang Windows Hello/Dongle
   const [identifierNeedsSetup, setIdentifierNeedsSetup] = useState(false)
+  const [identifierChecked, setIdentifierChecked] = useState(false)
   // Kata sandi tersedia setelah 5x percobaan gagal
   const showPasswordFallback = attemptsState.count >= 5
+
+  // Reset hitungan percobaan gagal saat username/email diganti (per-identifier).
+  // `syncServer=false` agar log keamanan di server tidak ikut terhapus saat mengetik.
+  const prevIdentifierRef = useRef(form.identifier)
+  useEffect(() => {
+    if (prevIdentifierRef.current !== form.identifier) {
+      prevIdentifierRef.current = form.identifier
+      reset(form.identifier.trim(), false)
+    }
+  }, [form.identifier, reset])
 
   // ── Capture photo before auth attempt ─────────────────────────
   const captureAuthPhoto = useCallback(async () => {
@@ -355,15 +369,7 @@ export default function LoginPage() {
     setUsbAuthStep('signing')
     setUsbAuthError('')
 
-    // Verify camera is still active before auth
-    const cameraActive = await verifyCameraActive(previewVideoElement)
-    if (!cameraActive) {
-      setUsbAuthStep('error')
-      setUsbAuthError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
-      return
-    }
-
-    // Capture photo before auth
+    // Capture photo before auth (opsional — tidak memblokir login jika kamera mati)
     const photo = await captureAuthPhoto()
 
     try {
@@ -458,6 +464,7 @@ export default function LoginPage() {
     const identifier = form.identifier.trim()
     if (!identifier) {
       setIdentifierNeedsSetup(false)
+      setIdentifierChecked(false)
       return
     }
     const timer = setTimeout(async () => {
@@ -470,8 +477,10 @@ export default function LoginPage() {
         const data = await res.json()
         if (res.ok && data.found) {
           setIdentifierNeedsSetup(data.requires_setup === true)
+          setIdentifierChecked(true)
         } else {
           setIdentifierNeedsSetup(false)
+          setIdentifierChecked(true)
         }
       } catch {
         setIdentifierNeedsSetup(false)
@@ -489,14 +498,7 @@ export default function LoginPage() {
       return
     }
 
-    // Verify camera is still active before auth
-    const cameraActive = await verifyCameraActive(previewVideoElement)
-    if (!cameraActive) {
-      setError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
-      return
-    }
-
-    // Capture photo before auth
+    // Capture photo before auth (opsional — tidak memblokir login jika kamera mati)
     const photo = await captureAuthPhoto()
 
     setLoading(true)
@@ -599,61 +601,74 @@ export default function LoginPage() {
   }
 
   // ── Konfigurasi metode auth ─────────────────────────────────
-  // Kata Sandi tersedia jika:
-  //   - identifierNeedsSetup = user belum pasang Windows Hello/Dongle (onboarding)
-  //   - showPasswordFallback = 5+ percobaan gagal
-  //   - Kamera tidak tersedia untuk Windows Hello
-  const passwordAvailable = identifierNeedsSetup || showPasswordFallback || cameraPermission === false
+  // Alur baru: setelah username diketik, cek ke /auth/security-status.
+  // - Belum punya WebAuthn/Dongle (identifierNeedsSetup) → hanya Kata Sandi
+  // - Sudah punya WebActuhn atau Dongle → hanya opsi keamanan itu, tanpa Kata Sandi
+  //   kecuali setelah 5x percobaan gagal (password fallback)
+  const passwordAvailable = identifierNeedsSetup || showPasswordFallback
 
-  const authMethods = [
-    {
-      id: 'webauthn',
-      label: 'Windows Hello',
-      description: 'Sidik jari, wajah, atau PIN Windows (kamera wajib aktif)',
-      icon: <FingerprintIcon />,
-      available: (webauthnSupported && webauthnPlatformAvailable) && cameraPermission !== false,
-      unavailableReason: cameraPermission === false
-        ? 'Kamera tidak tersedia. Gunakan Kata Sandi untuk masuk.'
-        : (webauthnSupported ? 'Windows Hello tidak tersedia di perangkat ini' : 'Browser tidak mendukung WebAuthn'),
-      requireCamera: true,
-    },
-    {
-      id: 'dongle',
-      label: 'Dongle Keamanan',
-      description: 'USB token fisik (TrueCount Token)',
-      icon: <KeyIcon />,
-      available: isTauri,
-      unavailableReason: isTauri ? undefined : 'Dongle USB hanya tersedia di aplikasi desktop',
-      requireCamera: false,
-    },
-    {
-      id: 'password',
-      label: 'Kata Sandi',
-      description: passwordAvailable ? 'Username/email dan kata sandi' : 'Username/email dan kata sandi (tersedia setelah 5 percobaan gagal)',
-      icon: <PasswordIcon />,
-      available: passwordAvailable,
-      unavailableReason: passwordAvailable ? undefined : 'Tersedia setelah 5 percobaan gagal',
-      requireCamera: false,
-    },
-  ]
+  const authMethods = useMemo(() => {
+    // Belum mengecek status user → tidak tampilkan metode apa pun
+    if (!identifierChecked) return []
+
+    const methods = []
+
+    // Jika sudah punya WebAuthn/Dongle → tampilkan hanya opsi keamanan (tanpa Kata Sandi)
+    if (!identifierNeedsSetup && !showPasswordFallback) {
+      // Windows Hello (jika supported + platform available + kamera ok)
+      if ((webauthnSupported && webauthnPlatformAvailable) && cameraPermission !== false) {
+        methods.push({
+          id: 'webauthn',
+          label: 'Windows Hello',
+          description: 'Sidik jari, wajah, atau PIN Windows (kamera wajib aktif)',
+          icon: <FingerprintIcon />,
+          available: true,
+          requireCamera: true,
+        })
+      }
+      // Dongle (jika di Tauri desktop)
+      if (isTauri) {
+        methods.push({
+          id: 'dongle',
+          label: 'Dongle Keamanan',
+          description: 'USB token fisik (TrueCount Token)',
+          icon: <KeyIcon />,
+          available: true,
+          requireCamera: false,
+        })
+      }
+    } else {
+      // Belum punya keamanan (onboarding) atau 5x gagal → hanya Kata Sandi
+      methods.push({
+        id: 'password',
+        label: 'Kata Sandi',
+        description: 'Username/email dan kata sandi',
+        icon: <PasswordIcon />,
+        available: true,
+        requireCamera: false,
+      })
+    }
+
+    return methods
+  }, [identifierNeedsSetup, showPasswordFallback, webauthnSupported, webauthnPlatformAvailable, cameraPermission, isTauri])
 
   // Determine default method:
-  // 1. User belum pasang keamanan → paksa Kata Sandi (onboarding)
-  // 2. Kamera tidak tersedia → paksa Kata Sandi
-  // 3. Windows Hello tersedia → default (direkomendasikan)
-  // 4. Tauri → dongle
-  // 5. Fallback password
+  // - identifierNeedsSetup (onboarding) atau showPasswordFallback (5x gagal) → Kata Sandi
+  // - Lainnya → WebHello jika tersedia, kalau tidak Dongle
   useEffect(() => {
-    if (identifierNeedsSetup || cameraPermission === false || showPasswordFallback) {
+    if (!identifierChecked) return
+    if (identifierNeedsSetup || showPasswordFallback) {
       setSelectedMethod('password')
-    } else if (webauthnSupported && webauthnPlatformAvailable) {
+    } else if ((webauthnSupported && webauthnPlatformAvailable) && cameraPermission !== false) {
       setSelectedMethod('webauthn')
     } else if (isTauri) {
       setSelectedMethod('dongle')
+    } else if (authMethods.length > 0) {
+      setSelectedMethod(authMethods[0].id)
     } else {
       setSelectedMethod('password')
     }
-  }, [identifierNeedsSetup, cameraPermission, showPasswordFallback, webauthnSupported, webauthnPlatformAvailable, isTauri])
+  }, [identifierChecked, identifierNeedsSetup, showPasswordFallback, webauthnSupported, webauthnPlatformAvailable, cameraPermission, isTauri, authMethods])
 
   return (
     <div className="auth-shell">
@@ -694,14 +709,14 @@ export default function LoginPage() {
         )}
 
         {toast && (
-          <p className="auth-warning" role="status">
-            <AlertIcon />
+          <p className={`auth-toast ${toastType === 'success' ? 'auth-success' : 'auth-warning'}`} role="status" aria-live="polite">
+            {toastType === 'success' ? <CheckIcon /> : <AlertIcon />}
             {toast}
           </p>
         )}
 
         {/* ── Camera Requirement Notice ─────────────────────────────────── */}
-        {(selectedMethod === 'webauthn' || (webauthnSupported && webauthnPlatformAvailable)) && (
+        {selectedMethod === 'webauthn' && (
           <div 
             className={`camera-notice 
               ${cameraPermission === false ? 'camera-notice--error' : ''} 
@@ -777,7 +792,7 @@ export default function LoginPage() {
               <div className="camera-preview-overlay">
                 <div className="camera-status-indicator active">
                   <span className="status-dot" aria-hidden="true"></span>
-                  <span>Kamera Aktif - Verifikasi</span>
+                  <span>verifikasi kamera</span>
                 </div>
               </div>
             </div>
@@ -871,35 +886,46 @@ export default function LoginPage() {
 
         </div>
 
+        {/* ── Input Username / Email (di bawah opsi metode masuk) ──────────────── */}
+        <div className="field">
+          <label htmlFor="identifier">Masukkan username atau email Anda</label>
+          <input
+            id="identifier"
+            name="identifier"
+            type="text"
+            autoComplete="username"
+            placeholder="anda@contoh.com"
+            value={form.identifier}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
         {/* ── Form Password ──────────────────────────────────── */}
         {selectedMethod === 'password' && (
           <form onSubmit={handlePasswordSubmit} noValidate>
             <div className="field">
-              <label htmlFor="identifier">Username atau email</label>
-              <input
-                id="identifier"
-                name="identifier"
-                type="text"
-                autoComplete="username"
-                placeholder="anda@contoh.com"
-                value={form.identifier}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="field">
               <label htmlFor="password">Kata sandi</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Kata sandi Anda"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="password-input-wrapper">
+                <input
+                  id="password"
+                  name="password"
+                  type={passwordShow ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="Kata sandi Anda"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setPasswordShow(s => !s)}
+                  aria-label={passwordShow ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                >
+                  {passwordShow ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
             </div>
 
             {error && <p className="field-error" role="alert"><AlertIcon />{error}</p>}
@@ -916,17 +942,6 @@ export default function LoginPage() {
         {selectedMethod === 'webauthn' && (
           <div className="webauthn-form">
             <div className="field">
-              <label htmlFor="webauthn-identifier">Username atau email</label>
-              <input
-                id="webauthn-identifier"
-                name="identifier"
-                type="text"
-                autoComplete="username"
-                placeholder="anda@contoh.com"
-                value={form.identifier}
-                onChange={handleChange}
-                required
-              />
             </div>
 
             {error && <p className="field-error" role="alert"><AlertIcon />{error}</p>}
@@ -959,18 +974,6 @@ export default function LoginPage() {
         {selectedMethod === 'dongle' && (
           <div className="dongle-form">
             <div className="field">
-              <label htmlFor="dongle-identifier">Username atau email</label>
-              <input
-                id="dongle-identifier"
-                name="identifier"
-                type="text"
-                autoComplete="username"
-                placeholder="anda@contoh.com"
-                value={form.identifier}
-                onChange={handleChange}
-                required
-                disabled={usbAuthStep !== 'idle' && usbAuthStep !== 'error'}
-              />
             </div>
 
             {usbAuthStep === 'idle' && (

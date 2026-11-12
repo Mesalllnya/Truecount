@@ -14,7 +14,7 @@
 | **Nama** | TrueCount |
 | **Tipe** | Aplikasi e-voting akademik (bukan production-critical) |
 | **Bahasa UI** | Indonesia (Bahasa Indonesia penuh, termasuk path URL) |
-| **Status** | Sprint 1 selesai |
+| **Status** | Semua sprint selesai (Sprint 1–4 + 4b) ✅ |
 | **Repositori** | Monorepo - backend PHP + frontend React dalam satu folder |
 | **Tujuan** | Proyek Akhir Mata Kuliah Kriptografi |
 | **Universitas** | UPN "Veteran" Yogyakarta - Program Studi Informatika |
@@ -26,7 +26,7 @@
 | --- | ------ | ------- | -------------- |
 | 1 | **Rio Meidi Ataurrahman** | Authentication & User Management | Sprint 1 (Auth, Invite, Dashboard) · Sprint 4 (MFA: WebAuthn, USB Token) · **Sprint 4b (Auth Security Layer: Session Mgmt, Failed Attempts, Camera Enforcement)** |
 | 2 | **Muhamad Ifsal Fadhilah** | Election Management & Voting System | **Sprint 2 (Election CRUD, Voting, Results) ✅ SELESAI** |
-| 3 | **[Nama Orang 3]** | Cryptography & Advanced Security | **Sprint 3 (Vigenere, AES-256-GCM, ChaCha20, Blockchain, Steganografi) ✅ SELESAI** |
+| 3 | **Erlan Rifqi Davin D** | Cryptography & Advanced Security | **Sprint 3 (Vigenere, AES-256-GCM, ChaCha20, Blockchain, Steganografi) ✅ SELESAI** |
 
 ---
 
@@ -102,6 +102,17 @@ TrueCount pakai kumpulan kursor kustom untuk berbagai state interaksi, agar apli
 - **Aksesibilitas:** Animasi kursor dimatikan untuk pengguna yang mengaktifkan `prefers-reduced-motion: reduce`
 - **Pemakaian class utility:** `.tc-loading`, `.tc-copy`, `.tc-grab`, `.tc-grabbing`, `.tc-zoom-in`, `.tc-zoom-out`, `.tc-help`, `.tc-not-allowed`, `.tc-text`, `.tc-crosshair`, dll.
 
+### Detail Visual: Status Indicator Dot (Kamera Verifikasi)
+
+Di `LoginPage` (`/masuk`), indikator status kamera menggunakan titik kecil (`.status-dot` dalam `.camera-status-indicator`) yang **berkedip warna hijau ↔ abu-abu** selama kamera diverifikasi aktif:
+
+- File CSS: `frontend/src/pages/AuthPage.css`
+- Animasi: `statusBlink` (1.5s, infinite)
+- Warna hijau: `#2a7a3b` (kamera aktif / terverifikasi)
+- Warna abu-abu: `#9ca3af` (fase blink)
+- Elemen HTML: `<span className="status-dot" aria-hidden="true"></span>` + teks "verifikasi kamera"
+- `prefers-reduced-motion: reduce` mematikan animasi → titik tetap hijau statis
+
 ---
 
 ## 4. Struktur File Kunci
@@ -115,7 +126,14 @@ backend/helpers/logger.php   - tc_log() file logger → backend/storage/logs/app
 backend/helpers/jwt.php      - generateJwt() + verifyJwt() - HS256 manual
 backend/config/database.php  - getDB() singleton PDO
 backend/config/app.php       - Konstanta JWT_SECRET, JWT_EXPIRE, ARGON2_*
-backend/middleware/auth.php  - requireAuth() → return payload atau exit 401
+backend/config/env.php       - Baca variabel .env (DB_HOST, DB_NAME, JWT_SECRET, ENCRYPTION_KEY_B64, dll.)
+backend/helpers/response.php - jsonResponse() + CORS multi-origin (FRONTEND_ORIGIN + origin Tauri)
+backend/helpers/logger.php   - tc_log() file logger → backend/storage/logs/app.log
+backend/helpers/jwt.php      - generateJwt() + verifyJwt() - HS256 manual
+backend/helpers/datetime.php - Helper tanggal/WIB (Asia/Jakarta)
+backend/helpers/webauthn.php - Helper WebAuthn (attestation/verifikasi)
+backend/helpers/election_scheduler.php - Jadwal pemilihan (start/end time)
+backend/middleware/auth.php  - requireAuth() / requireAdmin() → return payload atau exit 401
 backend/api/auth/register.php   - invite-gated (wajib invite_token valid)
 backend/api/auth/login.php
 backend/api/auth/logout.php
@@ -166,6 +184,15 @@ backend/api/users/voters.php    - GET /users/voters - daftar semua voter aktif (
 backend/api/users/search.php    - GET /users/search?q= - cari pengguna (admin)
 backend/api/encrypted-messages/create.php  - POST /encrypted-messages - buat pesan terenkripsi
 backend/api/encrypted-messages/get.php     - GET /encrypted-messages/:id - ambil pesan terenkripsi
+backend/services/crypto/AESGCMService.php        - Enkripsi AES-256-GCM (ballot, file)
+backend/services/crypto/ChaCha20Poly1305Service.php - Enkripsi ChaCha20-Poly1305 (pesan, file)
+backend/services/crypto/VigenereCipherService.php - Enkripsi Vigenere (pesan klasik)
+backend/services/crypto/SteganographyService.php  - Sembunyikan pesan dalam gambar (LSB)
+backend/services/crypto/FileEncryptionService.php - Enkripsi file upload (nonce, auth_tag, mime_type)
+backend/services/crypto/EncryptedMessageService.php - Service pesan terenkripsi
+backend/services/crypto/BlockchainService.php     - Blockchain sederhana (seal & verify hasil pemilihan)
+backend/services/crypto/BallotService.php         - Enkripsi/dekripsi ballot suara
+backend/services/crypto/BallotTallyService.php    - Tally hasil pemilihan
 ```
 
 ### Frontend
@@ -211,7 +238,8 @@ frontend/src/styles/cursor.css  - Kumpulan aturan kursor kustom untuk state norm
 ```
 database/migrations/001_init.sql  - 10 tabel (lihat seksi DB)
 database/seeds/001_admin.sql      - Admin: username=admin, password=Admin@1234
-database/seeds/002_dummy_users.sql - User dummy: rio, pemilih1, pemilih2 (lihat seksi 4.5)
+database/seeds/002_dummy_users.sql - User dummy: pemilih1, pemilih2 (lihat seksi 4.5)
+database/seeds/003_dev_user.sql    - User dev: username=dev, password=Dev@1234, role=dev
 database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 ```
 
@@ -220,9 +248,9 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | Username | Password | Role | Email | Keterangan |
 | --- | --- | --- | --- | --- |
 | `admin` | `Admin@1234` | admin | admin@truecount.local | Akun utama (seed 001) |
-| `rio` | `Rio@12345` | voter | rio@truecount.local | Dummy - testing MFA USB token |
 | `pemilih1` | `Pemilih@123` | voter | pemilih1@truecount.local | Dummy - testing pemilihan |
 | `pemilih2` | `Pemilih@123` | voter | pemilih2@truecount.local | Dummy - testing pemilihan |
+| `dev` | `Dev@1234` | dev | dev@truecount.local | Akses halaman dev (`/dev`) - seed 003 |
 
 - Semua password di-hash dengan **Argon2id** (memory=65536, time=4, threads=2)
 - Seed dijalankan via `php database/migrate.php --seed`
@@ -331,7 +359,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
  
 ## 7. Database Schema
  
-16 tabel - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql` + `007_auth_attempts.sql` + `008_sprint2_marker.sql` + `009_add_photo_path_to_auth_attempts.sql` + `010_add_crypto_version.sql` + `011_add_encrypted_files_columns.sql`:
+16 tabel - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql` + `007_auth_attempts.sql` + `008_sprint2_marker.sql` + `009_add_photo_path_to_auth_attempts.sql` + `010_add_crypto_version.sql` + `011_add_encrypted_files_columns.sql` + `012_add_dev_role.sql`:
 
 | Tabel | Sprint | Keterangan |
 | --- | --- | --- |
@@ -405,6 +433,75 @@ Undangan terikat email → email akun dipaksa mengikuti email undangan.
 ```js
 const payload = JSON.parse(atob(token.split('.')[1]))
 payload.username  // "admin"
+```
+
+---
+
+## 8.5. Flow Aplikasi (End-to-End)
+
+Berikut alur lengkap penggunaan aplikasi dari awal hingga akhir, menurut peran pengguna:
+
+### A. Alur Admin / Panitia
+
+```
+1. Login → /masuk (Windows Hello / Dongle / Kata Sandi fallback)
+2. AuthGuard cek security setup → jika belum setup, redirect /atur-keamanan
+3. Masuk /dasbor → lihat panel undangan (stats: menunggu/diterima/kedaluwarsa/dibatalkan)
+4. Buat undangan: POST /invites → dapatkan link /daftar?undangan=<token>
+5. Bagikan tautan undangan ke calon pemilih
+6. Buat pemilihan: POST /elections → atur judul, deskripsi, waktu mulai/selesai, status
+7. Kelola kandidat: POST /elections/:id/candidates (+ upload foto)
+8. Daftarkan voter ke pemilihan: POST /elections/:id/voters
+9. Saat voting berjalan: pantau hasil di /hasil/:id (tally + blockchain verify)
+10. Setelah selesai: seal blok: POST /elections/blockchain/seal
+11. Verifikasi integritas: GET /elections/blockchain/verify
+12. Audit: lihat log keamanan lewat /users/search → /log-keamanan/:id
+13. Logout → hapus token dari localStorage
+```
+
+### B. Alur Pemilih (Voter)
+
+```
+1. Menerima tautan undangan dari admin: /daftar?undangan=<token>
+2. Cek validitas undangan: GET /invites/verify?token=...
+3. Daftar akun: POST /auth/register (dengan invite_token) → password di-hash Argon2id
+4. Login: /masuk (Windows Hello default jika tersedia, else Dongle, else Kata Sandi)
+5. Kamera diverifikasi aktif (untuk Windows Hello / Kata Sandi)
+6. Jika belum setup keamanan → redirect /atur-keamanan (wajib setup Windows Hello atau Dongle)
+7. Masuk /pilih → lihat kandidat pemilihan yang aktif
+8. Kirim suara: POST /elections/:id/vote (terenkripsi AES-256-GCM, tanpa FK ke user)
+9. Lihat hasil: /hasil/:id (tally + verifikasi blockchain)
+10. Kelola keamanan pribadi: /pengaturan (ganti password, kelola Windows Hello, kelola USB token)
+11. (Opsional) Daftarkan USB token di /usb-token-test untuk MFA login
+12. Logout
+```
+
+### C. Alur Login dengan Security Layer (Sprint 4b)
+
+```
+1. User buka /masuk
+2. Default method: Windows Hello (jika supported + kamera aktif), Dongle (Tauri), Kata Sandi (HIDDEN)
+3. Input identifier (username/email)
+4. POST /auth/security-status → cek user punya WebAuthn/Dongle?
+   - Belum punya → Kata Sandi TAMPIL (onboarding)
+5. Pilih method:
+   a. Windows Hello → kamera wajib aktif (canvas sampling) → ambil foto → loginWithWindowsHello
+   b. Dongle → start USB auth → input PIN → sign challenge → verify → JWT
+   c. Kata Sandi → kamera tetap diverifikasi → POST /auth/login + photo
+6. Success → login(token, user) → navigate /dasbor
+7. Gagal 5x → lock 15 menit → Kata Sandi TAMPIL (emergency fallback)
+8. Berhasil → reset counter lokal + backend reset attempts
+```
+
+### D. Alur USB Token (Sprint 4)
+
+```
+1. Colok flashdisk → app desktop scan tiap 2 detik (scan_usb_tokens)
+2. Buat token baru: "＋ Buat Token di USB" → generate keypair P-256 → encrypt → tulis .truecount_token
+   (atau via CLI: php database/generate_test_token.php <drive> <user_id> <pin>)
+3. Daftarkan token: /mfa/usb/register/start (challenge) → input PIN → sign → /mfa/usb/register/verify
+4. Token terdaftar ke akun login → tampil di panel USB token (daftar, revoke, label)
+5. Login MFA: /mfa/usb/authenticate/start → wait USB → input PIN → sign → /mfa/usb/authenticate/verify → JWT
 ```
 
 ---
@@ -499,7 +596,7 @@ Desktop app **sudah bisa di-build dan berjalan** - installer `.msi` + `.exe` (NS
 
 ## 11.5. USB Token System (Sprint 4)
 
-> **Status:** Registrasi & manajemen token sudah jalan di dasbor (daftar, revoke, label). **Belum dipakai untuk login MFA** — flow autentikasi saat login akan ditambahkan nanti setelah review.
+> **Status:** Registrasi & manajemen token sudah jalan. **Login MFA via USB token juga sudah diimplementasi** (`/mfa/usb/authenticate/*`) — identifier-based challenge → sign → verify → JWT. Lihat Section 12 (Sprint 4) untuk detail lengkap.
 
 ### Arsitektur
 
@@ -699,7 +796,7 @@ Kriptografi: PBKDF2-HMAC-SHA256 (100k iterasi, PIN → key) → AES-256-GCM (pri
 | File token bisa di-copy | ⚠️ Ya — ini software token, bukan hardware secure element |
 | PIN bisa di-keylog | ⚠️ Ya — inherent ke software token |
 | Tidak ada user presence (touch) | ⚠️ Beda dengan FIDO2 hardware key |
-| **Integrasi ke auth MFA** | ❌ **BELUM** — nanti pakai backend verify signature |
+| **Integrasi ke auth MFA** | ✅ Sudah terintegrasi — login via `/mfa/usb/authenticate/*` (challenge → sign → verify → JWT) |
 
 ---
 
@@ -725,7 +822,7 @@ Kriptografi: PBKDF2-HMAC-SHA256 (100k iterasi, PIN → key) → AES-256-GCM (pri
 - Integrasi auth guard di halaman voting, JWT middleware
 - Enkripsi ballot (AES-256-GCM) + blockchain seal/verify untuk integritas hasil
 
-### Sprint 3 - SELESAI ✅ ([Nama Orang 3])
+### Sprint 3 - SELESAI ✅ (Erlan Rifqi Davin D)
 
 - **Modul Kriptografi & Keamanan Lanjutan sudah diimplementasikan sepenuhnya**
 - Enkripsi pesan: Vigenere, AES-256-GCM, ChaCha20-Poly1305
@@ -895,6 +992,7 @@ Saat menambahkan endpoint baru, selalu update:
 3. `README.md` - seksi API Endpoints
 4. `tests/api_test.php` - tambah test case
 5. `docs/dev/knowledge_transfer.md` - update State Sprint
+6. `docs/dev/pembagian_jobdesk_secure_e_voting.md` - update pembagian tugas (file ada di `docs/dev/`, BUKAN `docs/project/`)
 
 ---
 
@@ -902,7 +1000,7 @@ Saat menambahkan endpoint baru, selalu update:
 
 1. **CORS** - origin web dikunci di `.env` key `FRONTEND_ORIGIN`. Kalau port frontend berubah, update ini. Origin Tauri (`http://tauri.localhost`, `tauri://localhost`, `http://localhost`, `http://127.0.0.1`) sudah diizinkan otomatis di `helpers/response.php` untuk desktop app.
 2. **JWT Secret** - ada di `.env` key `JWT_SECRET`. Nilai default di `.env.example` JANGAN dipakai di production.
-3. **Password admin default** - `Admin@1234`. Hash-nya di-generate ulang setiap `php database/migrate.php --seed` dijalankan.
+3. **Password akun seed (HARDCODED)** - `admin`=`Admin@1234`, `dev`=`Dev@1234`, `pemilih1`/`pemilih2`=`Pemilih@123`. Hash Argon2id-nya **hardcoded** di `database/seeds/*.sql` (bukan di-generate ulang saat `--seed`). Jika ingin mengubah password default, generate hash baru via `password_hash('...', PASSWORD_ARGON2ID, ['memory_cost'=>65536,'time_cost'=>4,'threads'=>2])` lalu update file seed-nya — pastikan hash sesuai password (jangan copy-paste antar seed, karena bisa menyebabkan login gagal seperti kasus user `dev`).
 4. **`ballots` tidak punya FK ke users** - ini by design, jangan ditambahkan.
 5. **Tauri icons** - sudah di-generate dari `frontend/public/icon/TrueCount_logo_transparent.png`. Kalau ganti desain logo: copy file PNG baru ke `src-tauri/icons/icon.png`, lalu jalankan `npx tauri icon src-tauri/icons/icon.png` untuk generate semua format platform (`.ico` Windows, `.icns` macOS, PNG, dll.).
 6. **axios belum dipakai** - diinstall tapi Sprint 1 pakai `fetch` native. Sprint 2 boleh migrasi ke axios atau tetap pakai fetch.

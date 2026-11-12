@@ -163,28 +163,6 @@
 
 .landing .btn-lg { padding: 0.85rem 1.8rem; font-size: 1.05rem; border-radius: 8px; }
 
-/* ── Animasi pintu sign-in (buka saat hover, tutup saat kursor keluar) ── */
-.landing .door-signin {
-  width: 20px;
-  height: 20px;
-  display: inline-block;
-  perspective: 160px;
-  margin-right: 0.55rem;
-  pointer-events: none;
-  vertical-align: -0.1rem;
-}
-
-.landing .door-panel {
-  transform-origin: 3px 12px;        /* scharnir di sisi kiri pintu */
-  transition: transform 450ms var(--ease-spring);
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-}
-
-.landing .door-signin:hover .door-panel {
-  transform: rotateY(-50deg);        /* pintu ayun terbuka */
-}
-
 /* ══════════════════════════════════════════════════════════
    HERO
    ══════════════════════════════════════════════════════════ */

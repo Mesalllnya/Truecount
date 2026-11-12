@@ -336,7 +336,12 @@ export default function SecuritySetupPage() {
 
         {/* ── Camera Requirement Notice ───────────────────────── */}
         {(activeStep === 'choose' || activeStep === 'webauthn') && (
-          <div className="camera-notice" role="status">
+          <div 
+            className={`camera-notice 
+              ${cameraPermission === true ? 'camera-notice--success' : ''} 
+              ${cameraPermission === false ? 'camera-notice--error' : ''}`}
+            role="status"
+          >
             <CameraIcon />
             <span>
               <strong>Kamera wajib aktif</strong> untuk Windows Hello (verifikasi wajah/sidik jari).

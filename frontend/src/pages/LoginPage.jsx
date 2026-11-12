@@ -161,9 +161,11 @@ export default function LoginPage() {
 
   // ── Toast untuk kamera (muncul setiap kali pemeriksaan kamera berjalan) ──
   const [toast, setToast] = useState(null)
+  const [toastType, setToastType] = useState('success')
 
-  const showAuthToast = useCallback((message) => {
+  const showAuthToast = useCallback((message, type = 'success') => {
     setToast(message)
+    setToastType(type)
     setTimeout(() => setToast(null), 3500)
   }, [])
 
@@ -171,9 +173,9 @@ export default function LoginPage() {
   useEffect(() => {
     if (cameraChecking) return
     if (cameraPermission === true) {
-      showAuthToast('Kamera siap ✓')
+      showAuthToast('Kamera siap ✓', 'success')
     } else if (cameraPermission === false) {
-      showAuthToast(cameraError || 'Kamera tidak aktif. Buka shutter kamera untuk Windows Hello.')
+      showAuthToast(cameraError || 'Kamera tidak aktif. Buka shutter kamera untuk Windows Hello.', 'error')
     }
   }, [cameraPermission, cameraChecking, cameraError, showAuthToast])
 
@@ -694,8 +696,8 @@ export default function LoginPage() {
         )}
 
         {toast && (
-          <p className="auth-warning" role="status">
-            <AlertIcon />
+          <p className={`auth-toast ${toastType === 'success' ? 'auth-success' : 'auth-warning'}`} role="status" aria-live="polite">
+            {toastType === 'success' ? <CheckIcon /> : <AlertIcon />}
             {toast}
           </p>
         )}
@@ -777,7 +779,7 @@ export default function LoginPage() {
               <div className="camera-preview-overlay">
                 <div className="camera-status-indicator active">
                   <span className="status-dot" aria-hidden="true"></span>
-                  <span>Kamera Aktif - Verifikasi</span>
+                  <span>verifikasi kamera</span>
                 </div>
               </div>
             </div>

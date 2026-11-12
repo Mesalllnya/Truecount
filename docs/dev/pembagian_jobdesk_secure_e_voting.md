@@ -59,7 +59,7 @@
 
 ---
 
-### Orang 3 - [Nama Orang 3]
+### Orang 3 - [Erlan Rifki Davin D]
 
 **Peran:** Cryptography & Advanced Security  
 **Fokus:** Implementasi algoritma kriptografi & fitur keamanan lanjutan

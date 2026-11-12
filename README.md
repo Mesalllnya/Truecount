@@ -54,8 +54,8 @@ Truecount/
 ├── frontend/               # React + Vite
 │   ├── public/             # Aset statis (gambar artsy, logo, cursor set)
 │   ├── src/
-│   │   ├── pages/          # LandingPage · AboutPage · LoginPage · RegisterPage · SecuritySetupPage · DashboardPage · VotePage · ResultsPage · ProfileSettingsPage · UsbTokenTestPage · UserSecurityLogPage · EncryptedMessagesPage
-│   │   ├── components/     # Nav · DashNav · AuthGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui)
+│   │   ├── pages/          # LandingPage · AboutPage · LoginPage · RegisterPage · SecuritySetupPage · DashboardPage · VotePage · ResultsPage · ProfileSettingsPage · UsbTokenTestPage · UserSecurityLogPage · EncryptedMessagesPage · DevPage
+│   │   ├── components/     # Nav · DashNav · AuthGuard · RoleGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui) · IsometricFlow · IsometricCrypto
 │   │   ├── hooks/          # useAuth · useAuthSession · useAuthSecurity · useFaceDetection · useUsbToken · useWebAuthn
 │   │   ├── styles/         # cursor.css (kursor kustom)
 │   │   ├── utils/          # webauthn.ts
@@ -216,6 +216,8 @@ Base URL: `http://localhost:8000`
 | GET | `/users/search?q=` | JWT (admin) | Cari pengguna (admin) |
 | POST | `/encrypted-messages` | JWT | Buat pesan terenkripsi |
 | GET | `/encrypted-messages/:id` | JWT | Ambil pesan terenkripsi |
+| GET | `/dev/flow` | JWT (admin/dev) | Data flow aplikasi (nodes & edges) untuk halaman dev |
+| GET | `/dev/crypto` | JWT (admin/dev) | Data algoritma kriptografi untuk halaman dev |
 
 Pendaftaran publik **ditutup** - akun hanya bisa dibuat lewat tautan undangan yang dibuat admin (`/daftar?undangan=<token>`).
 
@@ -250,9 +252,10 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | `/usb-token-test` | USB Token Test | Deteksi, decrypt, challenge-response |
 | `/pesan-terenkripsi` | Encrypted Messages | Buat & lihat pesan terenkripsi (Sprint 3) |
 | `/log-keamanan/:userId` | Log Keamanan Pengguna | Riwayat percobaan login + foto kamera (audit admin) |
+| `/dev` | Halaman Dev | Visualisasi 3D isometrik flow aplikasi + algoritma kripto (hanya admin & dev) |
 | `*` | Redirect → `/` | Catchall |
 
-Semua route terlindungi (`/dasbor`, `/pilih`, `/pengaturan`, dll.) dipelihara oleh `AuthGuard` yang redirect ke `/atur-keamanan` jika user belum setup Windows Hello atau Dongle.
+Semua route terlindungi (`/dasbor`, `/pilih`, `/pengaturan`, dll.) dipelihara oleh `AuthGuard` yang redirect ke `/atur-keamanan` jika user belum setup Windows Hello atau Dongle. Halaman `/dev` selain itu dilindungi oleh `RoleGuard` yang hanya mengizinkan role `admin` dan `dev`.
 
 ## Test Otomatis
 

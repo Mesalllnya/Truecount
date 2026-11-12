@@ -284,6 +284,50 @@ Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis ke path baru.
 
 ---
 
+## 11. Halaman Dev (`/dev`) — Admin + Developer
+
+Halaman dev eksklusif untuk role `admin` dan `dev`, berisi visualisasi 3D isometrik interaktif sebagai dokumentasi teknis dan materi pitch deck.
+
+### Akses
+- URL: `/dev` (diakses setelah login + setup keamanan)
+- Role yang diizinkan: `admin`, `dev` (dicek oleh `RoleGuard` di frontend dan `requireDevOrAdmin()` di backend middleware)
+- User dev default: `dev` / `Dev@1234` (seed `003_dev_user.sql`)
+
+### Dua Section Visualisasi 3D Isometrik
+
+#### A. Flow Aplikasi
+Menampilkan alur lengkap aplikasi dari awal hingga akhir sebagai blok 3D isometrik:
+1. **Pengguna** → membuka aplikasi
+2. **Login / Masuk** → 3 metode: Windows Hello, Dongle USB, Kata Sandi
+3. **Setup Keamanan** → wajib setup Windows Hello atau Dongle sebelum akses dasbor
+4. **Dasbor** → Admin (undangan, pemilihan, blockchain audit) | Pemilih (daftar pemilihan aktif)
+5. **Input Suara** → Pemilih memilih kandidat, suara dienkripsi AES-256-GCM
+6. **Hasil + Blockchain** → tally suara + verifikasi integritas blockchain
+
+Warna per peran: 🟠 Admin = Oranye, 🔵 Pemilih = Biru, 🟢 Sistem = Hijau. Klik node untuk lihat detail.
+
+#### B. Algoritma Kriptografi
+Menampilkan 8 algoritma kriptografi sebagai blok 3D dengan ikon:
+| Algoritma | Digunakan Untuk |
+|-----------|-----------------|
+| Argon2id | Hash password |
+| JWT HS256 | Token otentikasi |
+| AES-256-GCM | Enkripsi suara + file |
+| ChaCha20-Poly1305 | Enkripsi pesan/file |
+| Vigenere | Enkripsi pesan klasik |
+| Steganografi (LSB) | Sembunyikan pesan dalam gambar |
+| Blockchain sederhana | Integritas hasil pemilihan |
+| ECDSA P-256 | USB Token / WebAuthn signature |
+
+Klik algoritma untuk lihat detail implementasi (file PHP, ukuran key, mode operasi).
+
+### Catatan
+- Halaman dev bersifat **read-only**, tidak mengubah data produksi.
+- Semua akses ke halaman dev dicatat untuk audit.
+- Cocok sebagai materi presentasi (pitch deck) saat sidang proyek akhir.
+
+---
+
 ## 11. Diagram Alur Pengguna (Mermaid)
 
 Diagram di bawah ini menggunakan sintaksis **Mermaid**. Untuk melihat render visual, buka file ini di GitHub, GitLab, VS Code (dengan extension Mermaid), atau salin blok kode ke [mermaid.live](https://mermaid.live).

@@ -10,8 +10,8 @@
  *   { "algorithms": [ { id, name, purpose, file, key_size, mode, description }, ... ] }
  */
 
-require_once __DIR__ . '/../../../middleware/auth.php';
-require_once __DIR__ . '/../../../helpers/response.php';
+require_once __DIR__ . '/../../middleware/auth.php';
+require_once __DIR__ . '/../../helpers/response.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     jsonResponse(['error' => 'Method tidak diizinkan.'], 405);

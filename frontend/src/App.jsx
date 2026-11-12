@@ -13,10 +13,13 @@ import UserSecurityLogPage from './pages/UserSecurityLogPage'
 import HealthMonitor from './components/HealthMonitor'
 import Nav from './components/Nav'
 import EncryptedMessagesPage from './pages/EncryptedMessagesPage'
+import DevPage from './pages/DevPage'
+import RoleGuard from './components/RoleGuard'
 import AuthGuard from './components/AuthGuard'
+import { useAuth } from './hooks/useAuthSession'
 import { FailedAttemptsProvider } from './hooks/useAuthSecurity'
 import { AuthProvider } from './hooks/useAuthSession'
-import { Home, Info, LayoutDashboard, Vote, Mail, Settings } from 'lucide-react'
+import { Home, Info, LayoutDashboard, Vote, Mail, Settings, Code2 } from 'lucide-react'
 
 /* Ikon navbar (lucide, outline: tengah kosong) — ukuran & ketebalan seragam */
 const navIcon = { size: 18, strokeWidth: 1.5 }
@@ -56,6 +59,8 @@ const PROTECTED_LINKS = [
 
 function AppRoutes() {
   const location = useLocation()
+  const { user } = useAuth()
+  const isDevOrAdmin = user && (user.role === 'admin' || user.role === 'dev')
   const isProtected =
     location.pathname.startsWith('/dasbor') ||
     location.pathname.startsWith('/dashboard') ||
@@ -64,9 +69,14 @@ function AppRoutes() {
     location.pathname.startsWith('/pesan-terenkripsi') ||
     location.pathname.startsWith('/pengaturan') ||
     location.pathname.startsWith('/usb-token-test') ||
-    location.pathname.startsWith('/log-keamanan')
+    location.pathname.startsWith('/log-keamanan') ||
+    location.pathname.startsWith('/dev')
 
   const navLinks = isProtected ? PROTECTED_LINKS : PUBLIC_LINKS
+
+  const devLink = isDevOrAdmin
+    ? { href: '/dev', label: 'Dev', icon: <Code2 {...navIcon} /> }
+    : null
 
   const isLoginPage =
     location.pathname.startsWith('/masuk') ||
@@ -74,7 +84,7 @@ function AppRoutes() {
 
   return (
     <>
-      {!isLoginPage && <Nav links={navLinks} />}
+      {!isLoginPage && <Nav links={[...navLinks, devLink].filter(Boolean)} />}
       <Routes>
         <Route path="/"           element={<LandingPage />} />
         <Route path="/tentang"    element={<AboutPage />} />
@@ -94,6 +104,10 @@ function AppRoutes() {
           <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
           <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
           <Route path="/log-keamanan/:userId" element={<UserSecurityLogPage />} />
+          {/* Dev page - hanya admin & dev */}
+          <Route element={<RoleGuard allowedRoles={['admin', 'dev']} />}>
+            <Route path="/dev" element={<DevPage />} />
+          </Route>
         </Route>
         
         <Route path="*"                element={<Navigate to="/" replace />} />

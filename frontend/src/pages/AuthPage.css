@@ -28,6 +28,7 @@
   font-family: var(--font);
   color: var(--black);
   overflow-x: hidden;
+  padding-top: 4rem; /* lebih lega di atas, karena tidak ada navbar di halaman login */
 }
 
 @media (min-width: 860px) {
@@ -1416,7 +1417,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 0.75rem;
+  padding: 0.5rem;
   pointer-events: none;
 }
 

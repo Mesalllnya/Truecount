@@ -1,9 +1,12 @@
-/* ════════════════════════════════════════════════════════════════
-   Nav.css - TrueCount Shared Navigation
-   ════════════════════════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════════
+   Nav.css - TrueCount Unified Navigation
+   Acuan gaya: Landing Page (artsy / editorial)
+   Font: Plus Jakarta Sans
+   Palette: #F13C35 red · #0D0D0D black · #FAFAF8 cream
+   ═════════════════════════════════════════════════════════════════ */
 
 :root {
-  --nav-h:       72px;
+  --nav-h:       68px;
   --red:         #F13C35;
   --red-dark:    #c72e27;
   --red-soft:    rgba(241, 60, 53, 0.10);
@@ -16,6 +19,7 @@
   --white:       #ffffff;
   --font:        'Plus Jakarta Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
   --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .nav {
@@ -44,18 +48,7 @@
   .nav { padding: 0 4rem; }
 }
 
-@media (max-width: 767px) {
-  .nav {
-    display: flex;
-    justify-content: space-between;
-  }
-  .nav-links {
-    justify-self: auto;
-    text-align: left;
-  }
-}
-
-/* ── Brand (logo only, no text) ─────────────────────────── */
+/* ── Brand (logo) ─────────────────────────────────────────── */
 .nav-brand {
   display: flex;
   align-items: center;
@@ -66,63 +59,61 @@
 
 .nav-brand:hover { opacity: 0.85; }
 
-.nav-logo-img {
-  display: block;
-  line-height: 1;
-}
-
 .nav-logo {
   height: 55px;
   width: auto;
   display: block;
 }
 
-.nav--scrolled .nav-logo {
-  height: 48px;
-}
+.nav--scrolled .nav-logo { height: 48px; }
 
-/* ── Nav links (only Beranda gets active "nyala") ───────── */
+/* ── Nav links (tengah, desktop) ──────────────────────────── */
 .nav-links {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
   display: none;
-  gap: 2rem;
+  gap: 2.5rem;
   align-items: center;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .nav-links { display: flex; }
 }
 
 .nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 0.65rem 1.35rem;
-  font-size: 0.9rem;
+  padding: 0.4rem 0;
+  font-size: 1rem;
   font-weight: 500;
   color: var(--gray-500);
-  border-radius: 8px;
   text-decoration: none;
-  transition: color 150ms, background 150ms;
+  transition: color 150ms;
   white-space: nowrap;
+  position: relative;
 }
 
-.nav-link:hover {
-  color: var(--black);
-  background: var(--gray-100);
-}
+.nav-link:hover { color: var(--black); }
 
 .nav-link--active {
   color: var(--black);
-  background: transparent;
   font-weight: 600;
-  border-radius: 0;
-  border-bottom: 2.5px solid var(--red);
 }
 
-/* ── Actions (right side): Masuk button / User menu ───────── */
+.nav-link--active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--red);
+  border-radius: 2px;
+}
+
+/* ── Actions (kanan): Masuk button / User menu ────────────── */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -156,7 +147,7 @@
 /* Door icon animation — pintu terbuka saat hover */
 .door-icon {
   display: block;
-  transition: transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 350ms var(--ease-spring);
   transform-origin: 6px 12px;
 }
 
@@ -164,7 +155,7 @@
   transform: rotate(-55deg);
 }
 
-/* ── User menu (when authenticated) ───────────────────────── */
+/* ── User menu (saat terautentikasi) ──────────────────────── */
 .nav-user-menu {
   display: inline-flex;
   align-items: center;
@@ -201,18 +192,18 @@
   border-color: var(--red);
 }
 
-/* ── Hamburger ──────────────────────────────────────────── */
+/* ── Hamburger ────────────────────────────────────────────── */
 .nav-hamburger {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border: none;
   background: transparent;
   color: var(--black);
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: background 140ms;
   flex-shrink: 0;
 }
@@ -231,8 +222,8 @@
     left: 0; right: 0;
     background: var(--white);
     border-bottom: 1px solid var(--border);
-    padding: 1.5rem;
-    gap: 0.75rem;
+    padding: 1.75rem 2rem 2rem;
+    gap: 1.75rem;
     transform: translateY(-110%);
     opacity: 0;
     transition: transform 300ms var(--ease-out), opacity 200ms;
@@ -241,8 +232,9 @@
 
   .nav-links--open { transform: translateY(0); opacity: 1; }
 
-  .nav-link { padding: 0.75rem 1rem; font-size: 1rem; }
-  .nav-link--active { background: var(--gray-100); }
+  .nav-link { padding: 0.75rem 1rem; font-size: 1.15rem; }
+  .nav-link--active { background: var(--gray-100); border-bottom: none; }
+  .nav-link--active::after { display: none; }
 
   .nav-actions {
     flex-direction: column;
@@ -254,4 +246,6 @@
   }
 
   .nav-masuk { width: 100%; justify-content: center; }
+  .nav-user-menu { flex-direction: row; justify-content: space-between; width: 100%; padding: 0.75rem 0 0; border-top: 1px solid var(--border); margin-top: 0.75rem; }
+  .nav-logout { width: 100%; justify-content: center; }
 }

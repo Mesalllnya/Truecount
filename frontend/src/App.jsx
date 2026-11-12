@@ -38,9 +38,21 @@ function ProtectedRoutes() {
   )
 }
 
+const PUBLIC_LINKS = [
+  { href: '/', label: 'Beranda' },
+  { href: '/tentang', label: 'Tentang' },
+]
+
+const PROTECTED_LINKS = [
+  { href: '/dasbor', label: 'Dasbor' },
+  { href: '/pilih', label: 'Pemilihan' },
+  { href: '/pesan-terenkripsi', label: 'Pesan Terenkripsi' },
+  { href: '/pengaturan', label: 'Pengaturan' },
+]
+
 function AppRoutes() {
   const location = useLocation()
-  const isAppPage =
+  const isProtected =
     location.pathname.startsWith('/dasbor') ||
     location.pathname.startsWith('/dashboard') ||
     location.pathname.startsWith('/pilih') ||
@@ -48,14 +60,17 @@ function AppRoutes() {
     location.pathname.startsWith('/pesan-terenkripsi') ||
     location.pathname.startsWith('/pengaturan') ||
     location.pathname.startsWith('/usb-token-test') ||
-    location.pathname.startsWith('/log-keamanan') ||
+    location.pathname.startsWith('/log-keamanan')
+
+  const navLinks = isProtected ? PROTECTED_LINKS : PUBLIC_LINKS
+
+  const isLoginPage =
     location.pathname.startsWith('/masuk') ||
-    location.pathname.startsWith('/daftar') ||
-    location.pathname.startsWith('/atur-keamanan')
+    location.pathname.startsWith('/login')
 
   return (
     <>
-      {!isAppPage && <Nav />}
+      {!isLoginPage && <Nav links={navLinks} />}
       <Routes>
         <Route path="/"           element={<LandingPage />} />
         <Route path="/tentang"    element={<AboutPage />} />

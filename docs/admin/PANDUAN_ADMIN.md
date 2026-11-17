@@ -200,7 +200,7 @@ Output sukses:
 | Tidak bisa daftar akun | Pendaftaran ditutup publik — minta tautan undangan ke admin |
 | Tautan undangan "tidak valid" | Undangan mungkin kedaluwarsa (7 hari) atau sudah dipakai/dibatalkan |
 | Server tidak tersambung | Pastikan backend jalan (`npm run dev:full` atau app desktop otomatis spawn PHP) |
-| Kamera tetap menyala setelah pindah dari halaman login | Masalah sudah diatasi: kamera otomatis dimatikan saat navigasi keluar halaman login. Kalau masih terjadi, tutup buka ulang aplikasi. |
+| Kamera tetap menyala setelah pindah dari halaman login | Stream kamera bocor (race antar pemeriksaan kamera) | Sudah diatasi: kamera **hanya nyala di halaman Masuk**. Semua stream kamera terdaftar di registry global dan dipaksa mati otomatis saat pindah ke halaman lain (landing, dasbor, dll). Kalau masih terjadi, tutup buka ulang aplikasi. |
 | Foto tidak muncul di Log Keamanan | Foto hanya disimpan untuk percobaan login **setelah** perbaikan diterapkan. Percobaan lama tidak memiliki foto (placeholder kamera akan ditampilkan). |
 
 ---

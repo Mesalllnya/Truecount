@@ -59,8 +59,8 @@ Halaman login menampilkan **3 metode auth**, tersedia sesuai kondisi perangkat d
 | Metode | Ikon | Keterangan | Kapan tersedia |
 |--------|------|------------|----------------|
 | **Windows Hello** | 👆 Sidik jari | Sidik jari, wajah, atau PIN Windows (kamera wajib aktif) | Default, jika kamera aktif & WebAuthn supported |
-| **Dongle USB** | 🔑 Kunci | USB token fisik (TrueCount Token), ECDSA P-256 | Hanya di app desktop (Tauri) |
-| **Kata Sandi** | 🔒 Kunci | Username/email + password | Saat onboarding, setelah 5x gagal, atau kamera tidak tersedia |
+| **Dongle USB** | 🔑 Kunci | USB token fisik (TrueCount Token), ECDSA P-256, kamera wajib aktif | Hanya di app desktop (Tauri) |
+| **Kata Sandi** | 🔒 Kunci | Username/email + password, kamera wajib aktif | Saat onboarding, setelah 5x gagal, atau kamera tidak tersedia |
 
 ### Detail proses login:
 
@@ -114,7 +114,7 @@ Pilih **minimal satu** metode:
 Pilih "Windows Hello"
     → Masukkan nama perangkat (contoh: "Laptop Kantor")
     → Browser meminta autentikasi WebAuthn (Face ID / Windows Hello / PIN)
-    → Kamera wajib aktif
+    → Kamera tidak dinyalakan (kamera hanya aktif di halaman Masuk)
     → Kredensial disimpan di biometric_credentials
     → Berhasil → redirect ke returnTo (default /dasbor)
 ```
@@ -275,7 +275,7 @@ Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis ke path baru.
 |-------|-----------|
 | Pendaftaran hanya via undangan | Tidak ada register bebas, wajib `invite_token` |
 | Setup keamanan wajib | Tidak bisa masuk dashboard sebelum pasang Windows Hello atau Dongle |
-| Kamera wajib aktif | Untuk Windows Hello dan kata sandi; verifikasi frame tidak gelap/shutter tertutup |
+| Kamera hanya nyala di halaman Masuk | Kamera hanya aktif di `/masuk` dan **wajib online untuk SEMUA metode masuk** (Windows Hello, Dongle, Kata Sandi) — login diblokir bila kamera tertutup/gelap; dipaksa mati otomatis di halaman lain (landing, dasbor, dll.); frame diverifikasi tidak gelap/shutter tertutup |
 | Foto kamera sebagai audit | Ditangkap sebelum setiap percobaan login, disimpan di `auth_attempts.photo_path` |
 | Lockout 15 menit | Setelah 5x percobaan gagal, kata sandi muncul sebagai emergency fallback |
 | Suara anonIM | `ballots` tidak punya FK ke `users` (privasi by design) |

@@ -1,4 +1,6 @@
+/* eslint-disable react/only-export-components, react-refresh/only-export-components, react/set-state-in-effect */
 import { useState, useCallback, useEffect, useRef, createContext, useContext, ReactNode } from 'react';
+import { logCamera } from '../utils/cameraLogger';
 
 /** API base URL */
 const API_BASE = 'http://localhost:8000';
@@ -51,7 +53,7 @@ export function FailedAttemptsProvider({ children }: { children: ReactNode }) {
   // State disimpan di memori saja (tidak dipersist ke localStorage/session)
   // supaya counter otomatis reset setiap kali halaman dimuat ulang.
 
-  const increment = useCallback(async (identifier: string, method: string, success: boolean, error?: string) => {
+  const increment = useCallback(async (identifier: string, _method: string, success: boolean, _error?: string) => {
     // Catat ke server hanya untuk counter lokal (percobaan gagal, lockout, password fallback).
     // Penulisan ke tabel auth_attempts ditangani sepenuhnya oleh backend (login.php, webauthn_login_verify.php,
     // authenticate_verify.php) sebagai single source of truth, sehingga tidak ada duplikasi baris log.
@@ -97,7 +99,7 @@ export function FailedAttemptsProvider({ children }: { children: ReactNode }) {
     setState({ identifier: '', count: 0, lastAttempt: null, lockedUntil: null });
   }, []);
 
-  const canUsePassword = useCallback((identifier: string) => {
+  const canUsePassword = useCallback((_identifier?: string) => {
     // Allow password if:
     // 1. 5+ failed attempts (lockedUntil is set)
     // 2. Or lock has expired but count >= 5
@@ -158,6 +160,33 @@ export function useSecuritySetup() {
   return { status, isLoading, error, refetch: checkSetup };
 }
 
+/** ── Global camera stream registry ─────────────────────────────────
+ * Setiap MediaStream yang dibuat didaftarkan di sini sehingga SEMUA
+ * stream bisa dipaksa mati dari mana pun (route guard, unmount, pagehide).
+ * Menutup celah kebocoran stream saat dua checkCamera berjalan tumpang
+ * tindih (StrictMode / recheck interval) — penyebab LED kamera tetap
+ * nyala setelah meninggalkan halaman masuk. */
+const activeCameraStreams = new Set<MediaStream>();
+
+/** Paksa matikan SEMUA stream kamera yang masih hidup di seluruh aplikasi. */
+export function stopAllCameraStreams(): void {
+  activeCameraStreams.forEach((s) => {
+    try {
+      s.getTracks().forEach((t) => t.stop());
+    } catch {
+      // Track mungkin sudah berhenti — abaikan.
+    }
+  });
+  activeCameraStreams.clear();
+}
+
+/** Pesan alert untuk kondisi kamera tertutup / gelap — arahkan user ke solusi. */
+const CAMERA_BLOCKED_MESSAGES: Record<'flat' | 'dark' | 'black', string> = {
+  flat: 'Kamera tertutup. Buka penutup kamera (shutter), ganti kamera, atau pastikan tidak ada yang menutupi lensa.',
+  dark: 'Cahaya terlalu gelap. Nyalakan lampu atau ubah posisi kamera agar wajah terlihat.',
+  black: 'Kamera gelap total — tidak ada gambar. Buka penutup kamera (shutter) atau ganti kamera.',
+};
+
 /** Hook to check camera availability AND verify it produces valid frames (not covered/black) */
 export function useCameraPermission() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -169,10 +198,45 @@ export function useCameraPermission() {
 
   // Interval ref for periodic camera re-check when permission is denied
   const recheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const checkCameraRef = useRef<() => Promise<void>>(async () => {});
+  const isMountedRef = useRef(true);
+  const stopCameraRef = useRef<() => void>(() => {});
+  // Nomor urut run checkCamera — untuk membatalkan run yang tumpang tindih
+  // (StrictMode / recheck interval) agar stream run basi tidak bocor.
+  const runIdRef = useRef(0);
+  // Kamera yang dipilih user (untuk fitur "Ganti Kamera" — laptop Lenovo
+  // sering punya 2 perangkat: kamera IR + kamera RGB).
+  const deviceIdRef = useRef<string | null>(null);
+  const [cameraCount, setCameraCount] = useState(0);
 
   // Ref ke stream terbaru untuk cleanup saat unmount
   const streamRef = useRef<MediaStream | null>(null);
-  streamRef.current = stream;
+  useEffect(() => {
+    streamRef.current = stream;
+  }, [stream]);
+
+  /** Hentikan semua track stream secara aman — null-check + try/catch agar
+   *  tidak crash ("Cannot read properties of null") saat ref belum tersinkron
+   *  dengan state (Race Condition pada StrictMode / async unmount). */
+  const stopStreamSafely = useCallback(() => {
+    const current = streamRef.current;
+    if (!current) return;
+    try {
+      current.getTracks().forEach((track) => track.stop());
+    } catch {
+      // Track mungkin sudah berhenti — abaikan.
+    }
+    activeCameraStreams.delete(current);
+    streamRef.current = null;
+  }, []);
+
+  // Tandai component sebagai sudah unmount — mencegah state update setelah navigasi
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   /** Clear the periodic re-check interval */
   const stopRecheck = useCallback(() => {
@@ -182,25 +246,36 @@ export function useCameraPermission() {
     }
   }, []);
 
-  /** Check if video frame has actual content (not black/covered) */
-  const checkFrameHasContent = (video: HTMLVideoElement): boolean => {
+  /** Start periodic re-check when camera is not available (e.g., shutter closed) */
+  const startRecheck = useCallback(() => {
+    stopRecheck();
+    // Re-check CEPAT (750ms) supaya saat shutter dibuka / izin diberikan,
+    // kamera pulih secepat mungkin.
+    recheckIntervalRef.current = window.setInterval(() => {
+      checkCameraRef.current();
+    }, 750);
+  }, [stopRecheck]);
+
+  /** Analisis isi frame — deteksi kamera tertutup / gelap sekali.
+   *  Shutter Lenovo yang tertutup menghasilkan frame ABU-ABU RATA (bukan hitam,
+   *  kadang dengan ikon lock) — karena itu deteksi utama berdasarkan "kerataan"
+   *  frame (flatPercent), bukan hanya kecerahan. */
+  const analyzeFrame = (video: HTMLVideoElement): { ok: boolean; reason: 'ok' | 'flat' | 'dark' | 'black'; metrics: string } => {
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-      console.log('[Camera] No canvas context');
-      return false;
+      return { ok: false, reason: 'black', metrics: 'no canvas context' };
     }
-    
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     if (!imageData) {
-      console.log('[Camera] No image data');
-      return false;
+      return { ok: false, reason: 'black', metrics: 'no image data' };
     }
     const data = imageData.data;
-    
+
     // Sample pixels to check if frame is not all black
     let nonBlackPixels = 0;
     let totalSamples = 0;
@@ -226,59 +301,118 @@ export function useCameraPermission() {
     // Variance = E[X^2] - E[X]^2
     const variance = (sumBrightnessSq / totalSamples) - (avgBrightness * avgBrightness);
     const stdDev = Math.sqrt(Math.max(0, variance));
-    
-    // Stricter checks:
-    // 1. At least 15% non-black pixels
-    // 2. Average brightness > 20 (not just sensor noise)
-    // 3. Contrast > 30 (real face has shadows/highlights)
-    // 4. StdDev > 15 (real face has variance; covered/black shutter has near-zero variance)
-    const hasEnoughPixels = nonBlackPercent >= 15;
-    const hasBrightness = avgBrightness > 20;
-    const hasContrast = contrast > 30;
-    const hasVariance = stdDev > 15;
-    const result = hasEnoughPixels && hasBrightness && hasContrast && hasVariance;
-    
-    // Log as individual lines (not collapsed object)
-    console.log('[Camera] Frame check:');
-    console.log('  nonBlackPercent:', nonBlackPercent.toFixed(2) + '% (need ≥15%) →', hasEnoughPixels ? 'PASS' : 'FAIL');
-    console.log('  avgBrightness:', avgBrightness.toFixed(1), '(need >20) →', hasBrightness ? 'PASS' : 'FAIL');
-    console.log('  contrast:', contrast.toFixed(1), '(need >30) →', hasContrast ? 'PASS' : 'FAIL');
-    console.log('  stdDev:', stdDev.toFixed(1), '(need >25) →', hasVariance ? 'PASS' : 'FAIL');
-    console.log('  RESULT:', result ? 'PASSED' : 'FAILED');
-    return result;
+
+    // "Kerataan": persentase piksel yang warnanya nyaris sama dengan rata-rata.
+    // Frame wajah/ruangan nyata tidak akan pernah ≥85% rata; frame shutter
+    // tertutup (abu-abu rata + ikon lock) hampir 100% rata.
+    let flatPixels = 0;
+    for (let i = 0; i < data.length; i += sampleStep * 4) {
+      const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      if (Math.abs(brightness - avgBrightness) < 15) flatPixels++;
+    }
+    const flatPercent = (flatPixels / totalSamples) * 100;
+
+    const metrics = `nonBlack=${nonBlackPercent.toFixed(1)}%, avgBright=${avgBrightness.toFixed(1)}, contrast=${contrast.toFixed(1)}, stdDev=${stdDev.toFixed(1)}, flat=${flatPercent.toFixed(1)}%`;
+
+    let reason: 'ok' | 'flat' | 'dark' | 'black' = 'ok';
+    if (nonBlackPercent < 5) reason = 'black';
+    else if (flatPercent >= 85) reason = 'flat';   // shutter tertutup / lensa tertutup (frame rata)
+    else if (avgBrightness < 10) reason = 'dark';  // gelap sekali
+
+    return { ok: reason === 'ok', reason, metrics };
   };
 
   const checkCamera = useCallback(async () => {
-    console.log('[Camera] Starting camera check...');
+    const runId = ++runIdRef.current;
+    logCamera('INFO', `Memulai checkCamera (run #${runId})...`, {
+      isTauri: typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window,
+      isSecureContext: typeof window !== 'undefined' ? window.isSecureContext : false,
+      protocol: typeof window !== 'undefined' ? window.location.protocol : 'unknown',
+    });
     setIsChecking(true);
     setError(null);
     let stream: MediaStream | null = null;
     let video: HTMLVideoElement | null = null;
     let cameraReady = false;
 
-    try {
-      // Force stop any existing tracks first (handles shutter open/close)
-      try {
-        const existingStreams = await navigator.mediaDevices.getUserMedia({ video: true });
-        existingStreams.getTracks().forEach(t => t.stop());
-        console.log('[Camera] Stopped existing camera tracks');
-      } catch { /* ignore */ }
-      
-      // Request camera permission with facingMode: user (front camera for face)
-      console.log('[Camera] Requesting camera access...');
-      stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
-      });
-      const tracks = stream.getTracks();
-      console.log('[Camera] Got stream:', tracks.map(t => ({ kind: t.kind, label: t.label, enabled: t.enabled, readyState: t.readyState })));
-      // Log all available video inputs for debugging
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoInputs = devices.filter(d => d.kind === 'videoinput');
-        console.log('[Camera] Available video inputs:', videoInputs.map(d => ({ label: d.label, deviceId: d.deviceId })));
-      } catch (e) {
-        console.log('[Camera] Could not enumerate devices:', e);
+    // Cek ketersediaan mediaDevices
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const msg = 'navigator.mediaDevices.getUserMedia tidak tersedia di environment ini';
+      logCamera('ERROR', msg);
+      if (runId === runIdRef.current && isMountedRef.current) {
+        setError('Kamera tidak didukung pada perangkat ini.');
+        setHasPermission(false);
+        setIsChecking(false);
       }
+      return;
+    }
+
+    try {
+      // Matikan SEMUA stream lama (termasuk milik run lain yang tumpang tindih)
+      // sebelum meminta akses baru — mencegah stream bocor yang menyalakan LED.
+      stopAllCameraStreams();
+      stopStreamSafely();
+      logCamera('INFO', 'Stream lama dihentikan, meminta akses getUserMedia baru');
+
+      logCamera('INFO', 'Meminta akses getUserMedia (facingMode: user / deviceId terpilih)...');
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(
+          deviceIdRef.current
+            ? { video: { deviceId: { exact: deviceIdRef.current }, width: { ideal: 640 }, height: { ideal: 480 } } }
+            : { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } }
+        );
+      } catch (err: any) {
+        logCamera('WARN', `Constraint utama gagal (${err?.name}: ${err?.message}), mencoba basic constraints { video: true }...`);
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true 
+        });
+      }
+
+      // Dapatkan track video dari stream
+      if (!stream) {
+        throw new Error('Stream kamera tidak tersedia setelah inisialisasi');
+      }
+      const tracks = stream.getVideoTracks();
+
+      logCamera('INFO', `Berhasil mendapatkan stream kamera (${tracks.length} track)`, tracks.map(t => ({
+        id: t.id,
+        label: t.label,
+        enabled: t.enabled,
+        readyState: t.readyState,
+        muted: t.muted,
+      })));
+
+      // Daftarkan ke registry global SEBELUM guard — jika run ini ternyata
+      // basi (ada run lebih baru / halaman sudah unmount), stream langsung
+      // dihentikan sehingga tidak pernah bocor (LED kamera ikut mati).
+      activeCameraStreams.add(stream);
+      if (runId !== runIdRef.current || !isMountedRef.current) {
+        logCamera('WARN', `checkCamera run #${runId} basi (digantikan run lebih baru / halaman unmount) — stream baru langsung dihentikan`);
+        stream.getTracks().forEach((t) => t.stop());
+        activeCameraStreams.delete(stream);
+        return;
+      }
+
+      // Simpan stream ke ref segera (tidak hanya via state effect) agar
+      // cleanup saat unmount tetap bisa menghentikan track meski React belum
+      // merender ulang / men-sync state ke ref.
+      streamRef.current = stream;
+
+      // Catat perangkat kamera yang dipakai + jumlah kamera tersedia
+      // (untuk fitur "Ganti Kamera" — mis. Lenovo dengan kamera IR + RGB).
+      const deviceSettings = stream.getVideoTracks()[0]?.getSettings?.();
+      if (deviceSettings?.deviceId) deviceIdRef.current = deviceSettings.deviceId;
+      navigator.mediaDevices.enumerateDevices().then((devices) => {
+        const count = devices.filter((d) => d.kind === 'videoinput' && d.deviceId).length;
+        if (runId === runIdRef.current && isMountedRef.current) setCameraCount(count);
+      }).catch(() => { /* enumerateDevices tidak kritis */ });
+
+      // Daftarkan listener event track kamera
+      tracks.forEach(track => {
+        track.onended = () => logCamera('WARN', `[Track Event] onended dipicu untuk '${track.label}'`);
+        track.onmute = () => logCamera('WARN', `[Track Event] onmute dipicu untuk '${track.label}'`);
+        track.onunmute = () => logCamera('INFO', `[Track Event] onunmute dipicu untuk '${track.label}'`);
+      });
       
       // Create video element to capture frames
       video = document.createElement('video');
@@ -288,101 +422,162 @@ export function useCameraPermission() {
       
       await new Promise<void>((resolve, reject) => {
         if (!video) return reject(new Error('Video element not created'));
-        video.onloadedmetadata = () => {
-          console.log('[Camera] Video metadata loaded:', { width: video!.videoWidth, height: video!.videoHeight });
-          video!.play().then(resolve).catch(reject);
+        let resolved = false;
+        const onReady = () => {
+          if (!resolved) {
+            resolved = true;
+            logCamera('INFO', `Video metadata loaded: ${video!.videoWidth}x${video!.videoHeight}`);
+            video!.play().catch(() => {});
+            resolve();
+          }
         };
+
+        if (video.readyState >= 1) {
+          onReady();
+          return;
+        }
+
+        video.onloadedmetadata = onReady;
+        video.oncanplay = onReady;
         video.onerror = (e) => {
-          console.error('[Camera] Video error:', e);
-          reject(new Error('Video load error'));
+          if (!resolved) {
+            resolved = true;
+            logCamera('ERROR', 'Video element error event', e);
+            reject(new Error('Video load error'));
+          }
         };
-        // Timeout after 5 seconds
-        setTimeout(() => reject(new Error('Camera init timeout')), 5000);
+        // Timeout 3.5 detik (jika track sudah live, lanjutkan tanpa reject)
+        setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            if (stream && stream.getVideoTracks().some(t => t.readyState === 'live')) {
+              logCamera('WARN', 'Metadata wait timeout tetapi track video live, melanjutkan');
+              resolve();
+            } else {
+              logCamera('ERROR', 'Camera init timeout: metadata tidak terload dan track tidak live');
+              reject(new Error('Camera init timeout'));
+            }
+          }
+        }, 3500);
       });
       
-      console.log('[Camera] Video playing, waiting for auto-exposure...');
-      // Give camera a moment to auto-expose/adjust (longer for low light)
-      await new Promise(r => setTimeout(r, 1500));
-      
-      if (video) {
-        console.log('[Camera] Video ready state:', video.readyState, 'dimensions:', video.videoWidth, 'x', video.videoHeight);
-      }
-      
-      // Check multiple frames to ensure consistent content
+      // Warmup singkat — auto-exposure kamera masih menyesuaikan (±0.25 dtk).
+      await new Promise(r => setTimeout(r, 250));
+
+      // Cek frame SECEPAT MUNGKIN: 2 percobaan, lolos pada percobaan pertama
+      // langsung berhenti (total ±0.25 dtk). Kalau tertutup/gelap: stream TETAP
+      // dipertahankan agar monitor bisa mendeteksi pembukaan shutter secara
+      // live — recovery instan tanpa buka ulang kamera.
       let validFrames = 0;
-      const frameChecks = 5; // more checks for reliability
-      for (let i = 0; i < frameChecks; i++) {
-        if (video && checkFrameHasContent(video)) {
-          validFrames++;
-          console.log('[Camera] Frame', i + 1, '/', frameChecks, 'PASSED');
-        } else {
-          console.log('[Camera] Frame', i + 1, '/', frameChecks, 'FAILED');
+      let lastReason: 'flat' | 'dark' | 'black' = 'flat';
+      for (let i = 0; i < 2; i++) {
+        if (video) {
+          const verdict = analyzeFrame(video);
+          logCamera('INFO', `Frame check ${i + 1}/2: ${verdict.metrics} -> ${verdict.ok ? 'PASS' : `FAIL (${verdict.reason})`}`);
+          if (verdict.ok) {
+            validFrames++;
+            break;
+          }
+          lastReason = verdict.reason;
         }
-        await new Promise(r => setTimeout(r, 150));
+        if (i === 0) await new Promise(r => setTimeout(r, 150));
       }
-      
-      console.log('[Camera] Final result:', { validFrames, frameChecks, needed: 2, passed: validFrames >= 2 });
-      
-      if (validFrames < 2) { // need at least 2 valid frames out of 5
-        throw new Error('Kamera terdeteksi tertutup/gelap. Buka penutup fisik kamera (shutter) untuk Windows Hello.');
+
+      logCamera('INFO', `Hasil validasi frame: ${validFrames}/2 valid`);
+
+      // Guard terakhir: run bisa digantikan selama menunggu exposure/frame check.
+      if (runId !== runIdRef.current || !isMountedRef.current) {
+        logCamera('WARN', `checkCamera run #${runId} basi setelah validasi frame — stream dihentikan`);
+        stream.getTracks().forEach((t) => t.stop());
+        activeCameraStreams.delete(stream);
+        return;
       }
-      
-      console.log('[Camera] SUCCESS - Camera ready');
+
+      if (validFrames < 1) {
+        // Kamera tertutup / gelap: pertahankan stream + tampilkan alert.
+        // Monitor (polling 500ms) akan langsung flip ke "siap" saat shutter dibuka.
+        logCamera('WARN', `Kamera tertutup/gelap (${lastReason}) — stream dipertahankan, menunggu pembukaan shutter`);
+        setHasPermission(false);
+        setError(CAMERA_BLOCKED_MESSAGES[lastReason]);
+        stopRecheck();
+        cameraReady = true;
+        setStream(stream);
+        setVideoEl(video);
+        return;
+      }
+
+      logCamera('INFO', 'Kamera BERHASIL diinisialisasi dan siap (hasPermission=true)');
       setHasPermission(true);
       stopRecheck(); // Camera is available, stop periodic re-check
       cameraReady = true;
+      setStream(stream);
+      setVideoEl(video);
     } catch (err) {
       const error = err as Error;
-      console.error('[Camera] ERROR:', error.message);
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        setError('Izin kamera ditolak. Harap izinkan akses kamera untuk menggunakan Windows Hello.');
-      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-        setError('Kamera tidak ditemukan. Windows Hello memerlukan kamera untuk verifikasi wajah.');
-      } else if (error.message.includes('tertutup') || error.message.includes('gelap')) {
-        setError(error.message);
-      } else if (error.message.includes('timeout')) {
-        setError('Kamera tidak merespons. Pastikan kamera tidak digunakan aplikasi lain dan shutter terbuka.');
-      } else {
-        setError('Tidak dapat mengakses kamera. Periksa pengaturan privasi browser dan buka shutter kamera.');
+      logCamera('ERROR', `Gagal inisialisasi kamera: [${error.name}] ${error.message}`);
+      // Run basi (sudah digantikan run lebih baru) — jangan ubah state / recheck.
+      if (runId === runIdRef.current && isMountedRef.current) {
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          setError('Izin kamera ditolak. Harap izinkan akses kamera untuk menggunakan Windows Hello.');
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          setError('Kamera tidak ditemukan. Windows Hello memerlukan kamera untuk verifikasi wajah.');
+        } else if (error.message.includes('tertutup') || error.message.includes('gelap')) {
+          setError(error.message);
+        } else if (error.message.includes('timeout')) {
+          setError('Kamera tidak merespons. Pastikan kamera tidak digunakan aplikasi lain dan shutter terbuka.');
+        } else {
+          setError('Tidak dapat mengakses kamera. Periksa pengaturan privasi perangkat dan buka shutter kamera.');
+        }
+        setHasPermission(false);
+        startRecheck(); // Camera unavailable — start periodic re-check so it auto-recovers when shutter opens
       }
-      setHasPermission(false);
-      startRecheck(); // Camera unavailable — start periodic re-check so it auto-recovers when shutter opens
     } finally {
       // Only cleanup on error - keep stream alive on success for preview
       if (!cameraReady) {
-        if (stream) stream.getTracks().forEach(track => track.stop());
+        logCamera('WARN', 'Membersihkan stream karena kameraReady=false');
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          activeCameraStreams.delete(stream);
+        }
         if (video) {
           video.srcObject = null;
           video.remove();
         }
-      } else {
-        // Success - keep stream and video for preview
-        setStream(stream);
-        setVideoEl(video);
       }
-      console.log('[Camera] Check complete, isChecking=false');
-      setIsChecking(false);
+      // Hanya run terbaru yang boleh menutup status isChecking —
+      // run basi tidak boleh mengganggu state run yang sedang berjalan.
+      if (runId === runIdRef.current && isMountedRef.current) {
+        logCamera('INFO', 'checkCamera selesai, isChecking=false');
+        setIsChecking(false);
+      }
     }
-  }, []);
-
-  /** Start periodic re-check when camera is not available (e.g., shutter closed) */
-  const startRecheck = useCallback(() => {
-    stopRecheck();
-    // Re-check every 3 seconds so that when user opens shutter / grants permission,
-    // the camera becomes available automatically without manual retry.
-    recheckIntervalRef.current = window.setInterval(() => {
-      if (!isChecking) {
-        checkCamera();
-      }
-    }, 3000);
-  }, [stopRecheck, checkCamera, isChecking]);
+  }, [stopRecheck, startRecheck, stopStreamSafely]);
 
   useEffect(() => {
+    checkCameraRef.current = checkCamera;
+  }, [checkCamera]);
+
+  // NOTE: Camera is NOT auto-started on mount.
+  // Consumer (LoginPage) must call startCamera() explicitly.
+  // This ensures camera only activates on login page, not on SecuritySetupPage etc.
+  const startCamera = useCallback(() => {
     checkCamera();
+  }, [checkCamera]);
+
+  // Stop camera saat navigasi back/forward ATAU halaman dibuang penuh (pagehide).
+  // Stream cleanup penuh ada di effect unmount terpisah + route guard global.
+  useEffect(() => {
+    const handleLeave = () => {
+      stopCameraRef.current();
+    };
+    window.addEventListener('popstate', handleLeave);
+    window.addEventListener('pagehide', handleLeave);
     return () => {
+      window.removeEventListener('popstate', handleLeave);
+      window.removeEventListener('pagehide', handleLeave);
       stopRecheck();
     };
-  }, [checkCamera, stopRecheck]);
+  }, [stopRecheck]);
 
   /** Verify camera is still active and producing valid frames (quick check before auth) */
   const verifyCameraActive = useCallback(async (videoElement?: HTMLVideoElement | null): Promise<boolean> => {
@@ -421,53 +616,15 @@ export function useCameraPermission() {
     }
 
     try {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return false;
-
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
-
-      let nonBlackPixels = 0;
-      let totalSamples = 0;
-      let sumBrightness = 0;
-      let sumBrightnessSq = 0;
-      let minBrightness = 255;
-      let maxBrightness = 0;
-      const sampleStep = Math.max(1, Math.floor(data.length / 2000)); // sample ~500 pixels for speed
-      for (let i = 0; i < data.length; i += sampleStep * 4) {
-        totalSamples++;
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        const brightness = (r + g + b) / 3;
-        sumBrightness += brightness;
-        sumBrightnessSq += brightness * brightness;
-        minBrightness = Math.min(minBrightness, brightness);
-        maxBrightness = Math.max(maxBrightness, brightness);
-        if (r > 5 || g > 5 || b > 5) nonBlackPixels++;
-      }
-      const nonBlackPercent = (nonBlackPixels / totalSamples) * 100;
-      const avgBrightness = sumBrightness / totalSamples;
-      const contrast = maxBrightness - minBrightness;
-      const variance = (sumBrightnessSq / totalSamples) - (avgBrightness * avgBrightness);
-      const stdDev = Math.sqrt(Math.max(0, variance));
-
-      const hasEnoughPixels = nonBlackPercent >= 15;
-      const hasBrightness = avgBrightness > 20;
-      const hasContrast = contrast > 30;
-      const hasVariance = stdDev > 15;
-      const result = hasEnoughPixels && hasBrightness && hasContrast && hasVariance;
-
+      // Pakai analyzer yang sama dengan checkCamera — deteksi frame rata
+      // (shutter tertutup), gelap sekali, atau hitam total.
+      const verdict = analyzeFrame(video);
       console.log('[Camera] Verification:', {
-        nonBlackPercent: nonBlackPercent.toFixed(2) + '%',
-        avgBrightness: avgBrightness.toFixed(1),
-        contrast: contrast.toFixed(1),
-        stdDev: stdDev.toFixed(1),
-        active: result
+        metrics: verdict.metrics,
+        reason: verdict.reason,
+        active: verdict.ok
       });
-      return result;
+      return verdict.ok;
     } catch (err) {
       console.error('[Camera] Verification failed:', err);
       return false;
@@ -475,28 +632,56 @@ export function useCameraPermission() {
   }, [videoEl]);
 
   /**
-   * Continuous monitoring while camera is active.
-   * Detects shutter closed mid-session: samples frames every 2 seconds;
-   * if frames go dark, flips status to inactive and starts periodic re-check.
+   * Continuous monitoring — aktif selama ada stream (termasuk saat kamera
+   * "tertutup", karena stream dipertahankan khusus untuk auto-recovery).
+   * - Polling 500ms: deteksi shutter tertutup/gelap dalam ±1 detik.
+   * - Saat frame valid lagi → otomatis flip kembali ke "siap" secepat mungkin
+   *   (tanpa buka ulang kamera — stream tetap hidup).
    */
   useEffect(() => {
-    if (hasPermission !== true) return;
+    if (!stream) return;
     let cancelled = false;
     let inFlight = false;
+    let failCount = 0;
+    let intervalId = null;
 
     const poll = async () => {
-      if (cancelled || inFlight || isChecking) return;
+      if (cancelled || inFlight) return;
       inFlight = true;
       try {
+        const isLive = stream.getVideoTracks().some(t => t.readyState === 'live');
+        if (!isLive) {
+          logCamera('WARN', 'Continuous monitoring: stream tidak live!', {
+            tracks: stream.getVideoTracks().map(t => ({ id: t.id, readyState: t.readyState, enabled: t.enabled }))
+          });
+          if (!cancelled) {
+            setHasPermission(false);
+            setError('Kamera terputus. Pastikan kamera terhubung.');
+            stopCameraRef.current();
+          }
+          return;
+        }
+
         const active = await verifyCameraActive();
         if (cancelled) return;
         if (!active) {
-          console.warn('[Camera] Camera became inactive during monitoring (shutter closed?)');
-          setHasPermission(false);
-          setError('Kamera terdeteksi tertutup/gelap. Buka penutup fisik kamera (shutter).');
-          // Stop stream so preview freezes, then start periodic re-check
-          if (stream) stream.getTracks().forEach(t => t.stop());
-          startRecheck();
+          failCount++;
+          logCamera('WARN', `Continuous monitoring: frame tidak aktif (${failCount}/2)`);
+          if (failCount >= 2) {
+            logCamera('ERROR', 'Continuous monitoring: kamera tertutup/gelap — alert ditampilkan (stream dipertahankan)');
+            setHasPermission(false);
+            setError('Kamera tertutup atau terlalu gelap. Buka penutup kamera (shutter), nyalakan lampu, ubah posisi, atau ganti kamera.');
+            // Stream TETAP dipertahankan: pembukaan shutter terdeteksi di poll
+            // berikutnya (±500ms) tanpa buka ulang kamera.
+          }
+        } else {
+          // Recovery: kamera valid lagi → kembali "siap" secepat mungkin
+          if (hasPermission !== true || failCount >= 2) {
+            logCamera('INFO', 'Continuous monitoring: kamera PULIH — kembali aktif');
+            setHasPermission(true);
+            setError(null);
+          }
+          failCount = 0;
         }
       } catch {
         // Ignore transient poll errors
@@ -505,46 +690,46 @@ export function useCameraPermission() {
       }
     };
 
-    const intervalId = window.setInterval(poll, 2000);
+    intervalId = window.setInterval(poll, 500);
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      if (intervalId) window.clearInterval(intervalId);
     };
-  }, [hasPermission, isChecking, stream, verifyCameraActive, startRecheck]);
+  }, [stream, verifyCameraActive, hasPermission, stopCameraRef]);
 
   /**
    * Matikan kamera saat halaman (mis. LoginPage) di-unmount —
    * misalnya setelah login berhasil dan navigasi ke dashboard.
+   * stopAllCameraStreams() memastikan stream bocor dari run tumpang tindih
+   * ikut mati, bukan hanya stream yang terakhir tercatat di ref.
    */
   useEffect(() => {
     return () => {
       stopRecheck();
-      const current = streamRef.current;
-      if (current) {
-        current.getTracks().forEach(t => t.stop());
-        streamRef.current = null;
-      }
+      stopStreamSafely();
+      stopAllCameraStreams();
     };
-  }, [stopRecheck]);
+  }, [stopRecheck, stopStreamSafely]);
 
   /** Capture a photo from the video stream */
-  const capturePhoto = useCallback(async (): Promise<string | null> => {
-    if (!videoEl || videoEl.readyState < 2) {
+  const capturePhoto = useCallback(async (activeVideoEl?: HTMLVideoElement | null): Promise<string | null> => {
+    const el = activeVideoEl || videoEl;
+    if (!el || el.readyState < 2) {
       console.warn('[Camera] Video not ready for capture');
       return null;
     }
 
     try {
       const canvas = document.createElement('canvas');
-      canvas.width = videoEl.videoWidth;
-      canvas.height = videoEl.videoHeight;
+      canvas.width = el.videoWidth;
+      canvas.height = el.videoHeight;
       const ctx = canvas.getContext('2d');
       if (!ctx) return null;
 
       // Draw current frame (mirror for selfie view)
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
-      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
 
       // Convert to base64 JPEG (quality 0.8)
       const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
@@ -556,21 +741,57 @@ export function useCameraPermission() {
     }
   }, [videoEl]);
 
-  return { hasPermission, isChecking, error, requestPermission: checkCamera, stream, videoEl, capturePhoto, verifyCameraActive };
+  /** Paksa matikan kamera (track + interval) — dipanggil sebelum navigate keluar halaman login */
+  const stopCamera = useCallback(() => {
+    stopRecheck();
+    stopStreamSafely();
+    stopAllCameraStreams();
+    setStream(null);
+    setVideoEl(null);
+    setHasPermission(false);
+    setIsChecking(false);
+  }, [stopRecheck, stopStreamSafely]);
+
+  // Ref selalu menunjuk ke versi terbaru dan terisi sejak mount pertama,
+  // sehingga handler popstate/pagehide tidak pernah memanggil fungsi kosong (noop).
+  useEffect(() => {
+    stopCameraRef.current = () => stopCamera();
+  });
+
+  /** Ganti kamera aktif (mis. kamera IR → RGB di laptop Lenovo yang punya 2 kamera).
+   *  Dipakai tombol "Ganti Kamera" saat kamera tertutup / gelap. */
+  const switchCamera = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) {
+      setError('Tidak bisa mengganti kamera di perangkat ini.');
+      return;
+    }
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter((d) => d.kind === 'videoinput' && d.deviceId);
+      if (cams.length < 2) {
+        setError('Hanya ada satu kamera di perangkat ini. Buka penutup kamera (shutter) atau ubah posisi pencahayaan.');
+        return;
+      }
+      const idx = cams.findIndex((c) => c.deviceId === deviceIdRef.current);
+      const next = cams[(idx + 1) % cams.length];
+      logCamera('INFO', `Ganti kamera → perangkat #${((idx + 1) % cams.length) + 1}: ${next.label || next.deviceId}`);
+      deviceIdRef.current = next.deviceId;
+      await checkCamera();
+    } catch (err) {
+      logCamera('ERROR', `Gagal mengganti kamera: ${err instanceof Error ? err.message : String(err)}`);
+      setError('Gagal mengganti kamera. Coba lagi.');
+    }
+  }, [checkCamera]);
+
+  return { hasPermission, isChecking, error, requestPermission: checkCamera, stream, videoEl, capturePhoto, verifyCameraActive, stopCamera, startCamera, switchCamera, cameraCount };
 }
 
 /** Auth guard hook - checks if user can access protected routes */
 export function useAuthGuard() {
   const { status, isLoading, refetch } = useSecuritySetup();
-  const [canAccess, setCanAccess] = useState(false);
-
-  useEffect(() => {
-    if (!isLoading && status) {
-      // Allow access if user has at least one security method configured
-      // OR if they're on the setup page itself
-      setCanAccess(status.hasWebAuthn || status.hasDongle || !status.requiresSetup);
-    }
-  }, [isLoading, status]);
+  const canAccess = Boolean(
+    !isLoading && status && (status.hasWebAuthn || status.hasDongle || !status.requiresSetup)
+  );
 
   return { canAccess, isLoading, status, refetch };
 }

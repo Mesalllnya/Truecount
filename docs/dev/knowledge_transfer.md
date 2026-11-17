@@ -883,7 +883,7 @@ Kriptografi: PBKDF2-HMAC-SHA256 (100k iterasi, PIN → key) → AES-256-GCM (pri
 | Fitur | Deskripsi |
 |-------|-----------|
 | **Mandatory Security Setup** | User WAJIB setup Windows Hello atau Dongle di `/atur-keamanan` sebelum akses dashboard |
-| **Camera Enforcement** | Windows Hello butuh kamera aktif & frame valid (bukan gelap/shutter tertutup) — verifikasi real-time via canvas sampling |
+| **Camera Enforcement** | **SEMUA metode masuk** (Windows Hello, Dongle, Kata Sandi) butuh kamera aktif — frame wajib valid (bukan gelap/shutter tertutup); login diblokir + tercatat sebagai percobaan gagal bila kamera offline. Verifikasi real-time via canvas sampling |
 | **Password Fallback Controlled** | Kata Sandi hanya muncul setelah: 5+ percobaan gagal (lock 15 menit) ATAU user belum setup keamanan (onboarding) |
 | **Failed Attempts Tracking** | Semua attempt (success/gagal) di-log ke DB oleh backend secara internal; frontend hanya menyimpan counter lokal untuk UI lockout & password fallback, mencegah duplikasi baris log |
 | **Auto Session Management** | Cek JWT expiry tiap 30 detik → auto-logout; intercept fetch 401 → auto-logout + redirect |
@@ -970,13 +970,21 @@ Protected Routes (/dasbor, /pilih, /pengaturan, dll):
 ### Camera Verification Logic
 
 ```typescript
-// Frame sampling via canvas (checkFrameHasContent)
+// Frame sampling via canvas (analyzeFrame di useAuthSecurity.tsx)
 - Sample ~1000 pixels per frame
-- Check: nonBlackPercent ≥ 15%, avgBrightness > 20, contrast > 30, stdDev > 25
-- Need ≥ 2 valid frames out of 5 checks
-- Periodic re-check every 3s when shutter closed (auto-recover)
-- Continuous monitoring every 2s during active session (detect shutter close mid-session)
-- Lenovo gray shutter detection: low variance (stdDev ≤ 25) = FAIL
+- Deteksi UTAMA berdasarkan kerataan frame (flatPercent):
+  flatPercent ≥ 85% (piksel nyaris seragam) = FAIL "flat"  → shutter Lenovo tertutup
+    (shutter Lenovo menghasilkan frame abu-abu RATA + ikon lock, BUKAN hitam)
+  nonBlackPercent < 5%   = FAIL "black" → tidak ada gambar
+  avgBrightness < 10     = FAIL "dark"  → gelap sekali
+- Need ≥ 1 valid frame out of 2 quick checks (warmup 250ms, lolos pertama langsung berhenti — deteksi awal ±0.25 dtk)
+- Jika frame tertutup/gelap: stream TETAP dipertahankan → "watch mode" polling 500ms:
+  alert tertutup/gelap dalam ±1 detik, dan saat shutter dibuka kembali PULIH instan
+  (tanpa buka ulang kamera / tanpa nunggu interval)
+- Re-check level perangkat (getUserMedia gagal): interval cepat 750ms
+- Alert ke user spesifik per penyebab (buka shutter / nyalakan lampu / ubah posisi / ganti kamera)
+- Tombol "Ganti Kamera" (switchCamera) untuk berpindah antar perangkat video input
+  (laptop Lenovo sering punya 2 kamera: IR + RGB) — deviceId dilacak di deviceIdRef
 ```
 
 ### Password Fallback Rules
@@ -1064,3 +1072,10 @@ Saat menambahkan endpoint baru, selalu update:
 14. **Verifikasi Gambar/Foto** - LoginPage menampilkan pratinjau foto yang ditangkap (`photo-preview` dengan `photo-thumbnail`) sebelum auth dikirimkan, sehingga user dapat memastikan gambar benar-benar tertangkap. Ada tombol "Ulangi" untuk menangkap foto ulang.
 15. **Fix: Waktu Log Keamanan (WIB)** - Kolom `auth_attempts.created_at` bertipe `TIMESTAMP` dibaca MySQL dalam zona waktu server (UTC+7), lalu diformat backend sebagai UTC → waktu tampil maju 7 jam di browser. Perbaikan di `backend/api/auth/attempts_list.php`: baca sebagai Unix timestamp (UTC) lalu format `gmdate(DATE_ATOM)`.
 16. **Fix: Duplikasi Baris Log Login** - Sebelumnya setiap login membuat 2 baris di `auth_attempts` (frontend POST `/auth/attempts/log` + backend `logAuthAttempt()` internal). Perbaikan di `frontend/src/hooks/useAuthSecurity.tsx`: frontend `increment()` hanya simpan counter lokal (UI lockout/password fallback), DB logging sepenuhnya tanggung backend sebagai single source of truth.
+
+17. **Kamera hanya hidup di halaman Masuk (fix kebocoran stream)** - Aturan: **getUserMedia hanya boleh dipanggil dari `LoginPage` (`/masuk`)**. Dulu LED kamera bisa tetap nyala setelah pindah halaman karena race condition: dua `checkCamera` yang tumpang tindih (StrictMode dev, atau interval recheck 3 detik vs durasi check >3 detik) meninggalkan stream orphan yang tidak pernah di-stop. Perbaikan di `frontend/src/hooks/useAuthSecurity.tsx` + `App.jsx`:
+    - Registry global `activeCameraStreams` + `stopAllCameraStreams()` — setiap stream yang dibuat didaftarkan dan bisa dipaksa mati dari mana pun.
+    - `checkCamera` concurrency-safe: guard `runId` — stream milik run yang sudah basi langsung dihentikan saat `getUserMedia` resolve (tidak pernah bocor).
+    - `CameraRouteGuard` di `App.jsx` — setiap route ≠ `/masuk` memanggil `stopAllCameraStreams()` (jaminan mutlak: landing page & halaman setelah login selalu kamera-off).
+    - Cleanup unmount + event `pagehide` juga memanggil `stopAllCameraStreams()`.
+    - `SecuritySetupPage` tidak membuka kamera sama sekali (registrasi Windows Hello tidak butuh `getUserMedia` — biometrik ditangani Windows Hello/WebAuthn).

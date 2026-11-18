@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, RefreshCw, Home } from 'lucide-react'
+import { apiUrl } from '../lib/appConfig'
 
-const HEALTH_URL = 'http://localhost:8000/health'
 const POLL_INTERVAL = 3000 // 3 detik
 
 export default function ServerErrorPage() {
@@ -29,7 +29,7 @@ export default function ServerErrorPage() {
     const pollHealth = async () => {
       setChecking(true)
       try {
-        const res = await fetch(HEALTH_URL, { method: 'GET' })
+        const res = await fetch(apiUrl('/health'), { method: 'GET' })
         if (res.ok) {
           const data = await res.json()
           if (!cancelled) {

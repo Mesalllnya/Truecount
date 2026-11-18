@@ -14,10 +14,17 @@ date_default_timezone_set('Asia/Jakarta');
 
 // Access log - SEMUA request tercatat, termasuk preflight OPTIONS
 // (harus sebelum response.php yang meng-exit OPTIONS lebih awal)
+// Query sensitif (token undangan, kunci setup) disamarkan agar tidak masuk log.
+$logUri = preg_replace_callback(
+    '/([?&](?:token|k|key|setup_token|invite_token)=)[^&\s]+/i',
+    static fn(array $m): string => $m[1] . '***',
+    $_SERVER['REQUEST_URI'] ?? '-'
+);
+
 tc_log_info(sprintf(
     '%s %s | origin=%s | ip=%s',
     $_SERVER['REQUEST_METHOD'] ?? '-',
-    $_SERVER['REQUEST_URI'] ?? '-',
+    $logUri,
     $_SERVER['HTTP_ORIGIN'] ?? '-',
     $_SERVER['REMOTE_ADDR'] ?? '-'
 ));
@@ -93,6 +100,9 @@ match (true) {
             'status'   => $dbOk ? 'ok' : 'degraded',
             'app'      => 'TrueCount',
             'database' => $dbOk ? 'connected' : 'disconnected',
+            'server_id'    => SERVER_ID,
+            'server_label' => SERVER_LABEL,
+            'time'     => date('c'),
             'ip'       => $_SERVER['REMOTE_ADDR'] ?? '-',
         ]);
     })(),

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { apiUrl } from '../lib/appConfig'
 
 /**
  * IsometricFlow.jsx
@@ -7,8 +8,6 @@ import { useState, useEffect } from 'react'
  *
  * Data diambil dari GET /dev/flow (Admin + Dev only).
  */
-
-const API_BASE = 'http://localhost:8000'
 
 const ROLE_COLOR = {
   sistem: '#2e7d32',      // hijau
@@ -38,7 +37,7 @@ export default function IsometricFlow() {
     async function load() {
       setLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/dev/flow`, {
+        const res = await fetch(apiUrl('/dev/flow'), {
           headers: { Authorization: `Bearer ${getToken()}` },
         })
         if (!res.ok) throw new Error('Gagal memuat data flow.')

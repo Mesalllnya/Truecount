@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useRef, createContext, useContext, Re
 import { logCamera } from '../utils/cameraLogger';
 
 /** API base URL */
-const API_BASE = 'http://localhost:8000';
+import { apiUrl } from '../lib/appConfig';
 
 /** Auth attempt record */
 export interface AuthAttempt {
@@ -87,7 +87,7 @@ export function FailedAttemptsProvider({ children }: { children: ReactNode }) {
   const reset = useCallback(async (identifier: string, syncServer = true) => {
     if (syncServer) {
       try {
-        await fetch(`${API_BASE}/auth/attempts/reset`, {
+        await fetch(apiUrl('/auth/attempts/reset'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier }),
@@ -138,7 +138,7 @@ export function useSecuritySetup() {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/auth/security-setup`, {
+      const res = await fetch(apiUrl('/auth/security-setup'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

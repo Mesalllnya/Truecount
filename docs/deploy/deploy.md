@@ -358,6 +358,29 @@ Script ini hanya untuk Windows (PowerShell 5.1+) dan memakai `php -S`, bukan Ngi
 
 `SETUP_TOKEN` **tidak** dicetak; ambil dari `.env`.
 
+#### Mengarahkan client desktop (Tauri)
+
+Build client sekali dengan alamat default laptop server:
+
+```env
+# frontend/.env
+VITE_DEFAULT_SERVER_URL=http://<ip-laptop>:8000
+```
+
+```powershell
+cd frontend
+npm run desktop:build
+```
+
+Di tiap PC peserta, alamat masih bisa diubah tanpa rebuild:
+
+- Tekan **Ctrl + Shift + Alt + S**, atau jalankan `__tcServerConfig()` di DevTools console.
+- Mode **Client** = tanpa PHP lokal; mode **Server** = PHP laptop listen `0.0.0.0:8000`; mode **Standalone** = `127.0.0.1:8000`.
+- Tekan **Tes koneksi** untuk memastikan `/health` menjawab dan database `connected`.
+- **Simpan & muat ulang** menulis `app_config.json` di folder config aplikasi.
+
+Server `/health` mengembalikan `server_id`, `server_label`, dan `time`, sehingga client bisa memastikan terhubung ke laptop yang benar. Query log seperti `?token=` disamarkan menjadi `***`.
+
 #### Keamanan
 
 - Script tidak pernah membuka port 3306 dan tidak membuat rule firewall untuk profil Public.

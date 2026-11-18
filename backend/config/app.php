@@ -15,6 +15,11 @@ define('FRONTEND_ORIGIN', $_ENV['FRONTEND_ORIGIN'] ?? 'http://localhost:5173');
 define('JWT_SECRET',  $_ENV['JWT_SECRET']  ?? 'change-this-to-a-strong-random-secret');
 define('JWT_EXPIRE',  (int)($_ENV['JWT_EXPIRE']  ?? 3600));   // seconds
 
+// Identitas server (dibuat scripts/deploy-server.ps1).
+// Client memakai SERVER_ID untuk memastikan terhubung ke server yang benar.
+define('SERVER_ID',    $_ENV['SERVER_ID']    ?? '');
+define('SERVER_LABEL', $_ENV['SERVER_LABEL'] ?? 'Laptop Demo');
+
 // Undangan pendaftaran (invite) - berapa hari sebelum kedaluwarsa
 define('INVITE_EXPIRE_DAYS', (int)($_ENV['INVITE_EXPIRE_DAYS'] ?? 7));
 

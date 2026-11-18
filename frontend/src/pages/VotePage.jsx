@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { CandidatePhoto } from '../components/ElectionModals'
+import { apiUrl } from '../lib/appConfig'
 import './VotePage.css'
-
-const API_BASE = 'http://localhost:8000'
 
 // Palet warna fallback untuk kandidat (berputar berdasarkan urutan)
 const CANDIDATE_COLORS = ['#3468b0', '#F13C35', '#2a7a3b', '#b45309', '#7c3aed', '#0891b2']
@@ -77,7 +76,7 @@ export default function VotePage() {
     setLoadingElections(true)
     setError(null)
     try {
-      const res  = await fetch(`${API_BASE}/elections?status=active`, {
+      const res  = await fetch(apiUrl('/elections?status=active'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
@@ -99,7 +98,7 @@ export default function VotePage() {
     setLoadingCandidates(true)
     setError(null)
     try {
-      const res  = await fetch(`${API_BASE}/elections/${electionObj.id}/candidates`, {
+      const res  = await fetch(apiUrl(`/elections/${electionObj.id}/candidates`), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
@@ -140,7 +139,7 @@ export default function VotePage() {
     setSubmitting(true)
     setError(null)
     try {
-      const res  = await fetch(`${API_BASE}/elections/${election.id}/vote`, {
+      const res  = await fetch(apiUrl(`/elections/${election.id}/vote`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

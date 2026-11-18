@@ -203,7 +203,30 @@ Script juga memperingatkan kalau MySQL listen di `0.0.0.0:3306` (seharusnya `127
 
 Panduan lengkap + keamanan: [`docs/deploy/deploy.md`](docs/deploy/deploy.md#211-script-deploy-server-lokal-windows) · rencana topologi: [`docs/deploy/demo-server-config-plan.md`](docs/deploy/demo-server-config-plan.md).
 
-> **Catatan:** build client saat ini masih hardcode `http://localhost:8000`. Agar PC peserta benar-benar menulis ke laptop server, app perlu build baru dengan alamat server yang bisa diatur — lihat rencana di `demo-server-config-plan.md`.
+### Mengarahkan client desktop ke laptop server
+
+Alamat server **tidak lagi hardcode**. Tiap client menyimpan alamatnya sendiri di `app_config.json` dan bisa diubah tanpa rebuild:
+
+1. Buka halaman config tersembunyi: tekan **Ctrl + Shift + Alt + S** di aplikasi desktop, atau ketik `__tcServerConfig()` di DevTools console.
+2. Pilih mode:
+   - **Client** - PC peserta, tidak menjalankan PHP lokal.
+   - **Server** - laptop penyelenggara, PHP listen di `0.0.0.0:8000`.
+   - **Standalone** - PHP lokal hanya untuk laptop itu sendiri (`127.0.0.1`).
+3. Isi alamat server, mis. `http://192.168.2.102:8000`, lalu **Tes koneksi**.
+4. **Simpan & muat ulang**.
+
+Halaman ini tidak punya link di navigasi. Database dan kredensial tetap hanya ada di laptop server.
+
+Build client tetap memakai alamat default dari `frontend/.env`:
+
+```env
+VITE_DEFAULT_SERVER_URL=http://192.168.2.102:8000
+```
+
+Kalau `app_config.json` belum ada, alamat itu yang dipakai. Setelah disimpan, config runtime menang atas nilai build.
+
+> **Catatan:** halaman setup server berbasis PHP (`backend/setup/index.php`) masih rencana; untuk sekarang gunakan `scripts/deploy-server.ps1` di laptop server.
+
 
 ## API Endpoints
 

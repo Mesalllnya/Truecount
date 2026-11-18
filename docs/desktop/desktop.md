@@ -11,20 +11,22 @@ Dokumen ini menjelaskan cara mengkonversi TrueCount dari web app menjadi aplikas
 │  Tauri Window (native OS frame)         │
 │  ┌───────────────────────────────────┐  │
 │  │  WebView (React + Vite)           │  │
-│  │  fetch() → localhost:8000 (PHP)   │  │
+│  │  fetch() → alamat server (LAN)    │  │
 │  └───────────────────────────────────┘  │
 │  Rust backend                          │
-│    └─ spawn otomatis: php -S 8000      │
+│    └─ spawn PHP sesuai mode            │
 └─────────────────────────────────────────┘
-         ↕
-    PHP built-in server
-    (di-spawn otomatis oleh Rust saat app start)
+         ↕ (client: lewat LAN)
+    PHP server di laptop penyelenggara
 ```
 
-> **Catatan:** Backend PHP di-spawn otomatis oleh Rust saat aplikasi dijalankan
-> (dengan `CREATE_NO_WINDOW`, tanpa konsol), dan di-kill saat app ditutup.
-> Folder `backend/` di-bundle ke dalam installer sebagai resource Tauri.
-> Syarat: `php` harus terinstall di sistem user dan ada di PATH.
+> **Catatan:** Rust membaca `app_config.json` saat start dan menentukan perilaku:
+> - **Client** - tidak spawn PHP; semua request ke laptop server.
+> - **Server** - spawn `php -S 0.0.0.0:8000` agar bisa diakses PC lain di LAN.
+> - **Standalone** - spawn `php -S 127.0.0.1:8000` hanya untuk laptop itu.
+>
+> Folder `backend/` di-bundle ke installer sebagai resource Tauri. Syarat mode
+> server/standalone: `php` terinstall dan ada di PATH.
 
 ---
 
@@ -89,6 +91,71 @@ Hot reload React tetap berfungsi seperti biasa.
 > Jika port 8000 sudah dipakai (misal kamu menjalankan `php -S` manual untuk web dev),
 > app akan memakai server yang sudah ada dan tidak spawn yang baru.
 > Kalau tetap ingin menjalankan PHP manual: `php -S localhost:8000 -t backend backend/index.php`.
+
+---
+
+## Konfigurasi Runtime: Client / Server / Standalone
+
+Alamat server disimpan di `app_config.json`, bukan di dalam kode. Jadi satu installer
+bisa dipakai untuk laptop server maupun PC peserta, dan alamatnya bisa diubah tanpa build ulang.
+
+| Mode | PHP lokal | Bind | Dipakai untuk |
+| --- | --- | --- | --- |
+| `client` | tidak dijalankan | - | PC peserta, request ke laptop server |
+| `server` | dijalankan | `0.0.0.0:8000` | Laptop penyelenggara (bisa diakses LAN) |
+| `standalone` | dijalankan | `127.0.0.1:8000` | Laptop tunggal / dev |
+
+### Cara membuka halaman config
+
+Halaman `/__server` sengaja tidak punya link di navigasi:
+
+- **Keyboard:** `Ctrl + Shift + Alt + S` (berlaku di route mana pun).
+- **Console DevTools:** `__tcServerConfig()`.
+
+Isi alamat (host + port saja), tekan **Tes koneksi**, lalu **Simpan & muat ulang**.
+Tes koneksi memanggil `/health` dan menampilkan `server_label`, `server_id`,
+status database, dan waktu server.
+
+### Lokasi & isi file
+
+| OS | Lokasi |
+| --- | --- |
+| Windows | `%APPDATA%\com.truecount.app\app_config.json` |
+| macOS | `~/Library/Application Support/com.truecount.app/app_config.json` |
+| Linux | `~/.config/com.truecount.app/app_config.json` |
+
+```json
+{
+  "mode": "client",
+  "serverUrl": "http://192.168.2.102:8000"
+}
+```
+
+File ini hanya menyimpan alamat server. Kredensial database dan `.env` **tidak**
+pernah ikut ke client.
+
+### Default saat build
+
+`frontend/.env` (jangan di-commit):
+
+```env
+VITE_DEFAULT_SERVER_URL=http://192.168.2.102:8000
+# VITE_DEFAULT_MODE=client
+```
+
+- Production build default `client`; dev build (`npm run dev` / `desktop:dev`) default `standalone`.
+- Kalau `app_config.json` belum ada, frontend memakai `VITE_DEFAULT_SERVER_URL`.
+- Nilai yang sudah disimpan lewat halaman config menang atas default build.
+- Mode `standalone` selalu memakai `http://localhost:8000`, karena PHP hanya listen loopback.
+
+### Perubahan saat mode disimpan
+
+`set_app_config` di Rust akan:
+
+1. Menulis `app_config.json`.
+2. Menghentikan child PHP lama (kalau ada) dan menunggu port 8000 bebas.
+3. Menjalankan ulang PHP hanya kalau mode berubah, atau PHP seharusnya jalan tapi mati.
+4. Mode `client` tidak menjalankan PHP sama sekali.
 
 ---
 
@@ -157,32 +224,37 @@ npx tauri icon public/icon/TrueCount_logo_transparent.png --fit cover
 
 ---
 
-## Auto-start PHP dari Tauri - ✅ Sudah Diimplementasi
+## Auto-start PHP dari Tauri - ✅ Sudah Diimplementasi (mode-aware)
 
-PHP backend sekarang di-spawn otomatis di `lib.rs` (bukan lagi rencana Sprint 4+).
-Ringkasan perilaku:
+PHP backend di-spawn otomatis di `lib.rs`, tetapi sekarang mengikuti `app_config.json`:
 
-1. **Cek port** - kalau `127.0.0.1:8000` sudah ada server, spawn di-skip.
-2. **Cari folder backend** - urutan: resource dir (installer) → relatif lokasi exe → cwd (dev).
-3. **Spawn** - `php -S 127.0.0.1:8000 -t <backend> <backend>/index.php` dengan
+1. **Baca config** - `app_config.json`; kalau belum ada pakai default build.
+2. **Tentukan bind** - `client` = tidak spawn, `server` = `0.0.0.0:8000`,
+   `standalone` = `127.0.0.1:8000`.
+3. **Cek port** - kalau `127.0.0.1:8000` sudah ada server, spawn di-skip.
+4. **Cari folder backend** - urutan: resource dir (installer) → relatif lokasi exe → cwd (dev).
+5. **Spawn** - `php -S <bind> -t <backend> <backend>/index.php` dengan
    `CREATE_NO_WINDOW` (Windows) sehingga tidak muncul konsol.
-4. **Cleanup** - saat app keluar (`RunEvent::Exit`), child PHP di-kill.
-5. **Path `\\?\`** - Tauri mengembalikan extended-length path; prefix `\\?\`
-   di-strip dulu, karena PHP tidak bisa membuka file dengan prefix itu.
-6. **Output PHP** diarahkan ke `php.log` (lihat bawah).
+6. **Cleanup** - saat app keluar (`RunEvent::Exit`), child PHP di-kill.
 
 ```rust
 // src-tauri/src/lib.rs (ringkasan)
-if port_in_use(8000) { return; }                      // skip kalau sudah jalan
+let config = load_app_config(app.handle());           // client|server|standalone
+let bind = match config.mode.as_str() {
+    "server" => "0.0.0.0:8000",
+    "standalone" => "127.0.0.1:8000",
+    _ => return,                                     // client: tanpa PHP lokal
+};
+if port_in_use(8000) { return; }
 let dir = clean_path(&resolve_backend_dir(app));      // hapus prefix \\?\
 Command::new("php")
-    .args(["-S", "127.0.0.1:8000", "-t"])
+    .args(["-S", bind, "-t"])
     .arg(&dir).arg(dir.join("index.php"))
     .creation_flags(0x08000000)                       // CREATE_NO_WINDOW
     .spawn();
 ```
 
-> **Syarat:** `php` harus terinstall di mesin user dan ada di PATH.
+> **Syarat mode server/standalone:** `php` harus terinstall di mesin user dan ada di PATH.
 > Bundling `php.exe` sebagai sidecar binary masih merupakan rencana (Sprint 4).
 
 ### Konfigurasi penting yang sudah diterapkan
@@ -213,7 +285,7 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 | Aspek | Web | Desktop (Tauri) |
 | --- | --- | --- |
 | Distribusi | URL | Installer .exe/.dmg/.deb |
-| Offline | Perlu server | ✅ Auto-spawn PHP (syarat: `php` ada di PATH user) |
+| Offline | Perlu server | ✅ Mode server/standalone auto-spawn PHP (syarat: `php` ada di PATH user) |
 | Update | Deploy ulang | Tauri Updater plugin |
 | Ukuran binary | - | ~6–15 MB (jauh lebih kecil dari Electron ~120 MB) |
 | Performance | Browser | WebView native OS |
@@ -225,9 +297,11 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 ## Checklist Sebelum Build Production
 
 - [x] Isi semua file icon di `src-tauri/icons/` (dari `TrueCount_logo_transparent.png`)
-- [x] Backend URL frontend `LoginPage.jsx` / `RegisterPage.jsx` → `http://localhost:8000`
+- [x] Semua URL backend lewat `apiUrl()` / `appConfig.ts` (tidak ada `localhost:8000` hardcode di halaman)
+- [x] Halaman config tersembunyi `/__server` (mode client/server/standalone)
+- [ ] Isi `frontend/.env` → `VITE_DEFAULT_SERVER_URL=http://<ip-laptop>:8000` sebelum build client
 - [ ] Ganti `identifier` di `tauri.conf.json` jika dipublikasikan (`com.namakamu.truecount`)
-- [ ] Pastikan `php` terinstall & ada di PATH mesin target
+- [ ] Pastikan `php` terinstall & ada di PATH mesin target (mode server/standalone)
 - [ ] `npm run build` berhasil tanpa error sebelum `desktop:build`
 - [ ] Test di OS target sebelum distribusi
 

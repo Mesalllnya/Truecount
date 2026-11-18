@@ -1,7 +1,7 @@
 # TrueCount — Server 1 Laptop + Client Desktop
 
-> **Status:** Rencana (belum dieksekusi)
-> **Terakhir diperbarui:** 18 November 2026
+> **Status:** Sebagian dieksekusi — konfigurasi client (route `/__server`, `app_config.json`, mode Rust, `/health` identitas server) sudah diimplementasi. Halaman setup server berbasis PHP masih rencana.
+> **Terakhir diperbarui:** 19 November 2026
 > **Topologi:** 1 laptop menjadi server, N PC peserta menjalankan aplikasi desktop yang terhubung ke laptop itu.
 > **Dokumen terkait:** [`deploy.md`](deploy.md) · [`deploy-to-cloud-plan.md`](deploy-to-cloud-plan.md) (ditunda) · [`../desktop/desktop.md`](../desktop/desktop.md)
 
@@ -973,8 +973,8 @@ Siapkan laptop server + minimal satu PC client.
 ### 13.2 Saat peserta datang
 
 - [ ] Pastikan semua PC di jaringan yang sama.
-- [ ] Buka app, cek banner server (label + ID).
-- [ ] Kalau salah, buka `Ctrl+Shift+Alt+S`, isi URL laptop, test, simpan.
+- [ ] Buka halaman config (`Ctrl+Shift+Alt+S`), cek label + `server_id` lewat **Tes koneksi**.
+- [ ] Kalau salah, isi URL laptop, test, simpan & muat ulang.
 - [ ] Login dan vote percobaan dengan satu akun uji.
 - [ ] Hapus vote uji sebelum pemilihan resmi (atau pakai pemilihan terpisah).
 

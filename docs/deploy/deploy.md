@@ -5,6 +5,10 @@ Dokumen ini mencakup dua skenario:
 - **[Lokal / Development](#1-lokal--development)** - untuk pengerjaan sehari-hari di laptop masing-masing.
 - **[Server / Production](#2-server--production)** - untuk demo akhir atau hosting publik.
 
+> **Rencana demo 1 laptop + client desktop (aktif):** lihat [`demo-server-config-plan.md`](demo-server-config-plan.md) untuk topologi server laptop, konfigurasi alamat server di tiap client, halaman config tersembunyi, dan migrasi app yang sudah terpasang.
+>
+> **Rencana migrasi ke cloud/VPS (ditunda):** lihat [`deploy-to-cloud-plan.md`](deploy-to-cloud-plan.md) untuk keputusan arsitektur, refactor yang dibutuhkan, konfigurasi nginx, backup, dan checklist production.
+
 ---
 
 ## Prasyarat Umum

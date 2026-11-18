@@ -429,6 +429,43 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    // GET /voice-messages/{id}/audio - playback audio
+    preg_match('#^/voice-messages/(\d+)/audio$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
+        $_GET['id'] = $m[1];
+        require_once __DIR__ . '/api/voice-messages/show_audio.php';
+    })(),
+
+    preg_match('#^/voice-messages/(\d+)/read$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
+        $_GET['id'] = $m[1];
+        require_once __DIR__ . '/api/voice-messages/mark_read.php';
+    })(),
+
+        // ── Voice Messages ────────────────────────────────────────
+
+    $uri === '/voice-messages/admins' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/voice-messages/admins.php';
+    })(),
+
+    $uri === '/voice-messages/admins' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    $uri === '/voice-messages' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/voice-messages/create.php';
+    })(),
+
+    $uri === '/voice-messages' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    $uri === '/voice-messages/inbox' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/voice-messages/inbox.php';
+    })(),
+
+    $uri === '/voice-messages/inbox' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
         // ── Cryptography: Encrypted Messages ──────────────────────
 
     $uri === '/encrypted-messages' && $method === 'POST' => (function () {

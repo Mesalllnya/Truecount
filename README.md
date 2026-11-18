@@ -159,6 +159,50 @@ Log aplikasi (jika troubleshooting): `%LOCALAPPDATA%\com.truecount.app\logs\` (W
 
 Lihat [`docs/desktop/desktop.md`](docs/desktop/desktop.md) untuk panduan lengkap.
 
+## Quick Start - Server Demo (1 Laptop)
+
+Topologi demo: **laptopmu menjadi server**, PC peserta menjalankan app desktop yang terhubung ke laptop itu. Satu database, satu sumber kebenaran.
+
+> Prasyarat: PHP 8.1+ di PATH, MySQL/MariaDB berjalan, database `truecount_db` sudah dibuat (atau pakai `-Migrate`).
+
+```powershell
+# Periksa prasyarat + siapkan .env, tanpa menyalakan server
+.\scripts\deploy-server.ps1 -CheckOnly
+
+# Siapkan database + akun admin, lalu nyalakan server untuk LAN
+.\scripts\deploy-server.ps1 -Migrate -SeedAdmin -OpenFirewall
+
+# Hentikan server
+.\scripts\deploy-server.ps1 -Stop
+```
+
+Saat server jalan, script menampilkan:
+
+- URL lokal: `http://localhost:8000/`
+- URL LAN untuk client: `http://<ip-laptop>:8000/`
+- Health check: `http://localhost:8000/health`
+
+Tanpa parameter, script hanya memeriksa prasyarat dan menyalakan server memakai `.env` yang sudah ada.
+
+| Parameter | Fungsi |
+|---|---|
+| `-Port 8000` | Port API |
+| `-BindAddress 0.0.0.0` | Agar bisa diakses client di LAN |
+| `-Migrate` | Jalankan `database/migrate.php` |
+| `-SeedAdmin` | Seed akun admin saja |
+| `-BuildFrontend` | `npm run build` di `frontend/` |
+| `-OpenFirewall` | Rule inbound TCP, profil **Private** (butuh Administrator) |
+| `-CheckOnly` | Preflight saja, jangan nyalakan server |
+| `-Stop` | Hentikan server di port tersebut |
+| `-Force` | Izinkan script menghentikan proses yang memakai port |
+| `-RecreateEnv` | Buat ulang `.env` (butuh ketik `OVERWRITE`) |
+
+Yang **tidak** dilakukan script: membuka port 3306, membuat rule profil Public, mencetak secret ke console, atau menjalankan `migrate.php --fresh`/`--seed`.
+
+Panduan lengkap + keamanan: [`docs/deploy/deploy.md`](docs/deploy/deploy.md#211-script-deploy-server-lokal-windows) · rencana topologi: [`docs/deploy/demo-server-config-plan.md`](docs/deploy/demo-server-config-plan.md).
+
+> **Catatan:** build client saat ini masih hardcode `http://localhost:8000`. Agar PC peserta benar-benar menulis ke laptop server, app perlu build baru dengan alamat server yang bisa diatur — lihat rencana di `demo-server-config-plan.md`.
+
 ## API Endpoints
 
 Base URL: `http://localhost:8000`

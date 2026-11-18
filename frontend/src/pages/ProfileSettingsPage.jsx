@@ -748,7 +748,7 @@ export default function ProfileSettingsPage() {
                   </div>
                 </div>
 
-                {pwdError && <p className="form-error" role="alert">❌ {pwdError}</p>}
+                {pwdError && <p className="form-error" role="alert">{pwdError}</p>}
 
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary" disabled={pwdLoading}>
@@ -913,7 +913,7 @@ export default function ProfileSettingsPage() {
                             const sel = usbDrives.find(d => d.drive === usbCreateDrive)
                             return sel?.has_token ? (
                               <div className="overwrite-warning" role="alert">
-                                ⚠️ Flashdisk ini <strong>sudah berisi token</strong>. Membuat token baru akan{' '}
+                                Peringatan: Flashdisk ini <strong>sudah berisi token</strong>. Membuat token baru akan{' '}
                                 <strong>menimpa token lama</strong> dan token lama tidak bisa dipakai lagi.
                                 <label className="overwrite-confirm">
                                   <input
@@ -947,10 +947,10 @@ export default function ProfileSettingsPage() {
                             placeholder="Ketik ulang PIN"
                           />
                         </div>
-                        {usbCreateError && <p className="form-error" role="alert">❌ {usbCreateError}</p>}
+                        {usbCreateError && <p className="form-error" role="alert">{usbCreateError}</p>}
                         <div className="form-actions">
                           <button className="btn btn-primary" onClick={handleSubmitUsbCreate}>
-                            🔑 Buat Token
+                            Buat Token
                           </button>
                           <button className="btn btn-secondary" onClick={handleCloseUsbCreate}>Batal</button>
                         </div>
@@ -965,7 +965,7 @@ export default function ProfileSettingsPage() {
 
                     {usbCreateStep === 'done' && (
                       <div className="success-state">
-                        <p className="success-icon">✅</p>
+                        <p className="success-icon">✓</p>
                         <p><strong>Token berhasil dibuat di flashdisk!</strong></p>
                         <p className="field-hint">Credential ID: <code>{usbCreatedCredentialId.slice(0, 20)}…</code></p>
                         <p className="field-hint">Simpan PIN baik-baik. Sekarang daftarkan dengan tombol <strong>"Daftarkan USB Baru"</strong>.</p>
@@ -975,7 +975,7 @@ export default function ProfileSettingsPage() {
 
                     {usbCreateStep === 'error' && (
                       <div className="error-state">
-                        <p>❌ {usbCreateError}</p>
+                        <p>{usbCreateError}</p>
                         <div className="form-actions">
                           <button className="btn btn-secondary" onClick={() => { setUsbCreateStep('select-drive'); setUsbCreateError('') }}>
                             Coba Lagi
@@ -998,14 +998,14 @@ export default function ProfileSettingsPage() {
 
                     {usbRegisterStep === 'waiting-usb' && (
                       <div className="register-step">
-                        <p className="step-icon">🔌</p>
+                        <p className="step-icon">•</p>
                         <p><strong>Colokkan USB token</strong> yang ingin didaftarkan.</p>
                         <p className="step-sub">Sistem akan mendeteksi otomatis dalam 2 detik.</p>
                         {detectedTokens.length > 0 && (
-                          <p className="step-detected">✅ Terdeteksi: {detectedTokens[0].drive}</p>
+                          <p className="step-detected">Terdeteksi: {detectedTokens[0].drive}</p>
                         )}
                         {usbRegisterError && (
-                          <p className="step-removed">⚠️ {usbRegisterError}</p>
+                          <p className="step-removed">{usbRegisterError}</p>
                         )}
                       </div>
                     )}
@@ -1055,7 +1055,7 @@ export default function ProfileSettingsPage() {
 
                     {usbRegisterStep === 'done' && (
                       <div className="success-state">
-                        <p className="success-icon">✅</p>
+                        <p className="success-icon">✓</p>
                         <p><strong>USB token berhasil didaftarkan!</strong></p>
                         <button className="btn btn-primary" onClick={handleCloseUsbRegister}>Tutup</button>
                       </div>
@@ -1063,7 +1063,7 @@ export default function ProfileSettingsPage() {
 
                     {usbRegisterStep === 'error' && (
                       <div className="error-state">
-                        <p>❌ {usbRegisterError}</p>
+                        <p>{usbRegisterError}</p>
                         <div className="form-actions">
                           <button className="btn btn-secondary" onClick={handleStartUsbRegister}>Coba Lagi</button>
                           <button className="btn btn-secondary" onClick={handleCloseUsbRegister}>Tutup</button>
@@ -1350,14 +1350,14 @@ export default function ProfileSettingsPage() {
                   </div>
                 </div>
 
-                {usbCreateError && <p className="form-error" role="alert">❌ {usbCreateError}</p>}
+                {usbCreateError && <p className="form-error" role="alert">{usbCreateError}</p>}
 
                 <div className="form-actions">
                   <button className="btn btn-primary btn-full" onClick={handleSubmitUsbCreate}>
                     <span className="btn-loader" aria-hidden="true">
                       {usbCreateStep === 'creating' && <span className="spinner-sm"></span>}
                     </span>
-                    {usbCreateStep === 'creating' ? 'Membuat…' : '🔑 Buat Token'}
+                    {usbCreateStep === 'creating' ? 'Membuat…' : 'Buat Token'}
                   </button>
                   <button className="btn btn-secondary btn-full" onClick={handleCloseUsbCreate} disabled={usbCreateStep === 'creating'}>Batal</button>
                 </div>
@@ -1433,7 +1433,7 @@ export default function ProfileSettingsPage() {
                 <div className="usb-waiting-card">
                   <div className="usb-waiting-icon">
                     {detectedTokens.length > 0 ? (
-                      <span className="usb-detected-pulse">🔌</span>
+                      <span className="usb-detected-pulse">•</span>
                     ) : (
                       <Icon name="usb" className="usb-pulse" />
                     )}
@@ -1448,7 +1448,7 @@ export default function ProfileSettingsPage() {
                     </div>
                   )}
                   {usbRegisterError && (
-                    <div className="form-error inline-error">⚠️ {usbRegisterError}</div>
+                    <div className="form-error inline-error">{usbRegisterError}</div>
                   )}
                 </div>
               </div>

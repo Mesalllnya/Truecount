@@ -166,6 +166,8 @@ function InvitesPanel() {
   // Search & Filter state
   const [searchQuery, setSearchQuery]   = useState('')
   const [statusFilter, setStatusFilter] = useState('semua')
+  const [currentPage, setCurrentPage]   = useState(1)
+  const pageSize = 5
 
   const loadInvites = useCallback(async () => {
     setLoading(true)
@@ -197,6 +199,7 @@ function InvitesPanel() {
     return invites.filter(inv => {
       const matchesSearch = searchQuery === '' ||
         (inv.email && inv.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (inv.used_by_username && inv.used_by_username.toLowerCase().includes(searchQuery.toLowerCase())) ||
         inv.token.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (inv.created_by_username && inv.created_by_username.toLowerCase().includes(searchQuery.toLowerCase()))
 
@@ -205,6 +208,17 @@ function InvitesPanel() {
       return matchesSearch && matchesStatus
     })
   }, [invites, searchQuery, statusFilter])
+
+  // Reset page saat filter/search berubah
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter])
+
+  const totalPages = Math.ceil(filteredInvites.length / pageSize) || 1
+  const paginatedInvites = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredInvites.slice(start, start + pageSize)
+  }, [filteredInvites, currentPage, pageSize])
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -454,7 +468,7 @@ function InvitesPanel() {
         <div className="link-box" role="status" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="link-box-label" style={{ fontWeight: 700 }}>
-              ✓ {freshLinks.length} Undangan Berhasil Dibuat - Bagikan Tautan:
+              {freshLinks.length} Undangan Berhasil Dibuat - Bagikan Tautan:
             </span>
             <button
               className="copy-btn"
@@ -539,7 +553,7 @@ function InvitesPanel() {
           <span>Pembuat</span>
           <span>Dibuat</span>
           <span>Kedaluwarsa</span>
-          <span />
+          <span>Aksi</span>
         </div>
 
         {loading && (
@@ -559,65 +573,110 @@ function InvitesPanel() {
           </p>
         )}
 
-        {!loading && filteredInvites.map(inv => (
-          <div className="invite-row" key={inv.id}>
-            <div className="invite-cell invite-cell--email">
-              <span className="invite-cell-label">Email</span>
-              <span className="invite-email">{inv.email ?? '-'}</span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Peran</span>
-              <span className="invite-role">{ROLE_LABEL[inv.role] ?? inv.role}</span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Status</span>
-              <span className={`badge badge--${inv.status}`}>
-                {STATUS_META[inv.status]?.label ?? inv.status}
-              </span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Pembuat</span>
-              <span className="invite-creator">{inv.created_by_username ?? '-'}</span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Dibuat</span>
-              <span className="invite-date">{formatDate(inv.created_at)}</span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Kedaluwarsa</span>
-              <span className="invite-date">{formatDate(inv.expires_at)}</span>
-            </div>
-            <div className="invite-cell invite-cell--action">
-              <span className="invite-cell-label">Aksi</span>
-              <div className="invite-actions">
-                <button
-                  className="copy-btn"
-                  onClick={() => handleCopy(inv, inv.id)}
-                  title="Salin tautan undangan"
-                  disabled={inv.status === 'diterima' || inv.status === 'kedaluwarsa' || inv.status === 'dibatalkan'}
-                >
-                  {copiedId === inv.id ? <CheckIcon /> : <CopyIcon />}
-                  {copiedId === inv.id ? 'Tersalin' : 'Salin'}
-                </button>
-                {inv.status === 'menunggu' && (
+        {/* ── Daftar baris undangan (Paginasi) ── */}
+        <div>
+          {!loading && paginatedInvites.map(inv => (
+            <div className="invite-row" key={inv.id}>
+              <div className="invite-cell invite-cell--email">
+                <span className="invite-cell-label">Email</span>
+                <span className="invite-email" title={inv.used_by_username ? `Diklaim oleh: ${inv.used_by_username}` : undefined}>
+                  {inv.email ?? '-'}
+                </span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Peran</span>
+                <span className="invite-role">{ROLE_LABEL[inv.role] ?? inv.role}</span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Status</span>
+                <span className={`badge badge--${inv.status}`}>
+                  {STATUS_META[inv.status]?.label ?? inv.status}
+                </span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Pembuat</span>
+                <span className="invite-creator">{inv.created_by_username ?? '-'}</span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Dibuat</span>
+                <span className="invite-date">{formatDate(inv.created_at)}</span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Kedaluwarsa</span>
+                <span className="invite-date">{formatDate(inv.expires_at)}</span>
+              </div>
+              <div className="invite-cell invite-cell--action">
+                <span className="invite-cell-label">Aksi</span>
+                <div className="invite-actions">
                   <button
-                    className="revoke-btn"
-                    onClick={() => handleRevoke(inv)}
-                    title="Batalkan undangan"
-                    disabled={revokingId === inv.id}
+                    className="copy-btn"
+                    onClick={() => handleCopy(inv, inv.id)}
+                    title="Salin tautan undangan"
+                    disabled={inv.status === 'diterima' || inv.status === 'kedaluwarsa' || inv.status === 'dibatalkan'}
                   >
-                    {revokingId === inv.id ? 'Membatalkan…' : <RevokeIcon />}
+                    {copiedId === inv.id ? <CheckIcon /> : <CopyIcon />}
+                    {copiedId === inv.id ? 'Tersalin' : 'Salin'}
                   </button>
-                )}
+                  {inv.status === 'menunggu' && (
+                    <button
+                      className="revoke-btn"
+                      onClick={() => handleRevoke(inv)}
+                      title="Batalkan undangan"
+                      disabled={revokingId === inv.id}
+                    >
+                      {revokingId === inv.id ? 'Membatalkan…' : <RevokeIcon />}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+          ))}
+        </div>
+
+        {/* ── Kontrol Paginasi ── */}
+        {!loading && filteredInvites.length > pageSize && (
+          <div className="table-pagination">
+            <span className="pagination-info">
+              Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong> ({filteredInvites.length} data)
+            </span>
+            <div className="pagination-nav">
+              <button
+                type="button"
+                className="copy-btn"
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              >
+                ← Sebelumnya
+              </button>
+              <div className="pagination-pages">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    type="button"
+                    className={`pagination-num ${page === currentPage ? 'pagination-num--active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="copy-btn"
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              >
+                Selanjutnya →
+              </button>
+            </div>
           </div>
-        ))}
+        )}
       </div>
 
       <p className="admin-footnote">
-        Undangan yang belum diklaim otomatis kedaluwarsa setelah 7 hari. Masa berlaku bisa diubah lewat
-        <code> INVITE_EXPIRE_DAYS</code> di <code>.env</code>.
+        Undangan yang belum diklaim otomatis kedaluwarsa setelah 7 hari.
       </p>
     </section>
   )
@@ -670,7 +729,7 @@ function UserSecuritySearchPanel() {
   }, [query, loadUsers])
 
   return (
-    <section className="admin-panel" aria-label="Pencarian pengguna" style={{ marginTop: '3rem' }}>
+    <section className="admin-panel" aria-label="Pencarian pengguna">
       <div className="admin-head">
         <div className="admin-title">
           <h1>Log Keamanan Pengguna</h1>
@@ -858,7 +917,6 @@ function BlockchainAuditPanel() {
     <section
       className="admin-panel"
       aria-label="Blockchain audit"
-      style={{ marginTop: '3rem' }}
     >
       <div className="admin-head">
         <div>
@@ -1225,7 +1283,7 @@ function ElectionsPanel() {
   }
 
   return (
-    <section className="admin-panel" aria-label="Manajemen pemilihan" style={{ marginTop: '3rem' }}>
+    <section className="admin-panel" aria-label="Manajemen pemilihan">
       <div className="admin-head">
         <div className="admin-title">
           <h1>Pemilihan</h1>
@@ -1370,7 +1428,16 @@ function ElectionsPanel() {
       {listError && <p className="invite-error" role="alert">{listError}</p>}
 
       {/* ── Daftar election ── */}
-      <div className="invite-card">
+      <div
+        className="invite-card"
+        style={{
+          maxHeight: '430px',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         {loading && <p className="invite-list-note">Memuat pemilihan…</p>}
 
         {!loading && elections.length === 0 && (
@@ -1399,15 +1466,15 @@ function ElectionsPanel() {
                 </div>
               </div>
 
-              {/* Aksi Paslon & Pemilih */}
-              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              {/* Aksi Paslon, Pemilih, & Status */}
+              <div className="el-actions">
                 <button
                   type="button"
                   className="copy-btn"
                   onClick={() => setSelectedCandidatesEl(el)}
                   title="Kelola Paslon & Foto"
                 >
-                  👥 Paslon ({el.candidate_count})
+                  Paslon ({el.candidate_count})
                 </button>
                 <button
                   type="button"
@@ -1415,12 +1482,9 @@ function ElectionsPanel() {
                   onClick={() => setSelectedVotersEl(el)}
                   title="Tentukan Peserta Pemilih"
                 >
-                  📋 Peserta ({el.voter_count ?? 0})
+                  Peserta ({el.voter_count ?? 0})
                 </button>
-              </div>
 
-              {/* Aksi status */}
-              <div className="invite-cell invite-cell--action el-actions">
                 {el.status === 'draft' && (
                   <>
                     <button
@@ -1431,7 +1495,7 @@ function ElectionsPanel() {
                       onClick={() => startEditElection(el)}
                       title="Edit informasi pemilihan"
                     >
-                      ✏️ Edit
+                      Edit
                     </button>
                     <button
                       className="create-submit"
@@ -1604,7 +1668,7 @@ function VoterDashboardView() {
                     </span>
                     {el.has_voted ? (
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#e8f5e9', color: '#2a7a3b' }}>
-                        ✓ Suara Telah Diinput
+                        Suara Telah Diinput
                       </span>
                     ) : (
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c' }}>

@@ -229,11 +229,11 @@ export default function VotePage() {
                       <span className="vote-card-name" style={{ fontSize: '1.15rem' }}>{el.title}</span>
                       {el.has_voted ? (
                         <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#e8f5e9', color: '#2a7a3b' }}>
-                          ✓ Sudah Memilih
+                          Sudah Memilih
                         </span>
                       ) : hasDraft ? (
                         <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#eff6ff', color: '#1d4ed8' }}>
-                          ✎ Pilihan Tersimpan (Belum Diinput)
+                          Pilihan Tersimpan (Belum Diinput)
                         </span>
                       ) : (
                         <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c' }}>
@@ -452,7 +452,7 @@ export default function VotePage() {
 
                 {currentDraftId && !submitting ? (
                   <p className="vote-submit-hint" style={{ marginTop: '0.75rem', color: '#4b5563', fontSize: '0.85rem' }}>
-                    💡 <em>Anda masih dapat mengedit atau mengganti pilihan paslon di atas sebelum menekan tombol "Input Suara". Setelah ditekan, suara Anda akan resmi diinput ke basis data dan tidak dapat diubah lagi.</em>
+                    <em>Anda masih dapat mengedit atau mengganti pilihan paslon di atas sebelum menekan tombol "Input Suara". Setelah ditekan, suara Anda akan resmi diinput ke basis data dan tidak dapat diubah lagi.</em>
                   </p>
                 ) : (
                   <p className="vote-submit-hint" style={{ marginTop: '0.75rem' }}>

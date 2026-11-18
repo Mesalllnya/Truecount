@@ -182,7 +182,7 @@ export default function UsbTokenPanel() {
       }
       setCreatedCredentialId(result.credential_id)
       setCreateStep('done')
-      showToast('✅ Token berhasil dibuat di ' + createDrive)
+      showToast('Token berhasil dibuat di ' + createDrive)
     } catch (err) {
       setCreateStep('error')
       setCreateError(err?.message || 'Gagal membuat token.')
@@ -219,7 +219,7 @@ export default function UsbTokenPanel() {
     const poll = async () => {
       const tokens = await scanForTokens()
       if (!cancelled && tokens.length > 0) {
-        showToast(`✅ USB terdeteksi di ${tokens[0].drive}`)
+        showToast(`USB terdeteksi di ${tokens[0].drive}`)
         setSelectedDrive(tokens[0].drive)
         setRegisterStep('waiting-pin')
       }
@@ -243,7 +243,7 @@ export default function UsbTokenPanel() {
         const masihAda = tokens.some(t => t.drive === selectedDrive)
         if (!masihAda) {
           // USB dicabut - tampilkan toast + balik ke waiting-usb
-          showToast('🔌 USB dicabut. Colokkan kembali untuk melanjutkan.')
+          showToast('USB dicabut. Colokkan kembali untuk melanjutkan.')
           setSelectedDrive('')
           setPin('')
           setRegisterError('USB dicabut. Colokkan kembali untuk melanjutkan.')
@@ -292,7 +292,7 @@ export default function UsbTokenPanel() {
         const msg = hookError || ''
         // Kalau USB dicabut / file hilang → kembali ke waiting-usb
         if (msg.includes('not found') || msg.includes('tidak ditemukan') || msg.includes('Read file')) {
-          showToast('🔌 USB dicabut. Colokkan kembali untuk melanjutkan.')
+          showToast('USB dicabut. Colokkan kembali untuk melanjutkan.')
           setSelectedDrive('')
           setPin('')
           setRegisterStep('waiting-usb')
@@ -328,7 +328,7 @@ export default function UsbTokenPanel() {
 
       setRegisterStep('done')
       setPin('')
-      showToast('✅ USB token berhasil didaftarkan!')
+      showToast('USB token berhasil didaftarkan!')
       loadCredentials()
     } catch (err) {
       setRegisterStep('error')
@@ -423,7 +423,7 @@ export default function UsbTokenPanel() {
                   const sel = usbDrives.find(d => d.drive === createDrive)
                   return sel?.has_token ? (
                     <div className="usb-overwrite-warning" role="alert">
-                      ⚠️ Flashdisk ini <strong>sudah berisi token</strong>. Membuat token baru akan{' '}
+                      Peringatan: Flashdisk ini <strong>sudah berisi token</strong>. Membuat token baru akan{' '}
                       <strong>menimpa token lama</strong> dan token lama tidak bisa dipakai lagi.
                       <label className="usb-overwrite-confirm">
                         <input
@@ -457,10 +457,10 @@ export default function UsbTokenPanel() {
                   placeholder="Ketik ulang PIN"
                 />
               </div>
-              {createError && <p className="usb-create-error" role="alert">❌ {createError}</p>}
+              {createError && <p className="usb-create-error" role="alert">{createError}</p>}
               <div className="usb-form-actions">
                 <button className="usb-primary-btn" onClick={handleSubmitCreate}>
-                  🔑 Buat Token
+                  Buat Token
                 </button>
                 <button className="usb-secondary-btn" onClick={handleCloseCreate}>Batal</button>
               </div>
@@ -472,12 +472,12 @@ export default function UsbTokenPanel() {
           )}
 
           {createStep === 'creating' && (
-            <p className="usb-register-note">⏳ Membuat token…</p>
+            <p className="usb-register-note">Membuat token…</p>
           )}
 
           {createStep === 'done' && (
             <div className="usb-register-done">
-              <p className="usb-done-icon">✅</p>
+              <p className="usb-done-icon">✓</p>
               <p><strong>Token berhasil dibuat di flashdisk!</strong></p>
               <p className="usb-create-note">
                 Credential ID: <code>{createdCredentialId.slice(0, 20)}…</code>
@@ -491,7 +491,7 @@ export default function UsbTokenPanel() {
 
           {createStep === 'error' && (
             <div className="usb-register-error">
-              <p>❌ {createError}</p>
+              <p>{createError}</p>
               <div className="usb-form-actions">
                 <button className="usb-secondary-btn" onClick={() => { setCreateStep('select-drive'); setCreateError('') }}>
                   Coba Lagi
@@ -514,14 +514,14 @@ export default function UsbTokenPanel() {
 
           {registerStep === 'waiting-usb' && (
             <div className="usb-register-step">
-              <p className="usb-step-icon">🔌</p>
+              <p className="usb-step-icon">•</p>
               <p><strong>Colokkan USB token</strong> yang ingin didaftarkan.</p>
               <p className="usb-step-sub">Sistem akan mendeteksi otomatis dalam 2 detik.</p>
               {detectedTokens.length > 0 && (
-                <p className="usb-step-detected">✅ Terdeteksi: {detectedTokens[0].drive}</p>
+                <p className="usb-step-detected">Terdeteksi: {detectedTokens[0].drive}</p>
               )}
               {registerError && (
-                <p className="usb-step-removed">⚠️ {registerError}</p>
+                <p className="usb-step-removed">{registerError}</p>
               )}
             </div>
           )}
@@ -557,7 +557,7 @@ export default function UsbTokenPanel() {
                   onClick={handleSubmitPin}
                   disabled={!pin || registerStep === 'signing'}
                 >
-                  {registerStep === 'signing' ? '⏳ Memproses…' : (
+                  {registerStep === 'signing' ? 'Memproses…' : (
                     <>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ display: 'inline-block', marginRight: '0.4rem', verticalAlign: 'middle' }}>
                         <rect x="3" y="11" width="18" height="11" rx="2"/>
@@ -574,7 +574,7 @@ export default function UsbTokenPanel() {
 
           {registerStep === 'done' && (
             <div className="usb-register-done">
-              <p className="usb-done-icon">✅</p>
+              <p className="usb-done-icon">✓</p>
               <p><strong>USB token berhasil didaftarkan!</strong></p>
               <button className="usb-primary-btn" onClick={handleCloseRegister}>Tutup</button>
             </div>
@@ -582,7 +582,7 @@ export default function UsbTokenPanel() {
 
           {registerStep === 'error' && (
             <div className="usb-register-error">
-              <p>❌ {registerError}</p>
+              <p>{registerError}</p>
               <div className="usb-form-actions">
                 <button className="usb-secondary-btn" onClick={handleStartRegister}>Coba Lagi</button>
                 <button className="usb-secondary-btn" onClick={handleCloseRegister}>Tutup</button>
@@ -612,7 +612,7 @@ export default function UsbTokenPanel() {
             {credentials.map(cred => (
               <div key={cred.id} className={`usb-row${cred.is_active ? '' : ' usb-row--revoked'}`}>
                 <div className="usb-row-main">
-                  <span className="usb-row-icon">🔑</span>
+                  <span className="usb-row-icon">•</span>
                   <div className="usb-row-info">
                     {editingId === cred.id ? (
                       <div className="usb-edit-inline">

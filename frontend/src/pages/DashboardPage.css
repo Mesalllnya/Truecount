@@ -690,6 +690,36 @@
   border-color: var(--red) !important;
 }
 
+.pagination-ellipsis-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: inherit;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 150ms ease;
+  letter-spacing: 0.05em;
+}
+
+.pagination-ellipsis-btn:hover {
+  background: var(--cream);
+  color: var(--black);
+  border-color: var(--black);
+  transform: translateY(-1px);
+}
+
+.pagination-ellipsis-btn:active {
+  transform: scale(0.96);
+}
+
 /* ── Baris hasil pencarian user (4 kolom, bukan 6 seperti undangan) ── */
 @media (min-width: 860px) {
   .user-search-row {

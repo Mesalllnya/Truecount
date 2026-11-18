@@ -167,6 +167,8 @@ function InvitesPanel() {
   const [searchQuery, setSearchQuery]   = useState('')
   const [statusFilter, setStatusFilter] = useState('semua')
   const [currentPage, setCurrentPage]   = useState(1)
+  const [jumpInput, setJumpInput]       = useState('')
+  const [activeJump, setActiveJump]     = useState(null) // 'left' | 'right' | null
   const pageSize = 5
 
   const loadInvites = useCallback(async () => {
@@ -219,6 +221,18 @@ function InvitesPanel() {
     const start = (currentPage - 1) * pageSize
     return filteredInvites.slice(start, start + pageSize)
   }, [filteredInvites, currentPage, pageSize])
+
+  function handlePromptJump(defaultPage) {
+    const res = window.prompt(`Loncat ke halaman (1 - ${totalPages}):`, String(defaultPage || ''))
+    if (res !== null) {
+      const p = parseInt(res, 10)
+      if (!isNaN(p) && p >= 1 && p <= totalPages) {
+        setCurrentPage(p)
+      } else {
+        alert(`Harap masukkan halaman valid antara 1 dan ${totalPages}.`)
+      }
+    }
+  }
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -650,16 +664,59 @@ function InvitesPanel() {
                 ← Sebelumnya
               </button>
               <div className="pagination-pages">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                {/* Halaman Pertama (1) */}
+                <button
+                  type="button"
+                  className={`pagination-num ${currentPage === 1 ? 'pagination-num--active' : ''}`}
+                  onClick={() => setCurrentPage(1)}
+                >
+                  1
+                </button>
+
+                {/* Ellipsis / Shortcut Loncat Kiri (jika currentPage > 2) */}
+                {currentPage > 2 && (
                   <button
-                    key={page}
                     type="button"
-                    className={`pagination-num ${page === currentPage ? 'pagination-num--active' : ''}`}
-                    onClick={() => setCurrentPage(page)}
+                    className="pagination-ellipsis-btn"
+                    onClick={() => handlePromptJump(Math.floor((1 + currentPage) / 2))}
+                    title="Klik untuk loncat halaman"
                   >
-                    {page}
+                    …
                   </button>
-                ))}
+                )}
+
+                {/* Halaman Saat Ini (jika bukan halaman pertama dan bukan halaman terakhir) */}
+                {currentPage !== 1 && currentPage !== totalPages && (
+                  <button
+                    type="button"
+                    className="pagination-num pagination-num--active"
+                  >
+                    {currentPage}
+                  </button>
+                )}
+
+                {/* Ellipsis / Shortcut Loncat Kanan (jika currentPage < totalPages - 1) */}
+                {currentPage < totalPages - 1 && (
+                  <button
+                    type="button"
+                    className="pagination-ellipsis-btn"
+                    onClick={() => handlePromptJump(Math.floor((currentPage + totalPages) / 2))}
+                    title="Klik untuk loncat halaman"
+                  >
+                    …
+                  </button>
+                )}
+
+                {/* Halaman Terakhir */}
+                {totalPages > 1 && (
+                  <button
+                    type="button"
+                    className={`pagination-num ${currentPage === totalPages ? 'pagination-num--active' : ''}`}
+                    onClick={() => setCurrentPage(totalPages)}
+                  >
+                    {totalPages}
+                  </button>
+                )}
               </div>
               <button
                 type="button"

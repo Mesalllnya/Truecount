@@ -67,3 +67,21 @@ function requireAdmin(): array
 
     return $user;
 }
+
+/**
+ * Paksa autentikasi + role admin atau dev.
+ * Jika bukan admin/dev, langsung 403 dan exit.
+ *
+ * @return array  JWT payload (sub, username, email, role, iat, exp)
+ */
+function requireDevOrAdmin(): array
+{
+    $user = requireAuth();
+
+    $role = $user['role'] ?? '';
+    if ($role !== 'admin' && $role !== 'dev') {
+        jsonResponse(['error' => 'Akses ditolak. Hanya admin atau developer yang diizinkan.'], 403);
+    }
+
+    return $user;
+}

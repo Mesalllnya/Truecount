@@ -89,7 +89,16 @@ Akun admin default (setelah `--seed`):
 | Password | `Admin@1234`       |
 | Role     | `admin`            |
 
-> ⚠️ **Ganti password admin** setelah pertama kali login.
+Akun developer default (setelah `--seed`):
+
+| Field    | Value              |
+|----------|--------------------|
+| Username | `dev`              |
+| Email    | `dev@truecount.local` |
+| Password | `Dev@1234`         |
+| Role     | `dev`              |
+
+> ⚠️ **Ganti password admin dan dev** setelah pertama kali login.
 
 ### 1.4 Jalankan Backend (PHP Built-in Server)
 
@@ -308,7 +317,7 @@ sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 
 ### Fungsionalitas
 
-- [ ] Migration berhasil - semua 10 tabel terbuat
+- [ ] Migration berhasil - semua tabel terbuat (cek `php database/migrate.php` tanpa error)
 - [ ] Health check `GET /health` mengembalikan `200 OK`
 - [ ] Register akun baru berhasil
 - [ ] Login berhasil dan mendapatkan JWT

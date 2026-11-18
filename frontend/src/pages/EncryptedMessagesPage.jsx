@@ -1,8 +1,5 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
-import DashNav from '../components/DashNav'
-import './DashboardPage.css'
 import './EncryptedMessagesPage.css'
 
 const API = 'http://localhost:8000'
@@ -116,27 +113,8 @@ export default function EncryptedMessagesPage() {
     }
   }
 
-  function handleLogout() {
-    localStorage.removeItem('tc_token')
-    navigate('/masuk')
-  }
-
   return (
     <div className="dash-shell">
-      <DashNav
-        active="/pesan-terenkripsi"
-        brand={
-          <Link to="/dasbor" className="dash-brand" title="TrueCount">
-            <img
-              src={navLogoLight}
-              alt="TrueCount"
-              className="dash-brand-logo"
-            />
-          </Link>
-        }
-        onLogout={handleLogout}
-      />
-
       <main className="encrypted-page">
         <header className="encrypted-heading">
           <span className="encrypted-eyebrow">TRUECOUNT SECURITY</span>

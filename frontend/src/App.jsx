@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -13,14 +14,40 @@ import UserSecurityLogPage from './pages/UserSecurityLogPage'
 import HealthMonitor from './components/HealthMonitor'
 import Nav from './components/Nav'
 import EncryptedMessagesPage from './pages/EncryptedMessagesPage'
+import ServerErrorPage from './pages/ServerErrorPage'
+import DevPage from './pages/DevPage'
+import RoleGuard from './components/RoleGuard'
 import AuthGuard from './components/AuthGuard'
-import { FailedAttemptsProvider } from './hooks/useAuthSecurity'
+import { useAuth } from './hooks/useAuthSession'
+import { FailedAttemptsProvider, stopAllCameraStreams } from './hooks/useAuthSecurity'
 import { AuthProvider } from './hooks/useAuthSession'
+import { Home, Info, LayoutDashboard, Vote, Mail, Settings, Code2 } from 'lucide-react'
+
+/* Ikon navbar (lucide, outline: tengah kosong) — ukuran & ketebalan seragam */
+const navIcon = { size: 18, strokeWidth: 1.5 }
 
 /** Alias lama /register → /daftar, dengan query (?undangan=...) tetap dibawa */
 function RegisterRedirect() {
   const location = useLocation()
   return <Navigate to={`/daftar${location.search}`} replace />
+}
+
+/**
+ * Jaminan kamera HANYA hidup di halaman masuk (/masuk).
+ * Setiap kali route berubah ke selain /masuk — landing page, halaman setelah
+ * login, pengaturan, dll. — semua stream kamera dipaksa mati (LED ikut mati).
+ */
+function CameraRouteGuard() {
+  const location = useLocation()
+  const isLoginRoute =
+    location.pathname.startsWith('/masuk') ||
+    location.pathname.startsWith('/login')
+
+  useEffect(() => {
+    if (!isLoginRoute) stopAllCameraStreams()
+  }, [isLoginRoute, location.pathname])
+
+  return null
 }
 
 /** Protected routes wrapper */
@@ -38,9 +65,23 @@ function ProtectedRoutes() {
   )
 }
 
+const PUBLIC_LINKS = [
+  { href: '/', label: 'Beranda', icon: <Home {...navIcon} /> },
+  { href: '/tentang', label: 'Tentang', icon: <Info {...navIcon} /> },
+]
+
+const PROTECTED_LINKS = [
+  { href: '/dasbor', label: 'Dasbor', icon: <LayoutDashboard {...navIcon} /> },
+  { href: '/pilih', label: 'Pemilihan', icon: <Vote {...navIcon} /> },
+  { href: '/pesan-terenkripsi', label: 'Pesan Terenkripsi', icon: <Mail {...navIcon} /> },
+  { href: '/pengaturan', label: 'Pengaturan', icon: <Settings {...navIcon} /> },
+]
+
 function AppRoutes() {
   const location = useLocation()
-  const isAppPage =
+  const { user } = useAuth()
+  const isDevOrAdmin = user && (user.role === 'admin' || user.role === 'dev')
+  const isProtected =
     location.pathname.startsWith('/dasbor') ||
     location.pathname.startsWith('/dashboard') ||
     location.pathname.startsWith('/pilih') ||
@@ -49,13 +90,22 @@ function AppRoutes() {
     location.pathname.startsWith('/pengaturan') ||
     location.pathname.startsWith('/usb-token-test') ||
     location.pathname.startsWith('/log-keamanan') ||
+    location.pathname.startsWith('/dev')
+
+  const navLinks = isProtected ? PROTECTED_LINKS : PUBLIC_LINKS
+
+  const devLink = isDevOrAdmin
+    ? { href: '/dev', label: 'Dev', icon: <Code2 {...navIcon} /> }
+    : null
+
+  const isLoginPage =
     location.pathname.startsWith('/masuk') ||
-    location.pathname.startsWith('/daftar') ||
-    location.pathname.startsWith('/atur-keamanan')
+    location.pathname.startsWith('/login')
 
   return (
     <>
-      {!isAppPage && <Nav />}
+      <CameraRouteGuard />
+      {!isLoginPage && <Nav links={[...navLinks, devLink].filter(Boolean)} />}
       <Routes>
         <Route path="/"           element={<LandingPage />} />
         <Route path="/tentang"    element={<AboutPage />} />
@@ -64,6 +114,7 @@ function AppRoutes() {
         <Route path="/daftar"     element={<RegisterPage />} />
         <Route path="/register"   element={<RegisterRedirect />} />
         <Route path="/atur-keamanan" element={<SecuritySetupPage />} />
+        <Route path="/server-error" element={<ServerErrorPage />} />
         
         {/* Protected routes - require Windows Hello or Dongle setup */}
         <Route element={<AuthGuard />}>
@@ -75,6 +126,10 @@ function AppRoutes() {
           <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
           <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
           <Route path="/log-keamanan/:userId" element={<UserSecurityLogPage />} />
+          {/* Dev page - hanya admin & dev */}
+          <Route element={<RoleGuard allowedRoles={['admin', 'dev']} />}>
+            <Route path="/dev" element={<DevPage />} />
+          </Route>
         </Route>
         
         <Route path="*"                element={<Navigate to="/" replace />} />

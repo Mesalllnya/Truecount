@@ -1,128 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useUsbToken, fetchUsbCredentials, revokeUsbCredential, updateUsbLabel, listUsbDrives, createTokenFile, startUsbRegister, verifyUsbRegister } from '../hooks/useUsbToken'
 import { useChangePassword } from '../hooks/useAuth'
 import { useWebAuthnRegister, useWebAuthnList, useWebAuthnRevoke, isPlatformAuthenticatorAvailable } from '../hooks/useAuth'
 import { getRpId, base64urlEncode, base64urlDecode } from '../utils/webauthn'
+import Icon from '../components/Icon'
 import './ProfileSettingsPage.css'
 
 /* ── Constants & Helpers ─────────────────────────────────── */
 const API_BASE = 'http://localhost:8000'
-
-/* ── Icon components ─────────────────────────────────────── */
-function UserIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-      <circle cx="12" cy="7" r="4"/>
-    </svg>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-    </svg>
-  )
-}
-
-function FingerprintIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 17a10 10 0 0 0 8-7.5"/>
-      <path d="M12 17a10 10 0 0 1-8-7.5"/>
-      <path d="M12 13a6 6 0 0 0 5-5"/>
-      <path d="M12 13a6 6 0 0 1-5-5"/>
-      <path d="M12 9a2 2 0 0 0 1.5-1"/>
-      <path d="M12 9a2 2 0 0 1-1.5-1"/>
-      <circle cx="12" cy="17" r="1"/>
-    </svg>
-  )
-}
-
-function UsbIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 22a2 2 0 0 0 2-2V8a2 2 0 0 0-4 0v12a2 2 0 0 0 2 2Z"/>
-      <circle cx="12" cy="8" r="1.5"/>
-      <path d="M9 2h6l1 4H8l1-4Z"/>
-    </svg>
-  )
-}
-
-function EyeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-      <circle cx="12" cy="12" r="3"/>
-    </svg>
-  )
-}
-
-function EyeOffIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-      <line x1="1" y1="1" x2="23" y2="23"/>
-    </svg>
-  )
-}
-
-function CheckIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12"/>
-    </svg>
-  )
-}
-
-function RevokeIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="15" y1="9" x2="9" y2="15"/>
-      <line x1="9" y1="9" x2="15" y2="15"/>
-    </svg>
-  )
-}
-
-function ArrowLeftIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="19" y1="12" x2="5" y2="12"/>
-      <polyline points="12 19 5 12 12 5"/>
-    </svg>
-  )
-}
-
-function PlusIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <line x1="12" y1="5" x2="12" y2="19"/>
-      <line x1="5" y1="12" x2="19" y2="12"/>
-    </svg>
-  )
-}
-
-function SettingsIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="2.5"/>
-      <path d="M12 4.5v1.5M12 18v1.5M4.5 12h1.5M18 12h1.5M6.34 6.34l1.06 1.06M17.66 17.66l1.06 1.06M6.34 17.66l1.06-1.06M17.66 6.34l1.06-1.06"/>
-    </svg>
-  )
-}
-
-function CopyIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="9" y="9" width="13" height="13" rx="2"/>
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-    </svg>
-  )
-}
 
 /* ── Helpers ─────────────────────────────────────────────── */
 function formatDate(iso) {
@@ -151,15 +37,17 @@ async function copyText(text) {
 }
 
 const TABS = [
-  { id: 'password', label: 'Password', icon: <LockIcon /> },
-  { id: 'webauthn', label: 'Windows Hello', icon: <FingerprintIcon /> },
-  { id: 'usb', label: 'USB Token', icon: <UsbIcon /> },
+  { id: 'password', label: 'Password', icon: <Icon name="lock" /> },
+  { id: 'webauthn', label: 'Windows Hello', icon: <Icon name="fingerprint" /> },
+  { id: 'usb', label: 'USB Token', icon: <Icon name="usb" /> },
 ]
 
 /* ── Toast Notification ──────────────────────────────────── */
-function Toast({ message, onClose }) {
+function Toast({ message, icon = 'check', onClose }) {
+  const type = icon === 'alert' ? 'alert' : 'success'
   return (
-    <div className="settings-toast" role="status" aria-live="polite" onClick={onClose}>
+    <div className="settings-toast" data-type={type} role="status" aria-live="polite" onClick={onClose}>
+      <span className="toast-icon"><Icon name={icon} size={16} strokeWidth={1.5} /></span>
       {message}
     </div>
   )
@@ -196,10 +84,10 @@ export default function ProfileSettingsPage() {
 
   // Toast state
   const [toast, setToast] = useState(null)
-  const [toastTimerRef, setToastTimerRef] = useState(null)
+  const toastTimerRef = useRef(null)
 
-  const showToast = useCallback((message) => {
-    setToast(message)
+  const showToast = useCallback((message, icon = 'check') => {
+    setToast({ message, icon })
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
     toastTimerRef.current = window.setTimeout(() => setToast(null), 4000)
   }, [])
@@ -222,7 +110,7 @@ export default function ProfileSettingsPage() {
     }
     const ok = await changePassword(pwdForm.current, pwdForm.new)
     if (ok) {
-      showToast('✅ Password berhasil diubah')
+      showToast('Password berhasil diubah', 'check')
       setPwdForm({ current: '', new: '', confirm: '' })
       setPwdShow({ current: false, new: false, confirm: false })
     }
@@ -235,6 +123,7 @@ export default function ProfileSettingsPage() {
   const [waPlatformAvailable, setWaPlatformAvailable] = useState(false)
   const [waRegistering, setWaRegistering] = useState(false)
   const [waDisplayName, setWaDisplayName] = useState('')
+  const [waRevokeConfirmId, setWaRevokeConfirmId] = useState(null)
 
   useEffect(() => {
     fetchWaList()
@@ -298,7 +187,10 @@ export default function ProfileSettingsPage() {
             name: data.user.name,
             displayName: data.user.displayName,
           },
-          pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+          pubKeyCredParams: [
+            { type: 'public-key', alg: -7 },  // ES256
+            { type: 'public-key', alg: -257 }, // RS256
+          ],
           authenticatorSelection: {
             authenticatorAttachment: 'platform',
             userVerification: 'required',
@@ -309,7 +201,7 @@ export default function ProfileSettingsPage() {
         },
       })
 
-      // TypeScript type assertion handled via comment for JSX compatibility
+      if (!credential) throw new Error('Kredensial Windows Hello tidak dibuat oleh browser')
       const assertionResponse = credential.response
       const verifyRes = await fetch(`${API_BASE}/auth/webauthn/register/verify`, {
         method: 'POST',
@@ -329,7 +221,7 @@ export default function ProfileSettingsPage() {
 
       setWaRegisterCredId(verifyData.credential_id)
       setWaRegisterStep('done')
-      showToast('✅ Windows Hello berhasil didaftarkan')
+      showToast('Windows Hello berhasil didaftarkan', 'check')
       fetchWaList()
     } catch (err) {
       setWaRegisterStep('error')
@@ -345,11 +237,22 @@ export default function ProfileSettingsPage() {
     }
   }, [showWaRegister, waRegisterStep])
 
-  const handleWaRevoke = async (id) => {
-    if (!window.confirm('Hapus Windows Hello ini? Anda tidak bisa login dengan Windows Hello yang dihapus.')) return
+  const handleWaRevokeConfirm = (id) => {
+    setWaRevokeConfirmId(id)
+  }
+
+  const handleWaRevokeCancel = () => {
+    setWaRevokeConfirmId(null)
+  }
+
+  const handleWaRevokeDelete = async () => {
+    const id = waRevokeConfirmId
+    setWaRevokeConfirmId(null)
     const ok = await waRevoke(id)
     if (ok) {
-      showToast('✅ Windows Hello dihapus')
+      showToast('Windows Hello dihapus', 'check')
+      // Tunggu sebentar agar server selesai memproses penghapusan sebelum refetch
+      await new Promise(r => setTimeout(r, 300))
       fetchWaList()
     }
   }
@@ -399,6 +302,7 @@ export default function ProfileSettingsPage() {
   const [usbRevokingId, setUsbRevokingId] = useState(null)
   const [usbEditingId, setUsbEditingId] = useState(null)
   const [usbEditLabel, setUsbEditLabel] = useState('')
+  const [usbRevokeConfirmCred, setUsbRevokeConfirmCred] = useState(null)
 
   // Load USB credentials
   const loadUsbCredentials = useCallback(async () => {
@@ -443,7 +347,7 @@ export default function ProfileSettingsPage() {
     const poll = async () => {
       const tokens = await scanForTokens()
       if (!cancelled && tokens.length > 0) {
-        showToast(`✅ USB terdeteksi di ${tokens[0].drive}`)
+        showToast(`USB terdeteksi di ${tokens[0].drive}`, 'check')
         setSelectedUsbDrive(tokens[0].drive)
         setUsbRegisterStep('waiting-pin')
       }
@@ -462,7 +366,7 @@ export default function ProfileSettingsPage() {
       if (!cancelled) {
         const masihAda = tokens.some(t => t.drive === selectedUsbDrive)
         if (!masihAda) {
-          showToast('🔌 USB dicabut. Colokkan kembali untuk melanjutkan.')
+          showToast('USB dicabut. Colokkan kembali untuk melanjutkan.', 'alert')
           setSelectedUsbDrive('')
           setUsbPin('')
           setUsbRegisterError('USB dicabut. Colokkan kembali untuk melanjutkan.')
@@ -505,7 +409,7 @@ export default function ProfileSettingsPage() {
       if (!decryptResult) {
         const msg = usbHookError || ''
         if (msg.includes('not found') || msg.includes('tidak ditemukan') || msg.includes('Read file')) {
-          showToast('🔌 USB dicabut. Colokkan kembali untuk melanjutkan.')
+          showToast('USB dicabut. Colokkan kembali untuk melanjutkan.', 'alert')
           setSelectedUsbDrive('')
           setUsbPin('')
           setUsbRegisterStep('waiting-usb')
@@ -537,7 +441,7 @@ export default function ProfileSettingsPage() {
 
       setUsbRegisterStep('done')
       setUsbPin('')
-      showToast('✅ USB token berhasil didaftarkan!')
+      showToast('USB token berhasil didaftarkan!', 'check')
       loadUsbCredentials()
     } catch (err) {
       setUsbRegisterStep('error')
@@ -619,7 +523,7 @@ export default function ProfileSettingsPage() {
       }
       setUsbCreatedCredentialId(result.credential_id)
       setUsbCreateStep('done')
-      showToast('✅ Token berhasil dibuat di ' + usbCreateDrive)
+      showToast('Token berhasil dibuat di ' + usbCreateDrive, 'check')
     } catch (err) {
       setUsbCreateStep('error')
       setUsbCreateError(err?.message || 'Gagal membuat token.')
@@ -627,15 +531,28 @@ export default function ProfileSettingsPage() {
   }
 
   /* ── USB Revoke ── */
-  const handleUsbRevoke = async (cred) => {
-    if (!window.confirm(`Nonaktifkan token "${cred.label ?? 'tanpa label'}"?\nToken ini tidak akan bisa dipakai lagi untuk MFA.`)) {
-      return
-    }
+  const handleUsbRevokeConfirm = (cred) => {
     setUsbRevokingId(cred.id)
+    setUsbRevokeConfirmCred(cred)
+  }
+
+  const handleUsbRevokeCancel = () => {
+    setUsbRevokeConfirmCred(null)
+    setUsbRevokingId(null)
+  }
+
+  const handleUsbRevokeDelete = async () => {
+    const cred = usbRevokeConfirmCred
+    setUsbRevokeConfirmCred(null)
     const ok = await revokeUsbCredential(cred.id)
     setUsbRevokingId(null)
-    if (ok) loadUsbCredentials()
-    else alert('Gagal menonaktifkan token.')
+    if (ok) {
+      showToast('USB token dinonaktifkan', 'check')
+      await new Promise(r => setTimeout(r, 300))
+      loadUsbCredentials()
+    } else {
+      showToast('Gagal menonaktifkan token', 'alert')
+    }
   }
 
   /* ── USB Edit Label ── */
@@ -651,15 +568,73 @@ export default function ProfileSettingsPage() {
   /* ── Render ── */
   return (
     <div className="settings-shell">
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} icon={toast.icon} onClose={() => setToast(null)} />}
+
+      {/* ── Confirm Hapus Windows Hello Modal ── */}
+      {waRevokeConfirmId && (
+        <div className="modal-overlay" onClick={handleWaRevokeCancel}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-icon" style={{ background: '#f13c35' }}>
+                <Icon name="alert" size={28} strokeWidth={2} />
+              </div>
+              <h2>Hapus Windows Hello?</h2>
+              <p className="modal-subtitle">Anda tidak bisa login dengan Windows Hello yang dihapus.</p>
+            </div>
+            <div className="modal-body">
+              <div className="modal-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button className="btn btn-secondary" onClick={handleWaRevokeCancel}>
+                  Batal
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={handleWaRevokeDelete}
+                  disabled={waRevokeLoading}
+                >
+                  {waRevokeLoading ? 'Menghapus…' : 'Hapus'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Nonaktifkan USB Token Modal ── */}
+      {usbRevokeConfirmCred && (
+        <div className="modal-overlay" onClick={handleUsbRevokeCancel}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-icon" style={{ background: '#f13c35' }}>
+                <Icon name="alert" size={28} strokeWidth={2} />
+              </div>
+              <h2>Nonaktifkan USB Token?</h2>
+              <p className="modal-subtitle">Token "{usbRevokeConfirmCred.label ?? 'tanpa label'}" tidak akan bisa dipakai lagi untuk MFA.</p>
+            </div>
+            <div className="modal-body">
+              <div className="modal-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button className="btn btn-secondary" onClick={handleUsbRevokeCancel}>
+                  Batal
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={handleUsbRevokeDelete}
+                  disabled={usbRevokingId}
+                >
+                  {usbRevokingId ? 'Menonaktifkan…' : 'Nonaktifkan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header className="settings-header">
         <button className="settings-back" onClick={() => navigate('/dasbor')}>
-          <ArrowLeftIcon />
+          <Icon name="arrow-left" size={16} />
           Kembali ke Dasbor
         </button>
         <div className="settings-title">
-          <h1><SettingsIcon /> Pengaturan Profil</h1>
+          <h1><Icon name="settings" /> Pengaturan Profil</h1>
           <p>Kelola password, Windows Hello, dan USB token autentikasi</p>
         </div>
         <div className="settings-user-badge">
@@ -718,7 +693,7 @@ export default function ProfileSettingsPage() {
                       onClick={() => setPwdShow(p => ({ ...p, current: !p.current }))}
                       aria-label={pwdShow.current ? 'Sembunyikan password' : 'Tampilkan password'}
                     >
-                      {pwdShow.current ? <EyeOffIcon /> : <EyeIcon />}
+                      {pwdShow.current ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
                     </button>
                   </div>
                 </div>
@@ -743,7 +718,7 @@ export default function ProfileSettingsPage() {
                       onClick={() => setPwdShow(p => ({ ...p, new: !p.new }))}
                       aria-label={pwdShow.new ? 'Sembunyikan password' : 'Tampilkan password'}
                     >
-                      {pwdShow.new ? <EyeOffIcon /> : <EyeIcon />}
+                      {pwdShow.new ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
                     </button>
                   </div>
                   <span className="field-hint">Minimal 8 karakter, kombinasi huruf & angka direkomendasikan.</span>
@@ -768,7 +743,7 @@ export default function ProfileSettingsPage() {
                       onClick={() => setPwdShow(p => ({ ...p, confirm: !p.confirm }))}
                       aria-label={pwdShow.confirm ? 'Sembunyikan password' : 'Tampilkan password'}
                     >
-                      {pwdShow.confirm ? <EyeOffIcon /> : <EyeIcon />}
+                      {pwdShow.confirm ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
                     </button>
                   </div>
                 </div>
@@ -800,7 +775,7 @@ export default function ProfileSettingsPage() {
 
               {!waPlatformAvailable && (
                 <div className="platform-notice">
-                  <FingerprintIcon />
+                  <Icon name="fingerprint" />
                   <div>
                     <strong>Windows Hello tidak terdeteksi</strong>
                     <p>Perangkat ini tidak mendukung platform authenticator, atau browser tidak mengizinkan akses.
@@ -812,7 +787,7 @@ export default function ProfileSettingsPage() {
               {waPlatformAvailable && waCredentials.length === 0 && (
                 <div className="wa-empty">
                   <div className="wa-empty-icon">
-                    <FingerprintIcon />
+                    <Icon name="fingerprint" />
                   </div>
                   <h3>Belum ada Windows Hello terdaftar</h3>
                   <p>Daftarkan Windows Hello untuk login cepat tanpa password menggunakan Face ID, Touch ID, atau PIN perangkat.</p>
@@ -821,7 +796,7 @@ export default function ProfileSettingsPage() {
                     onClick={handleOpenWaRegister}
                     disabled={waLoading}
                   >
-                    <PlusIcon /> Daftarkan Windows Hello
+                    <Icon name="plus" size={14} /> Daftarkan Windows Hello
                   </button>
                 </div>
               )}
@@ -836,7 +811,7 @@ export default function ProfileSettingsPage() {
                         onClick={handleOpenWaRegister}
                         disabled={waLoading}
                       >
-                        <PlusIcon /> Tambah Baru
+                        <Icon name="plus" size={14} /> Tambah Baru
                       </button>
                     )}
                   </div>
@@ -846,7 +821,7 @@ export default function ProfileSettingsPage() {
                     {waCredentials.map(cred => (
                       <div key={cred.id} className="wa-row">
                         <div className="wa-row-main">
-                          <FingerprintIcon className="wa-row-icon" />
+                          <Icon name="fingerprint" className="wa-row-icon" />
                           <div className="wa-row-info">
                             <span className="wa-row-label">Windows Hello</span>
                             <span className="wa-row-meta">
@@ -871,11 +846,11 @@ export default function ProfileSettingsPage() {
                         <div className="wa-row-actions">
                           <button
                             className="btn btn-danger btn-icon"
-                            onClick={() => handleWaRevoke(cred.id)}
+                            onClick={() => handleWaRevokeConfirm(cred.id)}
                             disabled={waRevokeLoading}
                             title="Hapus Windows Hello"
                           >
-                            <RevokeIcon />
+                            <Icon name="revoke" size={13} />
                           </button>
                         </div>
                       </div>
@@ -902,7 +877,7 @@ export default function ProfileSettingsPage() {
 
               <div className="usb-panel-actions">
                 <button className="btn btn-secondary" onClick={handleOpenUsbCreate} disabled={showUsbCreate}>
-                  <PlusIcon /> Buat Token di USB
+                  <Icon name="plus" size={14} /> Buat Token di USB
                 </button>
                 <button className="btn btn-primary" onClick={handleStartUsbRegister} disabled={showUsbRegister}>
                   ＋ Daftarkan USB Baru
@@ -1068,7 +1043,7 @@ export default function ProfileSettingsPage() {
                           >
                             {usbRegisterStep === 'signing' ? '⏳ Memproses…' : (
                               <>
-                                <LockIcon />
+                                <Icon name="lock" />
                                 Daftarkan Token
                               </>
                             )}
@@ -1119,7 +1094,7 @@ export default function ProfileSettingsPage() {
                     {usbCredentials.map(cred => (
                       <div key={cred.id} className={`usb-row${cred.is_active ? '' : ' usb-row--revoked'}`}>
                         <div className="usb-row-main">
-                          <UsbIcon className="usb-row-icon" />
+                          <Icon name="usb" className="usb-row-icon" />
                           <div className="usb-row-info">
                             {usbEditingId === cred.id ? (
                               <div className="usb-edit-inline">
@@ -1166,11 +1141,11 @@ export default function ProfileSettingsPage() {
                               </button>
                               <button
                                 className="btn btn-danger btn-icon"
-                                onClick={() => handleUsbRevoke(cred)}
+                                onClick={() => handleUsbRevokeConfirm(cred)}
                                 title="Nonaktifkan token"
                                 disabled={usbRevokingId === cred.id}
                               >
-                                {usbRevokingId === cred.id ? '⏳' : <RevokeIcon />}
+                                {usbRevokingId === cred.id ? <Icon name="loader" size={13} /> : <Icon name="revoke" size={13} />}
                               </button>
                             </>
                           )}
@@ -1190,12 +1165,12 @@ export default function ProfileSettingsPage() {
         <div className="modal-overlay" onClick={handleCloseWaRegister} role="dialog" aria-modal="true" aria-labelledby="wa-modal-title">
           <div className="modal modal--webauthn" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={handleCloseWaRegister} aria-label="Tutup">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <Icon name="close" size={20} />
             </button>
 
             <div className="modal-header">
               <div className="modal-icon">
-                <FingerprintIcon />
+                <Icon name="fingerprint" />
               </div>
               <h2 id="wa-modal-title">Daftarkan Windows Hello</h2>
               <p className="modal-subtitle">Gunakan Face ID, Touch ID, atau PIN perangkat untuk login tanpa password.</p>
@@ -1208,7 +1183,7 @@ export default function ProfileSettingsPage() {
                     <div className="wa-pulse-ring"></div>
                     <div className="wa-pulse-ring"></div>
                     <div className="wa-pulse-ring"></div>
-                    <FingerprintIcon className="wa-pulse-center" />
+                    <Icon name="fingerprint" className="wa-pulse-center" />
                   </div>
                 </div>
                 <p className="wa-step-title">Menyiapkan registrasi…</p>
@@ -1275,12 +1250,12 @@ export default function ProfileSettingsPage() {
         <div className="modal-overlay" onClick={handleCloseUsbCreate} role="dialog" aria-modal="true" aria-labelledby="usb-create-modal-title">
           <div className="modal modal--usb" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={handleCloseUsbCreate} aria-label="Tutup">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <Icon name="close" size={20} />
             </button>
 
             <div className="modal-header">
               <div className="modal-icon">
-                <UsbIcon />
+                <Icon name="usb" />
               </div>
               <h2 id="usb-create-modal-title">Buat Token Baru di USB</h2>
               <p className="modal-subtitle">Generate kunci ECDSA P-256 terenkripsi dan simpan ke flashdisk.</p>
@@ -1305,7 +1280,7 @@ export default function ProfileSettingsPage() {
                     </select>
                     {usbDrives.length === 0 && (
                       <div className="drive-empty">
-                        <UsbIcon className="drive-empty-icon" />
+                        <Icon name="usb" className="drive-empty-icon" />
                         <p>Tidak ada flashdisk terdeteksi</p>
                         <span>Colokkan flashdisk lalu tunggu ±2 detik</span>
                       </div>
@@ -1315,7 +1290,7 @@ export default function ProfileSettingsPage() {
                     const sel = usbDrives.find(d => d.drive === usbCreateDrive)
                     return sel?.has_token ? (
                       <div className="overwrite-warning" role="alert">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <Icon name="alert" size={18} />
                         <div>
                           <strong>Flashdisk ini sudah berisi token.</strong>
                           <p>Membuat token baru akan <strong>menimpa token lama</strong> dan token lama tidak bisa dipakai lagi.</p>
@@ -1349,7 +1324,7 @@ export default function ProfileSettingsPage() {
                       onClick={() => setUsbCreatePinShow(p => !p)}
                       aria-label="Toggle PIN visibility"
                     >
-                      {usbCreatePinShow ? <EyeOffIcon /> : <EyeIcon />}
+                      {usbCreatePinShow ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
                     </button>
                   </div>
                 </div>
@@ -1370,7 +1345,7 @@ export default function ProfileSettingsPage() {
                       onClick={() => setUsbCreatePinConfirmShow(p => !p)}
                       aria-label="Toggle PIN visibility"
                     >
-                      {usbCreatePinConfirmShow ? <EyeOffIcon /> : <EyeIcon />}
+                      {usbCreatePinConfirmShow ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
                     </button>
                   </div>
                 </div>
@@ -1388,7 +1363,7 @@ export default function ProfileSettingsPage() {
                 </div>
 
                 <p className="modal-hint">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <Icon name="info" size={16} />
                   Membuat file token <strong>TIDAK</strong> otomatis mendaftarkannya. Setelah dibuat, gunakan tombol <strong>"Daftarkan USB Baru"</strong> untuk mengikatnya ke akun ini.
                 </p>
               </div>
@@ -1432,12 +1407,12 @@ export default function ProfileSettingsPage() {
         <div className="modal-overlay" onClick={handleCloseUsbRegister} role="dialog" aria-modal="true" aria-labelledby="usb-reg-modal-title">
           <div className="modal modal--usb" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={handleCloseUsbRegister} aria-label="Tutup">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <Icon name="close" size={20} />
             </button>
 
             <div className="modal-header">
               <div className="modal-icon">
-                <UsbIcon />
+                <Icon name="usb" />
               </div>
               <h2 id="usb-reg-modal-title">Daftarkan USB Token Baru</h2>
               <p className="modal-subtitle">Colokkan flashdisk yang sudah berisi token, masukkan PIN, dan ikat ke akun ini.</p>
@@ -1460,7 +1435,7 @@ export default function ProfileSettingsPage() {
                     {detectedTokens.length > 0 ? (
                       <span className="usb-detected-pulse">🔌</span>
                     ) : (
-                      <UsbIcon className="usb-pulse" />
+                      <Icon name="usb" className="usb-pulse" />
                     )}
                   </div>
                   <h3>{detectedTokens.length > 0 ? 'USB Terdeteksi!' : 'Menunggu USB…'}</h3>
@@ -1469,7 +1444,7 @@ export default function ProfileSettingsPage() {
                     : 'Colokkan flashdisk yang berisi token. Sistem akan mendeteksi otomatis dalam 2 detik.'}</p>
                   {detectedTokens.length > 0 && (
                     <div className="usb-drive-badge">
-                      <UsbIcon /> {detectedTokens[0].drive}
+                      <Icon name="usb" /> {detectedTokens[0].drive}
                     </div>
                   )}
                   {usbRegisterError && (
@@ -1500,7 +1475,7 @@ export default function ProfileSettingsPage() {
                       aria-label="Toggle PIN visibility"
                       disabled={usbRegisterStep === 'signing'}
                     >
-                      {usbPinShow ? <EyeOffIcon /> : <EyeIcon />}
+                      {usbPinShow ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
                     </button>
                   </div>
                 </div>
@@ -1528,7 +1503,7 @@ export default function ProfileSettingsPage() {
                     </span>
                     {usbRegisterStep === 'signing' ? 'Memproses…' : (
                       <>
-                        <LockIcon />
+                        <Icon name="lock" />
                         Daftarkan Token
                       </>
                     )}

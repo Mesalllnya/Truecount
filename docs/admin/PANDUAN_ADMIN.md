@@ -26,9 +26,10 @@ TrueCount adalah aplikasi **e-voting akademik** dengan fitur keamanan berbasis k
 | --- | --- |
 | Login & registrasi via undangan (invite-only) | ✅ |
 | Dasbor admin (kelola undangan) | ✅ |
-| **USB Token MFA** (daftar, kelola, pakai flashdisk sebagai faktor kedua) | ✅ |
-| Pemilihan / voting | ⏳ Sprint 2 |
-| Enkripsi pesan & file, blockchain | ⏳ Sprint 3 |
+| USB Token MFA (daftar, kelola, pakai flashdisk sebagai faktor kedua) | ✅ |
+| Pemilihan / voting (Election CRUD, kandidat, suara, hasil) | ✅ Sprint 2 |
+| Enkripsi pesan & file, blockchain | ✅ Sprint 3 |
+| Keamanan auth (Windows Hello, kamera, failed attempts, log keamanan) | ✅ Sprint 4b |
 
 **Prinsip pendaftaran:** Publik **tidak bisa** daftar sendiri. Calon pengguna hanya bisa membuat akun lewat **tautan undangan** yang dibuat admin.
 
@@ -71,11 +72,11 @@ npm run dev:full           # PHP :8000 + Vite :5173
 | Username | Kata Sandi | Peran | Keterangan |
 | --- | --- | --- | --- |
 | `admin` | `Admin@1234` | Admin | Akun utama — buat undangan, kelola sistem |
-| `rio` | `Rio@12345` | Pemilih | Akun uji coba |
+| `dev` | `Dev@1234` | Dev | Akses ke halaman dev (`/dev`) — visualisasi flow & kriptografi |
 | `pemilih1` | `Pemilih@123` | Pemilih | Akun uji coba |
 | `pemilih2` | `Pemilih@123` | Pemilih | Akun uji coba |
 
-> **Ganti kata sandi admin** sebelum dipakai serius. (Fitur ganti kata sandi: ⏳ akan datang)
+> **Ganti kata sandi admin** sebelum dipakai serius. Fitur ganti kata sandi tersedia di halaman **Pengaturan** (`/pengaturan`) setelah login.
 
 ---
 
@@ -87,7 +88,7 @@ Pendaftaran publik ditutup — semua akun baru masuk lewat undangan.
 2. Di panel **Undangan**, klik **"+ Buat undangan"**
 3. Isi formulir:
    - **Email calon** (opsional) — kalau diisi, undangan **hanya bisa dipakai email itu**
-   - **Peran akun** — `Pemilih` atau `Admin`
+   - **Peran akun** — `Pemilih`, `Admin`, atau `Dev`
 4. Klik **"Buat undangan"**
 5. Tautan undangan muncul → klik **"Salin"** → kirim ke calon pengguna
 
@@ -199,7 +200,7 @@ Output sukses:
 | Tidak bisa daftar akun | Pendaftaran ditutup publik — minta tautan undangan ke admin |
 | Tautan undangan "tidak valid" | Undangan mungkin kedaluwarsa (7 hari) atau sudah dipakai/dibatalkan |
 | Server tidak tersambung | Pastikan backend jalan (`npm run dev:full` atau app desktop otomatis spawn PHP) |
-| Kamera tetap menyala setelah pindah dari halaman login | Masalah sudah diatasi: kamera otomatis dimatikan saat navigasi keluar halaman login. Kalau masih terjadi, tutup buka ulang aplikasi. |
+| Kamera tetap menyala setelah pindah dari halaman login | Stream kamera bocor (race antar pemeriksaan kamera) | Sudah diatasi: kamera **hanya nyala di halaman Masuk**. Semua stream kamera terdaftar di registry global dan dipaksa mati otomatis saat pindah ke halaman lain (landing, dasbor, dll). Kalau masih terjadi, tutup buka ulang aplikasi. |
 | Foto tidak muncul di Log Keamanan | Foto hanya disimpan untuk percobaan login **setelah** perbaikan diterapkan. Percobaan lama tidak memiliki foto (placeholder kamera akan ditampilkan). |
 
 ---

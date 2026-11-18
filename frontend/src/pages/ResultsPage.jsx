@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import DashNav from '../components/DashNav'
-import './DashboardPage.css'
 import './ResultsPage.css'
 
 const API_BASE = 'http://localhost:8000'
@@ -48,26 +46,9 @@ export default function ResultsPage() {
     fetchResults()
   }, [id, token])
 
-  function handleLogout() {
-    localStorage.removeItem('tc_token')
-    navigate('/masuk')
-  }
-
-  const nav = (
-    <DashNav
-      brand={<Link to="/dasbor" className="dash-brand">TrueCount</Link>}
-      items={[
-        { to: '/dasbor', label: 'Dasbor' },
-        { to: null, label: 'Hasil', active: true },
-      ]}
-      onLogout={handleLogout}
-    />
-  )
-
   if (loading) {
     return (
       <div className="results-shell">
-        {nav}
         <main className="results-main">
           <p style={{ color: '#6a6a67', marginTop: '3rem' }}>Memuat hasil…</p>
         </main>
@@ -78,7 +59,6 @@ export default function ResultsPage() {
   if (error) {
     return (
       <div className="results-shell">
-        {nav}
         <main className="results-main">
           <div style={{
             background: '#fef2f2', border: '1px solid #fca5a5',
@@ -113,8 +93,6 @@ export default function ResultsPage() {
 
   return (
     <div className="results-shell">
-      {nav}
-
       <main className="results-main">
 
         {/* ── Header ── */}

@@ -300,7 +300,8 @@ export function useWebAuthnRegister() {
             displayName,
           },
           pubKeyCredParams: [
-            { type: 'public-key', alg: -7 }, // ES256
+            { type: 'public-key', alg: -7 },  // ES256
+            { type: 'public-key', alg: -257 }, // RS256
           ],
           authenticatorSelection: {
             // Allow both platform (Windows Hello) AND cross-platform (USB security keys)
@@ -312,6 +313,10 @@ export function useWebAuthnRegister() {
           attestation: 'none',
         },
       }) as PublicKeyCredential & { response: AuthenticatorAttestationResponse }
+
+      if (!credential || !credential.response) {
+        throw new Error('Kredensial Windows Hello tidak dibuat oleh browser')
+      }
 
       // 3. Kirim ke server untuk verifikasi
       const attestationRes = credential.response
@@ -325,8 +330,23 @@ export function useWebAuthnRegister() {
           client_data_json: base64urlEncode(new Uint8Array(attestationRes.clientDataJSON)),
         }),
       })
-      const verifyData = await verifyRes.json()
-      if (!verifyRes.ok) throw new Error(verifyData.error || 'Verifikasi registrasi gagal')
+
+      // Parse response — server bisa mengembalikan non-200 meski credential sudah dibuat.
+      let verifyData: { credential_id?: string; error?: string } = {}
+      try {
+        verifyData = await verifyRes.json()
+      } catch {
+        // Response bukan JSON — abaikan, coba lanjutkan jika credential_id tersedia dari situasi lain
+      }
+
+      // Jika server mengembalikan credential_id, berarti registrasi berhasil meski status non-200.
+      if (verifyData.credential_id) {
+        return { credentialId: verifyData.credential_id }
+      }
+
+      if (!verifyRes.ok) {
+        throw new Error(verifyData.error || 'Verifikasi registrasi gagal')
+      }
 
       return { credentialId: verifyData.credential_id }
     } catch (err) {

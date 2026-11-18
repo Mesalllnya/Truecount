@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
+use tauri::webview::{PermissionKind, PermissionResponse};
 use tauri::{Manager, RunEvent};
 
 // USB Token module
@@ -17,12 +18,30 @@ struct PhpServer(Mutex<Option<Child>>);
 /// Log file app (bukan log PHP).
 struct AppLog(Mutex<std::fs::File>);
 
+/// Log dari frontend (diagnostik kamera, error, dll.)
+#[tauri::command]
+fn log_from_frontend(app: tauri::AppHandle, message: String) {
+    if let Some(log) = app.try_state::<AppLog>() {
+        app_log(&log, &format!("[UI] {}", message));
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::<tauri::Wry>::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        // Auto-allow kamera & mikrofon untuk WebView2 (terutama pada production/MSI build)
+        .on_permission_request(|_webview, kind| {
+            match kind {
+                PermissionKind::Camera | PermissionKind::Microphone => {
+                    eprintln!("[TrueCount] Izin diberikan otomatis untuk: {kind:?}");
+                    PermissionResponse::Allow
+                }
+                _ => PermissionResponse::Default,
+            }
+        })
         .setup(|app| {
             // ── Siapkan logger ──────────────────────────────────────────
             let log_dir = app
@@ -61,7 +80,8 @@ pub fn run() {
             decrypt_usb_token_private_key,
             scan_usb_tokens,
             list_usb_drives,
-            create_usb_token_file
+            create_usb_token_file,
+            log_from_frontend
         ])
         .build(tauri::generate_context!())
         .expect("error saat menjalankan aplikasi TrueCount")

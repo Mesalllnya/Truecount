@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
-import DashNav from '../components/DashNav'
 import { CandidatePhoto } from '../components/ElectionModals'
-import './DashboardPage.css'   // reuse .dash-nav / .dash-brand / .dash-logout
 import './VotePage.css'
 
 const API_BASE = 'http://localhost:8000'
@@ -177,20 +174,10 @@ export default function VotePage() {
     }
   }
 
-  function handleLogout() {
-    localStorage.removeItem('tc_token')
-    navigate('/masuk')
-  }
-
   // ── Loading daftar election ────────────────────────────────
   if (loadingElections) {
     return (
       <div className="vote-shell">
-        <DashNav
-          brand={<Link to="/dasbor" className="dash-brand">TrueCount</Link>}
-          items={[]}
-          onLogout={handleLogout}
-        />
         <main className="vote-main">
           <p style={{ color: 'var(--muted)', marginTop: '4rem' }}>Memuat pemilihan…</p>
         </main>
@@ -204,16 +191,6 @@ export default function VotePage() {
 
     return (
       <div className="vote-shell">
-        <DashNav
-          active="/pilih"
-          brand={
-            <Link to="/dasbor" className="dash-brand">
-              <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
-            </Link>
-          }
-          onLogout={handleLogout}
-        />
-
         <main className="vote-main">
           <header className="vote-head">
             <h1>Pemilihan Saya</h1>
@@ -317,16 +294,6 @@ export default function VotePage() {
 
   return (
     <div className="vote-shell">
-        <DashNav
-          active="/pilih"
-          brand={
-            <Link to="/dasbor" className="dash-brand" aria-label="TrueCount - Dasbor">
-              <img src={navLogoLight} alt="TrueCount" className="dash-brand-logo" />
-            </Link>
-          }
-          onLogout={handleLogout}
-        />
-
         <main className="vote-main">
         {/* Tombol kembali ke daftar pemilihan */}
         <div style={{ width: '100%', maxWidth: '880px', marginBottom: '1.5rem' }}>

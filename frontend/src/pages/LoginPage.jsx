@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useUsbToken, startUsbAuthenticate, verifyUsbAuthenticate, base64urlToBytes, bytesToBase64url } from '../hooks/useUsbToken'
 import { useWebAuthnLogin, isWebAuthnSupported } from '../hooks/useWebAuthn'
@@ -119,6 +119,10 @@ function LockIcon() {
   )
 }
 
+/* ── Pesan standar: kamera wajib online untuk SEMUA metode masuk ── */
+const CAMERA_BLOCKED_MSG =
+  'Kamera tertutup atau terlalu gelap. Buka penutup kamera (shutter), nyalakan lampu, ubah posisi, atau ganti kamera.'
+
 function LoaderIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -151,19 +155,29 @@ export default function LoginPage() {
   const { login } = useAuth()
 
   // ── Failed Attempts Tracking ────────────────────────────────
-  const { state: attemptsState, increment } = useFailedAttempts()
+  const { state: attemptsState, increment, reset } = useFailedAttempts()
 
   // ── Camera Permission (required for Windows Hello) ──────────
-  const { hasPermission: cameraPermission, isChecking: cameraChecking, error: cameraError, requestPermission, stream, videoEl, capturePhoto, verifyCameraActive } = useCameraPermission()
+  const { hasPermission: cameraPermission, isChecking: cameraChecking, error: cameraError, requestPermission, stream, videoEl, capturePhoto, verifyCameraActive, stopCamera, startCamera, switchCamera, cameraCount } = useCameraPermission()
 
   // Video element for preview - use this for verification since it's the live one
   const [previewVideoElement, setPreviewVideoElement] = useState(null)
 
+  // ── Start camera explicitly on LoginPage mount ──
+  useEffect(() => {
+    startCamera()
+    return () => {
+      stopCamera()
+    }
+  }, [startCamera, stopCamera])
+
   // ── Toast untuk kamera (muncul setiap kali pemeriksaan kamera berjalan) ──
   const [toast, setToast] = useState(null)
+  const [toastType, setToastType] = useState('success')
 
-  const showAuthToast = useCallback((message) => {
+  const showAuthToast = useCallback((message, type = 'success') => {
     setToast(message)
+    setToastType(type)
     setTimeout(() => setToast(null), 3500)
   }, [])
 
@@ -171,51 +185,106 @@ export default function LoginPage() {
   useEffect(() => {
     if (cameraChecking) return
     if (cameraPermission === true) {
-      showAuthToast('Kamera siap ✓')
+      showAuthToast('Kamera siap', 'success')
     } else if (cameraPermission === false) {
-      showAuthToast(cameraError || 'Kamera tidak aktif. Buka shutter kamera untuk Windows Hello.')
+      showAuthToast(cameraError || CAMERA_BLOCKED_MSG, 'error')
     }
   }, [cameraPermission, cameraChecking, cameraError, showAuthToast])
 
   // ── State umum ──────────────────────────────────────────────
-  const [selectedMethod, setSelectedMethod] = useState('webauthn') // Default to Windows Hello
+  const [selectedMethod, setSelectedMethod] = useState(null)
   const [form, setForm] = useState({ identifier: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passwordShow, setPasswordShow] = useState(false)
   const [authPhoto, setAuthPhoto] = useState(null)
   // True jika user (berdasarkan identifier) belum pasang Windows Hello/Dongle
   const [identifierNeedsSetup, setIdentifierNeedsSetup] = useState(false)
+  const [identifierChecked, setIdentifierChecked] = useState(false)
   // Kata sandi tersedia setelah 5x percobaan gagal
   const showPasswordFallback = attemptsState.count >= 5
+  // User tidak ditemukan di database saat dicek security-status
+  const [userNotFound, setUserNotFound] = useState(false)
+
+  // Reset hitungan percobaan gagal saat username/email diganti (per-identifier).
+  // `syncServer=false` agar log keamanan di server tidak ikut terhapus saat mengetik.
+  const prevIdentifierRef = useRef(form.identifier)
+  useEffect(() => {
+    if (prevIdentifierRef.current !== form.identifier) {
+      prevIdentifierRef.current = form.identifier
+      reset(form.identifier.trim(), false)
+      setUserNotFound(false) // reset notifikasi user tidak ditemukan
+    }
+  }, [form.identifier, reset])
 
   // ── Capture photo before auth attempt ─────────────────────────
   const captureAuthPhoto = useCallback(async () => {
     if (!capturePhoto) return null;
-    const photo = await capturePhoto();
+    const photo = await capturePhoto(previewVideoElement);
     setAuthPhoto(photo);
     return photo;
-  }, [capturePhoto]);
+  }, [capturePhoto, previewVideoElement]);
 
-  // ── Matikan kamera saat meninggalkan halaman login ─────────────
-  // Mencegah kamera tetap menyala (indikator LED menyala) setelah
-  // navigasi ke dasbor atau halaman lain.
+  // ── Gate kamera: WAJIB online untuk SEMUA metode masuk ────────
+  // 'ok' = kamera siap, 'blocked' = kamera tertutup/gelap (harus dihitung
+  // gagal), 'checking' = masih diperiksa (tunggu, tidak dihitung gagal).
+  const checkCameraGate = useCallback(async () => {
+    if (cameraChecking) return 'checking'
+    if (cameraPermission === false) return 'blocked'
+    const active = await verifyCameraActive(previewVideoElement)
+    return active ? 'ok' : 'blocked'
+  }, [cameraChecking, cameraPermission, verifyCameraActive, previewVideoElement])
+
+  // Blokir login bila kamera tidak online. Mengembalikan true jika diblokir.
+  const blockIfCameraOffline = useCallback(async (identifier, method) => {
+    const gate = await checkCameraGate()
+    if (gate === 'ok') return false
+    if (gate === 'blocked') {
+      const msg = cameraError || CAMERA_BLOCKED_MSG
+      setError(msg)
+      try {
+        await increment(identifier, method, false, msg)
+      } catch (incErr) {
+        console.warn('[Login] Failed to log camera-blocked attempt:', incErr)
+      }
+    }
+    return true
+  }, [checkCameraGate, cameraError, increment])
+
+  // ── Matikan kamera HANYA saat meninggalkan halaman login (unmount) ────────
+  // Menggunakan ref agar pembaruan stream/previewVideoElement tidak mematikan
+  // kamera yang baru saja menyala.
+  const unmountCleanupRef = useRef({ stream: null, previewVideoElement: null, videoEl: null })
+  useEffect(() => {
+    unmountCleanupRef.current = { stream, previewVideoElement, videoEl }
+  }, [stream, previewVideoElement, videoEl])
+
+  // ── Pasang stream ke elemen video preview SEKALI SAJA ─────────────────────
+  // Dulu srcObject di-assign di dalam ref inline — ref inline dibuat baru tiap
+  // render, jadi React lepas/pasang ulang ref setiap ketikan dan srcObject
+  // di-assign ulang → pipeline media restart → kamera "flicker" tiap ngetik.
+  // Sekarang: ref stabil (hanya mount/unmount) + assignment diguard.
+  useEffect(() => {
+    if (previewVideoElement && stream && previewVideoElement.srcObject !== stream) {
+      previewVideoElement.srcObject = stream
+    }
+  }, [previewVideoElement, stream])
+
   useEffect(() => {
     return () => {
-      // Hentikan semua track kamera (mematikan indikator kamera)
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      stopCamera() // paksa matikan semua track + interval dari hook
+      const { stream: s, previewVideoElement: p, videoEl: v } = unmountCleanupRef.current
+      if (s) {
+        s.getTracks().forEach((track) => track.stop())
       }
-      // Lepaskan srcObject dari video elemen agar browser/WebView melepaskan kamera
-      if (previewVideoElement) {
-        previewVideoElement.srcObject = null;
-        previewVideoElement.removeAttribute('srcObject');
+      if (p) {
+        p.srcObject = null
       }
-      if (videoEl) {
-        videoEl.srcObject = null;
-        videoEl.removeAttribute('srcObject');
+      if (v) {
+        v.srcObject = null
       }
-    };
-  }, [stream, previewVideoElement, videoEl]);
+    }
+  }, [stopCamera]) // dependency: stopCamera agar cleanup selalu pakai versi terbaru
 
   // ── Notifikasi "akun baru dibuat" ───────────────────────────
   const [notice, setNotice] = useState(
@@ -352,18 +421,14 @@ export default function LoginPage() {
   const handleUsbAuthSubmitPin = async () => {
     const identifier = form.identifier.trim()
     if (!usbAuthSelectedDrive || !usbAuthPin || !usbAuthChallengeData) return
+
+    // Kamera WAJIB online — Dongle pun butuh kamera aktif
+    if (await blockIfCameraOffline(identifier, 'dongle')) return
+
     setUsbAuthStep('signing')
     setUsbAuthError('')
 
-    // Verify camera is still active before auth
-    const cameraActive = await verifyCameraActive(previewVideoElement)
-    if (!cameraActive) {
-      setUsbAuthStep('error')
-      setUsbAuthError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
-      return
-    }
-
-    // Capture photo before auth
+    // Capture photo before auth (kamera sudah pasti online)
     const photo = await captureAuthPhoto()
 
     try {
@@ -458,6 +523,9 @@ export default function LoginPage() {
     const identifier = form.identifier.trim()
     if (!identifier) {
       setIdentifierNeedsSetup(false)
+      setIdentifierChecked(false)
+      setUserNotFound(false)
+      setError('')
       return
     }
     const timer = setTimeout(async () => {
@@ -470,15 +538,51 @@ export default function LoginPage() {
         const data = await res.json()
         if (res.ok && data.found) {
           setIdentifierNeedsSetup(data.requires_setup === true)
+          setIdentifierChecked(true)
+          setUserNotFound(false)
+          setError('')
+        } else if (res.status >= 500) {
+          // Server hidup tapi database mati (atau error server lain)
+          navigate('/server-error')
         } else {
           setIdentifierNeedsSetup(false)
+          setIdentifierChecked(true)
+          setUserNotFound(true)
+          setError('Pengguna tidak ditemukan. Silakan coba username atau email yang lain.')
         }
       } catch {
-        setIdentifierNeedsSetup(false)
+        // Server tidak respons / tidak bisa nyambung ke database
+        navigate('/server-error')
       }
     }, 500)
     return () => clearTimeout(timer)
-  }, [form.identifier])
+  }, [form.identifier, navigate])
+
+  // ── Cek kesehatan server saat halaman login dimuat ──
+  // Jika server sudah mati sebelum user mengetik apa pun, arahkan ke /server-error
+  // segera agar user tidak menunggu pada halaman login yang tidak bisa diproses.
+  useEffect(() => {
+    let cancelled = false
+
+    const checkServer = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/health', {
+          method: 'GET',
+          // Gagal cepat jika server mati, tidak menunggu timeout bawaan browser
+          signal: AbortSignal.timeout(2000),
+        })
+        if (!cancelled && !res.ok) {
+          navigate('/server-error')
+        }
+      } catch {
+        // Server tidak bisa dihubungi sama sekali → redirect segera
+        if (!cancelled) navigate('/server-error')
+      }
+    }
+
+    checkServer()
+    return () => { cancelled = true }
+  }, [navigate])
 
   // ── Submit password ─────────────────────────────────────────
   async function handlePasswordSubmit(e) {
@@ -489,14 +593,10 @@ export default function LoginPage() {
       return
     }
 
-    // Verify camera is still active before auth
-    const cameraActive = await verifyCameraActive(previewVideoElement)
-    if (!cameraActive) {
-      setError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
-      return
-    }
+    // Kamera WAJIB online — Kata Sandi pun butuh kamera aktif
+    if (await blockIfCameraOffline(identifier, 'password')) return
 
-    // Capture photo before auth
+    // Capture photo before auth (kamera sudah pasti online)
     const photo = await captureAuthPhoto()
 
     setLoading(true)
@@ -545,20 +645,9 @@ export default function LoginPage() {
       setError('Masukkan username atau email terlebih dahulu')
       return
     }
-    if (cameraChecking) return
-    if (cameraPermission === false) {
-      setError(cameraError || 'Izin kamera diperlukan untuk Windows Hello')
-      // Hitung sebagai percobaan gagal agar Kata Sandi terbuka setelah 5x gagal
-      await increment(identifier, 'webauthn', false, cameraError || 'Kamera tidak tersedia')
-      return
-    }
 
-    // Verify camera is still active before auth
-    const cameraActive = await verifyCameraActive(previewVideoElement)
-    if (!cameraActive) {
-      setError('Kamera tidak aktif. Pastikan kamera tidak ditutup/dimatikan.')
-      return
-    }
+    // Kamera WAJIB online — Windows Hello pun butuh kamera aktif
+    if (await blockIfCameraOffline(identifier, 'webauthn')) return
 
     // Capture photo before auth
     const photo = await captureAuthPhoto()
@@ -574,10 +663,22 @@ export default function LoginPage() {
         } catch (incErr) {
           console.warn('[Login] Failed to log webauthn attempt:', incErr)
         }
+        stopCamera() // matikan kamera sebelum pindah ke dasbor
         navigate('/dasbor')
       } else {
         const errMsg = webauthnError || 'Autentikasi Windows Hello gagal'
         setError(errMsg)
+        // Jika gagal karena belum ada kredensial Windows Hello yang terdaftar,
+        // otomatis alihkan ke metode Kata Sandi agar user masih bisa masuk.
+        const isNoCredential = [
+          'kredensial', 'credential',
+          'belum mendaftarkan', 'belum terdaftar',
+          'tidak terdaftar', 'tidak ada',
+        ].some(k => errMsg.toLowerCase().includes(k))
+        if (isNoCredential) {
+          setSelectedMethod('password')
+          setError('Windows Hello belum terdaftar untuk akun ini. Silakan masuk dengan kata sandi.')
+        }
         try {
           await increment(identifier, 'webauthn', false, errMsg)
         } catch (incErr) {
@@ -587,6 +688,16 @@ export default function LoginPage() {
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Terjadi kesalahan'
       setError(errMsg)
+      // Fallback ke Kata Sandi jika tidak ada kredensial Windows Hello
+      const isNoCredential = [
+        'kredensial', 'credential',
+        'belum mendaftarkan', 'belum terdaftar',
+        'tidak terdaftar', 'tidak ada',
+      ].some(k => errMsg.toLowerCase().includes(k))
+      if (isNoCredential) {
+        setSelectedMethod('password')
+        setError('Windows Hello belum terdaftar untuk akun ini. Silakan masuk dengan kata sandi.')
+      }
       try {
         await increment(identifier, 'webauthn', false, errMsg)
       } catch (incErr) {
@@ -599,61 +710,77 @@ export default function LoginPage() {
   }
 
   // ── Konfigurasi metode auth ─────────────────────────────────
-  // Kata Sandi tersedia jika:
-  //   - identifierNeedsSetup = user belum pasang Windows Hello/Dongle (onboarding)
-  //   - showPasswordFallback = 5+ percobaan gagal
-  //   - Kamera tidak tersedia untuk Windows Hello
-  const passwordAvailable = identifierNeedsSetup || showPasswordFallback || cameraPermission === false
+  // Alur baru: setelah username diketik, cek ke /auth/security-status.
+  // - Belum punya WebAuthn/Dongle (identifierNeedsSetup) → hanya Kata Sandi
+  // - Sudah punya WebActuhn atau Dongle → hanya opsi keamanan itu, tanpa Kata Sandi
+  //   kecuali setelah 5x percobaan gagal (password fallback)
+  const passwordAvailable = identifierNeedsSetup || showPasswordFallback
 
-  const authMethods = [
-    {
-      id: 'webauthn',
-      label: 'Windows Hello',
-      description: 'Sidik jari, wajah, atau PIN Windows (kamera wajib aktif)',
-      icon: <FingerprintIcon />,
-      available: (webauthnSupported && webauthnPlatformAvailable) && cameraPermission !== false,
-      unavailableReason: cameraPermission === false
-        ? 'Kamera tidak tersedia. Gunakan Kata Sandi untuk masuk.'
-        : (webauthnSupported ? 'Windows Hello tidak tersedia di perangkat ini' : 'Browser tidak mendukung WebAuthn'),
-      requireCamera: true,
-    },
-    {
-      id: 'dongle',
-      label: 'Dongle Keamanan',
-      description: 'USB token fisik (TrueCount Token)',
-      icon: <KeyIcon />,
-      available: isTauri,
-      unavailableReason: isTauri ? undefined : 'Dongle USB hanya tersedia di aplikasi desktop',
-      requireCamera: false,
-    },
-    {
-      id: 'password',
-      label: 'Kata Sandi',
-      description: passwordAvailable ? 'Username/email dan kata sandi' : 'Username/email dan kata sandi (tersedia setelah 5 percobaan gagal)',
-      icon: <PasswordIcon />,
-      available: passwordAvailable,
-      unavailableReason: passwordAvailable ? undefined : 'Tersedia setelah 5 percobaan gagal',
-      requireCamera: false,
-    },
-  ]
+  const authMethods = useMemo(() => {
+    // Belum mengecek status user → tidak tampilkan metode apa pun
+    if (!identifierChecked) return []
+
+    const methods = []
+
+    // User tidak ditemukan di server → jangan tampilkan metode apa pun
+    if (userNotFound) return []
+
+    // Jika sudah punya WebAuthn/Dongle dan WebAuthn belum gagal → tampilkan hanya opsi keamanan (tanpa Kata Sandi)
+    if (!passwordAvailable) {
+      // Windows Hello (jika supported + platform available + kamera ok)
+      if ((webauthnSupported && webauthnPlatformAvailable) && cameraPermission !== false) {
+        methods.push({
+          id: 'webauthn',
+          label: 'Windows Hello',
+          description: 'Sidik jari, wajah, atau PIN Windows (kamera wajib aktif)',
+          icon: <FingerprintIcon />,
+          available: true,
+          requireCamera: true,
+        })
+      }
+      // Dongle (jika di Tauri desktop)
+      if (isTauri) {
+        methods.push({
+          id: 'dongle',
+          label: 'Dongle Keamanan',
+          description: 'USB token fisik (TrueCount Token, kamera wajib aktif)',
+          icon: <KeyIcon />,
+          available: true,
+          requireCamera: true,
+        })
+      }
+    } else {
+      // Belum punya keamanan (onboarding), 5x gagal, atau WebAuthn gagal → hanya Kata Sandi
+      methods.push({
+        id: 'password',
+        label: 'Kata Sandi',
+        description: 'Username/email dan kata sandi (kamera wajib aktif)',
+        icon: <PasswordIcon />,
+        available: true,
+        requireCamera: true,
+      })
+    }
+
+    return methods
+  }, [passwordAvailable, identifierChecked, userNotFound, webauthnSupported, webauthnPlatformAvailable, cameraPermission, isTauri])
 
   // Determine default method:
-  // 1. User belum pasang keamanan → paksa Kata Sandi (onboarding)
-  // 2. Kamera tidak tersedia → paksa Kata Sandi
-  // 3. Windows Hello tersedia → default (direkomendasikan)
-  // 4. Tauri → dongle
-  // 5. Fallback password
+  // - identifierNeedsSetup (onboarding) atau showPasswordFallback (5x gagal) → Kata Sandi
+  // - Lainnya → WebHello jika tersedia, kalau tidak Dongle
   useEffect(() => {
-    if (identifierNeedsSetup || cameraPermission === false || showPasswordFallback) {
+    if (!identifierChecked) return
+    if (passwordAvailable) {
       setSelectedMethod('password')
-    } else if (webauthnSupported && webauthnPlatformAvailable) {
+    } else if ((webauthnSupported && webauthnPlatformAvailable) && cameraPermission !== false) {
       setSelectedMethod('webauthn')
     } else if (isTauri) {
       setSelectedMethod('dongle')
+    } else if (authMethods.length > 0) {
+      setSelectedMethod(authMethods[0].id)
     } else {
       setSelectedMethod('password')
     }
-  }, [identifierNeedsSetup, cameraPermission, showPasswordFallback, webauthnSupported, webauthnPlatformAvailable, isTauri])
+  }, [identifierChecked, passwordAvailable, webauthnSupported, webauthnPlatformAvailable, cameraPermission, isTauri, authMethods])
 
   return (
     <div className="auth-shell">
@@ -694,14 +821,22 @@ export default function LoginPage() {
         )}
 
         {toast && (
-          <p className="auth-warning" role="status">
-            <AlertIcon />
+          <p className={`auth-toast ${toastType === 'success' ? 'auth-success' : 'auth-warning'}`} role="status" aria-live="polite">
+            {toastType === 'success' ? <CheckIcon /> : <AlertIcon />}
             {toast}
           </p>
         )}
 
-        {/* ── Camera Requirement Notice ─────────────────────────────────── */}
-        {(selectedMethod === 'webauthn' || (webauthnSupported && webauthnPlatformAvailable)) && (
+        {/* ── Notifikasi user tidak ditemukan ───────────────────── */}
+        {userNotFound && error && (
+          <p className="auth-warning" role="alert" aria-live="polite">
+            <AlertIcon />
+            {error}
+          </p>
+        )}
+
+        {/* ── Camera Requirement Notice (SEMUA metode butuh kamera online) ── */}
+        {(
           <div 
             className={`camera-notice 
               ${cameraPermission === false ? 'camera-notice--error' : ''} 
@@ -715,7 +850,11 @@ export default function LoginPage() {
             </div>
             <div className="camera-notice-content">
               <div className="camera-notice-title">
-                <strong>Kamera aktif</strong> untuk verifikasi
+                {cameraPermission === false ? (
+                  <strong>Kamera belum siap</strong>
+                ) : (
+                  <strong>Kamera aktif</strong>
+                )} untuk verifikasi
               </div>
               <div className="camera-notice-subtitle">
                 {cameraChecking ? (
@@ -730,7 +869,9 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <span className="camera-notice-success-icon" aria-hidden="true">✓</span>
+                    <span className="camera-notice-success-icon" aria-hidden="true">
+                      <CheckIcon />
+                    </span>
                     Kamera siap
                   </>
                 )}
@@ -738,16 +879,28 @@ export default function LoginPage() {
             </div>
             <div className="camera-notice-actions">
               {cameraPermission === false && (
-                <button 
-                  type="button" 
-                  className="camera-retry camera-retry--primary" 
-                  onClick={requestPermission}
-                  disabled={cameraChecking}
-                  aria-busy={cameraChecking}
-                >
-                  <CameraIcon />
-                  {cameraChecking ? 'Memeriksa...' : 'Periksa Lagi (Buka Shutter)'}
-                </button>
+                <>
+                  <button 
+                    type="button" 
+                    className="camera-retry camera-retry--primary" 
+                    onClick={requestPermission}
+                    disabled={cameraChecking}
+                    aria-busy={cameraChecking}
+                  >
+                    <CameraIcon />
+                    {cameraChecking ? 'Memeriksa...' : 'Periksa Lagi (Buka Shutter)'}
+                  </button>
+                  {cameraCount > 1 && (
+                    <button 
+                      type="button" 
+                      className="camera-retry camera-retry--secondary" 
+                      onClick={switchCamera}
+                      disabled={cameraChecking}
+                    >
+                      Ganti Kamera
+                    </button>
+                  )}
+                </>
               )}
               {cameraPermission === true && (
                 <span className="camera-ok-badge" aria-hidden="true">
@@ -764,10 +917,7 @@ export default function LoginPage() {
           <div className="camera-preview" role="region" aria-label="Pratinjau kamera">
             <div className="camera-preview-container">
               <video
-                ref={(el) => {
-                  setPreviewVideoElement(el)
-                  if (el && stream) el.srcObject = stream
-                }}
+                ref={setPreviewVideoElement}
                 autoPlay
                 playsInline
                 muted
@@ -777,7 +927,7 @@ export default function LoginPage() {
               <div className="camera-preview-overlay">
                 <div className="camera-status-indicator active">
                   <span className="status-dot" aria-hidden="true"></span>
-                  <span>Kamera Aktif - Verifikasi</span>
+                  <span>verifikasi kamera</span>
                 </div>
               </div>
             </div>
@@ -871,35 +1021,46 @@ export default function LoginPage() {
 
         </div>
 
+        {/* ── Input Username / Email (di bawah opsi metode masuk) ──────────────── */}
+        <div className="field">
+          <label htmlFor="identifier">Masukkan username atau email Anda</label>
+          <input
+            id="identifier"
+            name="identifier"
+            type="text"
+            autoComplete="username"
+            placeholder="anda@contoh.com"
+            value={form.identifier}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
         {/* ── Form Password ──────────────────────────────────── */}
         {selectedMethod === 'password' && (
           <form onSubmit={handlePasswordSubmit} noValidate>
             <div className="field">
-              <label htmlFor="identifier">Username atau email</label>
-              <input
-                id="identifier"
-                name="identifier"
-                type="text"
-                autoComplete="username"
-                placeholder="anda@contoh.com"
-                value={form.identifier}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="field">
               <label htmlFor="password">Kata sandi</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Kata sandi Anda"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="password-input-wrapper">
+                <input
+                  id="password"
+                  name="password"
+                  type={passwordShow ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="Kata sandi Anda"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setPasswordShow(s => !s)}
+                  aria-label={passwordShow ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                >
+                  {passwordShow ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
             </div>
 
             {error && <p className="field-error" role="alert"><AlertIcon />{error}</p>}
@@ -916,17 +1077,6 @@ export default function LoginPage() {
         {selectedMethod === 'webauthn' && (
           <div className="webauthn-form">
             <div className="field">
-              <label htmlFor="webauthn-identifier">Username atau email</label>
-              <input
-                id="webauthn-identifier"
-                name="identifier"
-                type="text"
-                autoComplete="username"
-                placeholder="anda@contoh.com"
-                value={form.identifier}
-                onChange={handleChange}
-                required
-              />
             </div>
 
             {error && <p className="field-error" role="alert"><AlertIcon />{error}</p>}
@@ -959,18 +1109,6 @@ export default function LoginPage() {
         {selectedMethod === 'dongle' && (
           <div className="dongle-form">
             <div className="field">
-              <label htmlFor="dongle-identifier">Username atau email</label>
-              <input
-                id="dongle-identifier"
-                name="identifier"
-                type="text"
-                autoComplete="username"
-                placeholder="anda@contoh.com"
-                value={form.identifier}
-                onChange={handleChange}
-                required
-                disabled={usbAuthStep !== 'idle' && usbAuthStep !== 'error'}
-              />
             </div>
 
             {usbAuthStep === 'idle' && (

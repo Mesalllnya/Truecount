@@ -33,6 +33,7 @@ $stmt = $db->query(
     'SELECT i.id, i.token, i.email, i.role, i.status,
             i.expires_at, i.created_at, i.used_at,
             u.username AS used_by_username,
+            u.email AS used_by_email,
             c.username AS created_by_username
        FROM invites i
        LEFT JOIN users u ON u.id = i.used_by
@@ -55,16 +56,24 @@ foreach ($rows as $r) {
         $status = 'dibatalkan';
     }
 
+    // Tampilkan email terdaftar jika undangan terbuka telah diklaim oleh pengguna
+    $displayEmail = $r['email'];
+    if (empty($displayEmail) && !empty($r['used_by_email'])) {
+        $displayEmail = $r['used_by_email'];
+    }
+
     $invites[] = [
         'id'                   => (int)$r['id'],
         'token'                => $r['token'],
-        'email'                => $r['email'],
+        'email'                => $displayEmail,
+        'original_email'       => $r['email'],
         'role'                 => $r['role'],
         'status'               => $status,
         'created_at'           => toIso8601($r['created_at']),
         'expires_at'           => toIso8601($r['expires_at']),
         'used_at'              => toIso8601($r['used_at']),
         'used_by_username'     => $r['used_by_username'],
+        'used_by_email'        => $r['used_by_email'],
         'created_by_username'  => $r['created_by_username'],
         'link'                 => '/daftar?undangan=' . $r['token'],
     ];

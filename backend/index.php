@@ -340,6 +340,11 @@ match (true) {
         $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/voters';
         require_once __DIR__ . '/api/elections/voters/register.php';
     })(),
+    // DELETE /elections/{id}/voters - hapus banyak voter sekaligus (admin)
+    preg_match('#^/elections/(\d+)/voters$#', $uri, $m) && $method === 'DELETE' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/voters';
+        require_once __DIR__ . '/api/elections/voters/delete.php';
+    })(),
     preg_match('#^/elections/(\d+)/voters$#', $uri) => (function () {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),

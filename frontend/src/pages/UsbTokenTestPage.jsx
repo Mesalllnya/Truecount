@@ -80,7 +80,7 @@ export default function UsbTokenTestPage() {
         base64urlToBytes(signature),
         challenge
       )
-      setVerifyResult({ ok, msg: ok ? '✅ Signature VALID (local verify)' : '❌ Signature INVALID' })
+      setVerifyResult({ ok, msg: ok ? 'Signature VALID (local verify)' : 'Signature INVALID' })
     } catch (err) {
       setVerifyResult({ ok: false, msg: `Verify error: ${err}` })
     }
@@ -113,7 +113,7 @@ export default function UsbTokenTestPage() {
       {/* Pending Notification */}
       {pendingToken && (
         <div className="pending-toast">
-          <span>🔔 USB Token terdeteksi di <strong>{pendingToken.drive}</strong> untuk user <strong>#{pendingToken.user_id}</strong></span>
+          <span>USB Token terdeteksi di <strong>{pendingToken.drive}</strong> untuk user <strong>#{pendingToken.user_id}</strong></span>
           <div className="toast-actions">
             <button onClick={() => setSelectedDrive(pendingToken.drive)}>Gunakan Ini</button>
             <button className="secondary" onClick={clearPending}>Abaikan</button>
@@ -124,7 +124,7 @@ export default function UsbTokenTestPage() {
       <main className="test-grid">
         {/* Panel 1: Detected Tokens */}
         <section className="panel">
-          <h2>📱 Token Terdeteksi</h2>
+          <h2>Token Terdeteksi</h2>
           {detectedTokens.length === 0 ? (
             <p className="empty">Belum ada USB token terdeteksi.<br/>Colokkan USB yang berisi file <code>.truecount_token</code></p>
           ) : (
@@ -141,7 +141,7 @@ export default function UsbTokenTestPage() {
                       onClick={() => setSelectedDrive(t.drive)}
                       disabled={selectedDrive === t.drive}
                     >
-                      {selectedDrive === t.drive ? '✓ Dipilih' : 'Pilih'}
+                      {selectedDrive === t.drive ? 'Dipilih' : 'Pilih'}
                     </button>
                     <button className="danger" onClick={() => removeToken(t.drive)}>
                       Hapus
@@ -164,7 +164,7 @@ export default function UsbTokenTestPage() {
         </h2>
           {decryptedKey ? (
             <div className="key-info">
-              <div className="success-badge">✅ Private Key Berhasil Didekripsi</div>
+              <div className="success-badge">Private Key Berhasil Didekripsi</div>
               <div className="field">
                 <label>Credential ID</label>
                 <code>{credentialId}</code>
@@ -200,7 +200,7 @@ export default function UsbTokenTestPage() {
                   autoFocus
                 />
               </div>
-              {error && <div className="error-msg">❌ {error}</div>}
+              {error && <div className="error-msg">{error}</div>}
               <button className="primary" onClick={handleDecrypt} disabled={isDecrypting || !selectedDrive || !pin}>
                 {isDecrypting ? '⏳ Mendekripsi…' : (
                   <>
@@ -218,7 +218,7 @@ export default function UsbTokenTestPage() {
 
         {/* Panel 3: Challenge-Response Test */}
         <section className="panel">
-          <h2>🧪 Challenge-Response Test</h2>
+          <h2>Challenge-Response Test</h2>
           {decryptedKey ? (
             <div className="challenge-test">
               <div className="field">
@@ -231,7 +231,7 @@ export default function UsbTokenTestPage() {
                     placeholder="Generate challenge dulu"
                   />
                   <button onClick={handleGenerateChallenge} disabled={!!challenge}>
-                    🎲 Generate
+                    Generate
                   </button>
                 </div>
               </div>
@@ -246,7 +246,7 @@ export default function UsbTokenTestPage() {
                     placeholder="Sign challenge dulu"
                   />
                   <button onClick={handleSign} disabled={!!signature || !challenge}>
-                    ✍️ Sign
+                    Sign
                   </button>
                 </div>
               </div>
@@ -254,7 +254,7 @@ export default function UsbTokenTestPage() {
               <div className="field">
                 <label>Verifikasi Lokal (Public Key)</label>
                 <button className="verify" onClick={handleVerifyLocal} disabled={!signature || !challenge}>
-                  ✅ Verifikasi Signature
+                  Verifikasi Signature
                 </button>
                 {verifyResult && (
                   <div className={`verify-result ${verifyResult.ok ? 'success' : 'fail'}`}>

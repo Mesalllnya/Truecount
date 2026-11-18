@@ -74,7 +74,6 @@ export default function IsometricFlow() {
   return (
     <section className="iso-section" aria-labelledby="flow-title">
       <h2 id="flow-title" className="iso-section-title">
-        <span style={{ fontSize: '1.4rem', marginRight: '0.5rem' }}>🗺️</span>
         Flow Aplikasi
       </h2>
       <p className="iso-section-desc">
@@ -180,13 +179,5 @@ export default function IsometricFlow() {
 }
 
 function nodeIcon(id) {
-  const icons = {
-    user: '👤',
-    login: '🔐',
-    setup: '🛡️',
-    dashboard: '📊',
-    vote: '🗳️',
-    result: '⛓️',
-  }
-  return icons[id] ?? '⬢'
+  return '•'
 }

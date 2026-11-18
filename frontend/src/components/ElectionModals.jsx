@@ -96,9 +96,12 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: fallbackSize,
+        color: '#9ca3af',
       }}>
-        👤
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
       </div>
     );
   }
@@ -111,7 +114,7 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
       onError={(e) => {
         e.target.style.display = 'none';
         if (e.target.parentElement) {
-          e.target.parentElement.innerHTML = `<div style="width:100%;height:100%;background:#f0f0ec;display:flex;align-items:center;justify-content:center;font-size:${fallbackSize};">👤</div>`;
+          e.target.parentElement.innerHTML = `<div style="width:100%;height:100%;background:#f0f0ec;display:flex;align-items:center;justify-content:center;color:#9ca3af;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`;
         }
       }}
     />
@@ -166,10 +169,30 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
   
 async function handleAddCandidate(e) {
   e.preventDefault()
-  if (!name.trim()) return
+  setError('')
+
+  if (!name.trim()) {
+    setError('Nama paslon wajib diisi. Mohon lengkapi bagian nama paslon.')
+    return
+  }
+  if (!vision.trim()) {
+    setError('Visi paslon wajib diisi. Mohon lengkapi bagian visi paslon.')
+    return
+  }
+  if (!mission.trim()) {
+    setError('Misi paslon wajib diisi. Mohon lengkapi bagian misi paslon.')
+    return
+  }
+  if (!photoFile) {
+    setError('Foto paslon wajib diunggah. Mohon pilih foto paslon (maksimal 2MB).')
+    return
+  }
+  if (photoFile.size > 2 * 1024 * 1024) {
+    setError(`Ukuran foto paslon terlalu besar (${(photoFile.size / (1024 * 1024)).toFixed(2)} MB). Maksimal ukuran foto adalah 2 MB. Silakan input ulang gambar paslon yang lebih kecil.`)
+    return
+  }
 
   setSubmitting(true)
-  setError('')
 
   try {
     // 1. Buat kandidat terlebih dahulu
@@ -284,14 +307,35 @@ async function handleUpdateCandidate(e) {
   e.preventDefault()
 
   if (!editingCandidate) return
+  setError('')
 
   if (!editName.trim()) {
-    setError('Nama kandidat tidak boleh kosong.')
+    setError('Nama paslon tidak boleh kosong. Mohon isi nama paslon.')
+    return
+  }
+  if (!editVision.trim()) {
+    setError('Visi paslon tidak boleh kosong. Mohon isi visi paslon.')
+    return
+  }
+  if (!editMission.trim()) {
+    setError('Misi paslon tidak boleh kosong. Mohon isi misi paslon.')
+    return
+  }
+
+  // Cek apakah paslon sudah punya foto sebelumnya atau memilih foto baru
+  const hasExistingPhoto = Boolean(editingCandidate.photo_file_id || editingCandidate.photo_path)
+  if (!hasExistingPhoto && !editPhotoFile) {
+    setError('Foto paslon wajib diunggah. Silakan pilih foto paslon (maks 2MB).')
+    return
+  }
+
+  // Jika mengunggah foto baru, validasi ukuran < 2MB
+  if (editPhotoFile && editPhotoFile.size > 2 * 1024 * 1024) {
+    setError(`Ukuran foto baru terlalu besar (${(editPhotoFile.size / (1024 * 1024)).toFixed(2)} MB). Maksimal 2 MB. Silakan pilih/input ulang gambar yang lebih kecil.`)
     return
   }
 
   setUpdating(true)
-  setError('')
 
   try {
     const candidateId = editingCandidate.id
@@ -418,9 +462,10 @@ async function handleUpdateCandidate(e) {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Visi (singkat)</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Visi (singkat) *</label>
                   <input
                     type="text"
+                    required
                     placeholder="Contoh: Transparansi & Inovasi Kampus"
                     value={vision}
                     onChange={e => setVision(e.target.value)}
@@ -428,13 +473,22 @@ async function handleUpdateCandidate(e) {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Foto Paslon (JPEG/PNG, maks 2MB)</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Foto Paslon (JPEG/PNG, maks 2MB) *</label>
                   <input
                     key={fileInputKey}
                     type="file"
+                    required
                     accept="image/jpeg,image/png,image/webp"
                     onChange={e => {
                       const file = e.target.files[0] || null
+                      if (file && file.size > 2 * 1024 * 1024) {
+                        setError(`Ukuran foto paslon terlalu besar (${(file.size / (1024 * 1024)).toFixed(2)} MB). Maksimal ukuran foto adalah 2 MB. Silakan pilih gambar lain.`)
+                        e.target.value = ''
+                        setPhotoFile(null)
+                        setPhotoPreview(null)
+                        return
+                      }
+                      setError('')
                       setPhotoFile(file)
                       if (file) {
                         setPhotoPreview(URL.createObjectURL(file))
@@ -456,9 +510,10 @@ async function handleUpdateCandidate(e) {
                   )}
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Misi</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Misi *</label>
                   <textarea
                     rows={2}
+                    required
                     placeholder="Poin-poin misi paslon..."
                     value={mission}
                     onChange={e => setMission(e.target.value)}
@@ -574,9 +629,10 @@ async function handleUpdateCandidate(e) {
                           </div>
 
                           <div>
-                            <label>Visi</label>
+                            <label>Visi *</label>
                             <input
                               type="text"
+                              required
                               value={editVision}
                               onChange={e => setEditVision(e.target.value)}
                               style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}
@@ -584,9 +640,10 @@ async function handleUpdateCandidate(e) {
                           </div>
 
                           <div>
-                            <label>Misi</label>
+                            <label>Misi *</label>
                             <textarea
                               rows={3}
+                              required
                               value={editMission}
                               onChange={e => setEditMission(e.target.value)}
                               style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontFamily: 'inherit' }}
@@ -594,11 +651,23 @@ async function handleUpdateCandidate(e) {
                           </div>
 
                           <div>
-                            <label>Ganti Foto</label>
+                            <label>
+                              Foto Paslon {editingCandidate.photo_file_id || editingCandidate.photo_path ? '(Pilih jika ingin mengganti)' : '* (Wajib diunggah)'}
+                            </label>
                             <input
                               type="file"
                               accept="image/jpeg,image/png,image/webp"
-                              onChange={e => setEditPhotoFile(e.target.files?.[0] || null)}
+                              onChange={e => {
+                                const file = e.target.files?.[0] || null
+                                if (file && file.size > 2 * 1024 * 1024) {
+                                  setError(`Ukuran foto paslon terlalu besar (${(file.size / (1024 * 1024)).toFixed(2)} MB). Maksimal 2 MB. Silakan pilih gambar yang lebih kecil.`)
+                                  e.target.value = ''
+                                  setEditPhotoFile(null)
+                                  return
+                                }
+                                setError('')
+                                setEditPhotoFile(file)
+                              }}
                             />
                           </div>
                         </div>
@@ -848,7 +917,7 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
           {error && <p className="invite-error" role="alert" style={{ margin: 0 }}>{error}</p>}
           {successMsg && (
             <p style={{ margin: 0, padding: '0.6rem 0.9rem', background: '#e8f5e9', border: '1px solid #c8e6c9', borderRadius: '8px', color: '#2a7a3b', fontSize: '0.85rem', fontWeight: 600 }}>
-              ✓ {successMsg}
+              {successMsg}
             </p>
           )}
 
@@ -857,7 +926,7 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
             <div style={{ background: 'var(--cream)', padding: '1.1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
-                  ➕ Tambah Hak Suara Akun Pemilih ({availableUsers.length} Tersedia)
+                  Tambah Hak Suara Akun Pemilih ({availableUsers.length} Tersedia)
                 </h3>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                   <input
@@ -898,15 +967,16 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
                 </p>
               ) : (
                 <div style={{
-                  maxHeight: '190px',
+                  maxHeight: '220px',
                   overflowY: 'auto',
+                  overflowX: 'hidden',
                   background: 'var(--white)',
                   border: '1px solid var(--border)',
                   borderRadius: '8px',
-                  padding: '0.4rem',
+                  padding: '0.5rem',
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
-                  gap: '0.4rem'
+                  gap: '0.45rem'
                 }}>
                   {availableUsers.map(u => {
                     const isChecked = selectedAvailableIds.has(u.id)
@@ -917,20 +987,21 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.55rem',
-                          padding: '0.45rem 0.6rem',
+                          padding: '0.5rem 0.65rem',
                           borderRadius: '6px',
-                          background: isChecked ? '#eff6ff' : 'transparent',
-                          border: `1px solid ${isChecked ? '#bfdbfe' : 'transparent'}`,
+                          background: isChecked ? '#eff6ff' : 'var(--cream)',
+                          border: `1px solid ${isChecked ? '#3468b0' : 'var(--border)'}`,
                           cursor: 'pointer',
                           userSelect: 'none',
-                          fontSize: '0.82rem'
+                          fontSize: '0.82rem',
+                          transition: 'all 120ms ease-in-out'
                         }}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleAvailable(u.id)}
-                          style={{ cursor: 'pointer' }}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                         />
                         <div style={{ minWidth: 0, overflow: 'hidden' }}>
                           <div style={{ fontWeight: 600, color: 'var(--black)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
@@ -952,7 +1023,7 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
-                📋 Daftar Pemilih yang Berhak Ikut ({electionVoters.length})
+                Daftar Pemilih yang Berhak Ikut ({electionVoters.length})
               </h3>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <input
@@ -1024,7 +1095,7 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
                           <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginLeft: '0.6rem' }}>{v.email}</span>
                           {v.has_voted ? (
                             <span style={{ marginLeft: '0.6rem', fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: '#e9f4ec', color: '#2a7a3b', fontWeight: 700 }}>
-                              ✓ Sudah Memilih
+                              Sudah Memilih
                             </span>
                           ) : (
                             <span style={{ marginLeft: '0.6rem', fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: '#fef2f2', color: '#b91c1c', fontWeight: 600 }}>

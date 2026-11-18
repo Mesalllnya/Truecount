@@ -126,9 +126,17 @@ export default function AboutPage() {
         <div className="hero-visual" aria-hidden="true">
           <div className="hero-visual-accent" />
           <div className="hero-visual-frame">
-            <div className="hero-placeholder">
-              <Icon name="code" size={64} />
-            </div>
+            <img
+              src="/3jari.png"
+              alt="TrueCount 3 Jari"
+              className="hero-img"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
             <div className="hero-img-tag">
               <Icon name="check" size={12} />
               <span>Academic Project</span>

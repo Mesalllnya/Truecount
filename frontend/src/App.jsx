@@ -40,6 +40,8 @@ function RegisterRedirect() {
  * - Console: __tcServerConfig()
  * Tidak ada tombol/link di navigasi, sesuai rencana demo.
  */
+let serverHintLogged = false
+
 function ServerConfigShortcut() {
   const navigate = useNavigate()
 
@@ -53,9 +55,12 @@ function ServerConfigShortcut() {
 
     window.addEventListener('keydown', onKeyDown)
     window.__tcServerConfig = () => navigate('/__server')
-    console.info(
-      '[TrueCount] Koneksi server: Ctrl+Shift+Alt+S atau jalankan __tcServerConfig() di console.',
-    )
+    if (import.meta.env.DEV && !serverHintLogged) {
+      serverHintLogged = true
+      console.info(
+        '[TrueCount] Koneksi server: Ctrl+Shift+Alt+S atau jalankan __tcServerConfig() di console.',
+      )
+    }
 
     return () => {
       window.removeEventListener('keydown', onKeyDown)

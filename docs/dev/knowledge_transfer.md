@@ -1079,3 +1079,10 @@ Saat menambahkan endpoint baru, selalu update:
     - `CameraRouteGuard` di `App.jsx` — setiap route ≠ `/masuk` memanggil `stopAllCameraStreams()` (jaminan mutlak: landing page & halaman setelah login selalu kamera-off).
     - Cleanup unmount + event `pagehide` juga memanggil `stopAllCameraStreams()`.
     - `SecuritySetupPage` tidak membuka kamera sama sekali (registrasi Windows Hello tidak butuh `getUserMedia` — biometrik ditangani Windows Hello/WebAuthn).
+
+18. **Konsol Bersih + Fix Event USB Tauri + Migrasi Voice Message** (19 Nov 2026):
+    - Log kamera `INFO` (verifikasi frame tiap ±500 ms, tunggu video, foto diambil) **tidak lagi dicetak ke konsol**. Semua `INFO` tetap tersimpan di `window.__TC_CAMERA_LOGS__`, `localStorage` (`tc_camera_debug_logs`), dan file log Tauri via `log_from_frontend`; hanya `WARN`/`ERROR` yang tampil di konsol (`frontend/src/utils/cameraLogger.ts`).
+    - Pemanggilan `console.log` langsung di `useAuthSecurity.tsx` diganti `logCamera('INFO', ...)` agar konsol tidak banjir.
+    - Petunjuk halaman server (`Ctrl+Shift+Alt+S` / `__tcServerConfig()`) hanya dicetak **sekali** dan hanya saat `import.meta.env.DEV` (`App.jsx`).
+    - Warning `event.listen not allowed. Plugin not found` berasal dari permission `event:default` yang bukan plugin Tauri v2. Permission itu dihapus dari `frontend/src-tauri/capabilities/default.json`; `core:default` sudah mencakup `core:event:default`. Hook `useUsbToken` juga tidak lagi menampilkan warning untuk kegagalan capability yang memang diperkirakan.
+    - Error 500 `GET /voice-messages/inbox` disebabkan tabel `voice_messages` belum ada. Jalankan `php database/migrate.php` (menerapkan `013_create_voice_messages.sql`). Sudah diverifikasi query inbox berjalan normal setelah migrasi.

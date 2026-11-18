@@ -589,7 +589,7 @@ export function useCameraPermission() {
 
     // Wait for video to be ready if not yet (handles stream just assigned to preview element)
     if (video.readyState < 2) {
-      console.log('[Camera] Waiting for video to be ready...');
+      logCamera('INFO', 'Menunggu video siap untuk verifikasi...');
       await new Promise<void>((resolve, reject) => {
         const handler = () => resolve();
         video.addEventListener('loadedmetadata', handler, { once: true });
@@ -619,7 +619,7 @@ export function useCameraPermission() {
       // Pakai analyzer yang sama dengan checkCamera — deteksi frame rata
       // (shutter tertutup), gelap sekali, atau hitam total.
       const verdict = analyzeFrame(video);
-      console.log('[Camera] Verification:', {
+      logCamera('INFO', 'Verifikasi frame sebelum auth', {
         metrics: verdict.metrics,
         reason: verdict.reason,
         active: verdict.ok
@@ -733,7 +733,9 @@ export function useCameraPermission() {
 
       // Convert to base64 JPEG (quality 0.8)
       const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-      console.log('[Camera] Photo captured:', Math.round(dataUrl.length / 1024), 'KB');
+      logCamera('INFO', 'Foto berhasil diambil', {
+        sizeKB: Math.round(dataUrl.length / 1024)
+      });
       return dataUrl;
     } catch (err) {
       console.error('[Camera] Capture failed:', err);

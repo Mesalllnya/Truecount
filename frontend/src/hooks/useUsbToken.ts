@@ -109,7 +109,12 @@ export function useUsbToken() {
         })
         unlisten = un
       } catch (err) {
-        console.warn('[TrueCount] Gagal listen event Tauri:', err)
+        // Event USB hanya tersedia di desktop; kegagalan capability/plugin adalah
+        // kondisi yang sudah diperkirakan dan tidak perlu memenuhi konsol.
+        const message = err instanceof Error ? err.message : String(err)
+        if (!/not allowed|plugin not found/i.test(message)) {
+          console.warn('[TrueCount] Gagal listen event Tauri:', message)
+        }
       }
     }
     setupListener()

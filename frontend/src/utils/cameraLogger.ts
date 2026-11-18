@@ -1,6 +1,7 @@
 /**
  * Logger & Diagnostik Khusus Kamera TrueCount
- * Menyimpan log ke memori, localStorage, konsol, dan (opsional) file via Tauri IPC.
+ * Menyimpan log ke memori, localStorage, dan (opsional) file via Tauri IPC.
+ * Hanya level WARN/ERROR yang dicetak ke konsol; INFO cukup untuk diagnostik.
  */
 
 export interface LogEntry {
@@ -51,14 +52,12 @@ export function logCamera(level: 'INFO' | 'WARN' | 'ERROR', message: string, dat
     } catch { /* ignore */ }
   }
 
-  // Cetak ke konsol browser
-  const prefix = `[CameraLog ${timestamp.slice(11, 23)}][${level}]`;
+  // Hanya WARN/ERROR yang dicetak ke konsol. INFO tetap tersimpan di memori,
+  // localStorage, dan file log Tauri untuk keperluan diagnostik.
   if (level === 'ERROR') {
-    console.error(prefix, message, data ?? '');
+    console.error('[Camera]', message, data ?? '');
   } else if (level === 'WARN') {
-    console.warn(prefix, message, data ?? '');
-  } else {
-    console.log(prefix, message, data ?? '');
+    console.warn('[Camera]', message, data ?? '');
   }
 }
 

@@ -90,23 +90,41 @@ if ($audio['size'] <= 0 || $audio['size'] > 20 * 1024 * 1024) {
 $finfo = new finfo(FILEINFO_MIME_TYPE);
 $mimeType = $finfo->file($audio['tmp_name']);
 
+
 $allowedAudioTypes = [
-    'audio/webm' => 'webm',
-    'audio/ogg'  => 'ogg',
-    'audio/mpeg' => 'mp3',
-    'audio/wav'  => 'wav',
+    'audio/webm'  => 'webm',
+    'video/webm'  => 'webm',
+    'audio/ogg'   => 'ogg',
+    'audio/mpeg'  => 'mp3',
+    'audio/wav'   => 'wav',
     'audio/x-wav' => 'wav',
-    'audio/mp4'  => 'm4a',
-    'audio/aac'  => 'aac',
-    'audio/flac' => 'flac'
+    'audio/mp4'   => 'm4a',
+    'audio/aac'   => 'aac',
+    'audio/flac'  => 'flac'
 ];
 
-if (!is_string($mimeType) || !isset($allowedAudioTypes[$mimeType])) {
+$browserMime = strtolower(
+    trim(explode(';', $audio['type'] ?? '')[0])
+);
+
+$isWebmAudio =
+    $mimeType === 'video/webm' &&
+    $browserMime === 'audio/webm';
+
+if (
+    !is_string($mimeType) ||
+    (
+        !isset($allowedAudioTypes[$mimeType]) ||
+        ($mimeType === 'video/webm' && !$isWebmAudio)
+    )
+) {
     jsonResponse([
         'error' => 'Format audio tidak didukung.',
         'allowed_formats' => array_keys($allowedAudioTypes)
     ], 422);
 }
+
+
 
 $db = getDB();
 

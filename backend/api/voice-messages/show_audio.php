@@ -70,9 +70,10 @@ try {
     ], 500);
 }
 
-// MIME allowlist agar response tidak dapat mengirim tipe arbitrer.
+
 $allowedMimeTypes = [
     'audio/webm',
+    'video/webm',
     'audio/ogg',
     'audio/mpeg',
     'audio/wav',
@@ -86,7 +87,12 @@ if (!in_array($audio['mime_type'], $allowedMimeTypes, true)) {
     jsonResponse(['error' => 'Format audio tidak didukung.'], 415);
 }
 
-header('Content-Type: ' . $audio['mime_type']);
+// WebM yang direkam sebagai audio dikirim dengan MIME audio/webm.
+$responseMimeType = $audio['mime_type'] === 'video/webm'
+    ? 'audio/webm'
+    : $audio['mime_type'];
+
+header('Content-Type: ' . $responseMimeType);
 header('Content-Length: ' . strlen($audio['content']));
 header('Content-Disposition: inline; filename="voice-message-audio"');
 header('Cache-Control: private, no-store, no-cache, must-revalidate');

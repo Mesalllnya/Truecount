@@ -58,6 +58,11 @@ export default function RegisterPage() {
         )
         const data = await readJson(res)
         if (cancelled) return
+        if (res.status >= 500) {
+          // Server hidup tapi database mati
+          navigate('/server-error')
+          return
+        }
         if (!res.ok) {
           setInviteState('invalid')
           setInviteError(data.error || 'Undangan tidak valid.')
@@ -71,6 +76,11 @@ export default function RegisterPage() {
         }
       } catch (err) {
         if (cancelled) return
+        // Server tidak respons / tidak bisa nyambung ke database
+        if (err?.message === 'Failed to fetch' || !err?.message) {
+          navigate('/server-error')
+          return
+        }
         setInviteState('invalid')
         setInviteError(
           err?.message && err.message !== 'Failed to fetch'
@@ -115,11 +125,20 @@ export default function RegisterPage() {
         }),
       })
       const data = await readJson(res)
+      if (res.status >= 500) {
+        navigate('/server-error')
+        return
+      }
       if (!res.ok) { setError(data.error || 'Pendaftaran gagal.'); return }
       navigate('/masuk', {
         state: { registered: true, username: form.username },
       })
     } catch (err) {
+      // Server tidak respons / tidak bisa nyambung ke database
+      if (err?.message === 'Failed to fetch' || !err?.message) {
+        navigate('/server-error')
+        return
+      }
       setError(
         err?.message && err.message !== 'Failed to fetch'
           ? err.message

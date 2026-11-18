@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useWebAuthnRegister } from '../hooks/useWebAuthn';
 import { useUsbToken, createTokenFile, listUsbDrives, startUsbRegister, verifyUsbRegister } from '../hooks/useUsbToken';
-import { useCameraPermission } from '../hooks/useAuthSecurity';
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg';
 import './AuthPage.css';
 
@@ -115,8 +114,10 @@ export default function SecuritySetupPage() {
     error: usbHookError,
   } = useUsbToken();
 
-  // ── Camera Permission ────────────────────────────────────────
-  const { hasPermission: cameraPermission, isChecking: cameraChecking, error: cameraError, requestPermission } = useCameraPermission();
+  // ── Kamera TIDAK diaktifkan di halaman ini ───────────────────
+  // Sesuai kebijakan: kamera hanya boleh nyala di halaman Masuk (/masuk).
+  // Registrasi Windows Hello tidak memerlukan stream kamera — verifikasi
+  // biometrik ditangani langsung oleh Windows Hello (WebAuthn).
 
   // ── Dongle State ─────────────────────────────────────────────
   const [dongleStep, setDongleStep] = useState<'select-drive' | 'enter-pin' | 'registering' | 'done'>('select-drive');
@@ -182,11 +183,6 @@ export default function SecuritySetupPage() {
     e.preventDefault();
     if (!webauthnName.trim()) {
       setError('Masukkan nama untuk Windows Hello (misal: "Laptop Kantor")');
-      return;
-    }
-    if (cameraChecking) return;
-    if (cameraPermission === false) {
-      setError(cameraError || 'Izin kamera diperlukan untuk Windows Hello');
       return;
     }
 
@@ -334,24 +330,18 @@ export default function SecuritySetupPage() {
           <p className="auth-success" role="status"><CheckIcon />{success}</p>
         )}
 
-        {/* ── Camera Requirement Notice ───────────────────────── */}
+        {/* ── Camera Notice (informatif — kamera TIDAK dinyalakan di sini) ── */}
         {(activeStep === 'choose' || activeStep === 'webauthn') && (
           <div 
-            className={`camera-notice 
-              ${cameraPermission === true ? 'camera-notice--success' : ''} 
-              ${cameraPermission === false ? 'camera-notice--error' : ''}`}
+            className="camera-notice camera-notice--success"
             role="status"
           >
             <CameraIcon />
             <span>
-              <strong>Kamera wajib aktif</strong> untuk Windows Hello (verifikasi wajah/sidik jari).
-              {cameraChecking ? ' Memeriksa izin...' : cameraPermission === false ? ` ${cameraError}` : ' Kamera siap.'}
+              <strong>Kamera hanya aktif di halaman Masuk.</strong> Pendaftaran
+              Windows Hello tidak menyalakan kamera — verifikasi wajah/sidik jari
+              ditangani langsung oleh Windows Hello.
             </span>
-            {cameraPermission === false && (
-              <button type="button" className="camera-retry" onClick={requestPermission}>
-                Coba Lagi
-              </button>
-            )}
           </div>
         )}
 
@@ -427,13 +417,13 @@ export default function SecuritySetupPage() {
             <button
               type="submit"
               className="btn-submit btn-submit--webauthn"
-              disabled={loadingAny || !webauthnName.trim() || cameraPermission === false}
+              disabled={loadingAny || !webauthnName.trim()}
             >
               {loadingAny ? (
                 <span className="btn-loading"><LoaderIcon />Mendaftarkan…</span>
               ) : (
                 <>
-                  <FingerprintIcon />
+                  <FingerprintIcon className="btn-submit-icon" />
                   Daftarkan Windows Hello
                 </>
               )}
@@ -469,7 +459,11 @@ export default function SecuritySetupPage() {
                         >
                           <span className="drive-letter">{drive.drive}</span>
                           <span className="drive-desc">
-                            {drive.has_token ? '✓ Token terdeteksi' : 'Drive kosong'}
+                            {drive.has_token ? (
+                              <>
+                                <CheckIcon className="drive-check-icon" /> Token terdeteksi
+                              </>
+                            ) : 'Drive kosong'}
                           </span>
                           <ChevronRightIcon />
                         </button>

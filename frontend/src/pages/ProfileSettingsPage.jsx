@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useUsbToken, fetchUsbCredentials, revokeUsbCredential, updateUsbLabel, listUsbDrives, createTokenFile, startUsbRegister, verifyUsbRegister } from '../hooks/useUsbToken'
 import { useChangePassword } from '../hooks/useAuth'
@@ -43,9 +43,11 @@ const TABS = [
 ]
 
 /* ── Toast Notification ──────────────────────────────────── */
-function Toast({ message, onClose }) {
+function Toast({ message, icon = 'check', onClose }) {
+  const type = icon === 'alert' ? 'alert' : 'success'
   return (
-    <div className="settings-toast" role="status" aria-live="polite" onClick={onClose}>
+    <div className="settings-toast" data-type={type} role="status" aria-live="polite" onClick={onClose}>
+      <span className="toast-icon"><Icon name={icon} size={16} strokeWidth={1.5} /></span>
       {message}
     </div>
   )
@@ -82,10 +84,10 @@ export default function ProfileSettingsPage() {
 
   // Toast state
   const [toast, setToast] = useState(null)
-  const [toastTimerRef, setToastTimerRef] = useState(null)
+  const toastTimerRef = useRef(null)
 
-  const showToast = useCallback((message) => {
-    setToast(message)
+  const showToast = useCallback((message, icon = 'check') => {
+    setToast({ message, icon })
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
     toastTimerRef.current = window.setTimeout(() => setToast(null), 4000)
   }, [])
@@ -108,7 +110,7 @@ export default function ProfileSettingsPage() {
     }
     const ok = await changePassword(pwdForm.current, pwdForm.new)
     if (ok) {
-      showToast('✅ Password berhasil diubah')
+      showToast('Password berhasil diubah', 'check')
       setPwdForm({ current: '', new: '', confirm: '' })
       setPwdShow({ current: false, new: false, confirm: false })
     }
@@ -121,6 +123,7 @@ export default function ProfileSettingsPage() {
   const [waPlatformAvailable, setWaPlatformAvailable] = useState(false)
   const [waRegistering, setWaRegistering] = useState(false)
   const [waDisplayName, setWaDisplayName] = useState('')
+  const [waRevokeConfirmId, setWaRevokeConfirmId] = useState(null)
 
   useEffect(() => {
     fetchWaList()
@@ -184,7 +187,10 @@ export default function ProfileSettingsPage() {
             name: data.user.name,
             displayName: data.user.displayName,
           },
-          pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+          pubKeyCredParams: [
+            { type: 'public-key', alg: -7 },  // ES256
+            { type: 'public-key', alg: -257 }, // RS256
+          ],
           authenticatorSelection: {
             authenticatorAttachment: 'platform',
             userVerification: 'required',
@@ -195,7 +201,7 @@ export default function ProfileSettingsPage() {
         },
       })
 
-      // TypeScript type assertion handled via comment for JSX compatibility
+      if (!credential) throw new Error('Kredensial Windows Hello tidak dibuat oleh browser')
       const assertionResponse = credential.response
       const verifyRes = await fetch(`${API_BASE}/auth/webauthn/register/verify`, {
         method: 'POST',
@@ -215,7 +221,7 @@ export default function ProfileSettingsPage() {
 
       setWaRegisterCredId(verifyData.credential_id)
       setWaRegisterStep('done')
-      showToast('✅ Windows Hello berhasil didaftarkan')
+      showToast('Windows Hello berhasil didaftarkan', 'check')
       fetchWaList()
     } catch (err) {
       setWaRegisterStep('error')
@@ -231,11 +237,22 @@ export default function ProfileSettingsPage() {
     }
   }, [showWaRegister, waRegisterStep])
 
-  const handleWaRevoke = async (id) => {
-    if (!window.confirm('Hapus Windows Hello ini? Anda tidak bisa login dengan Windows Hello yang dihapus.')) return
+  const handleWaRevokeConfirm = (id) => {
+    setWaRevokeConfirmId(id)
+  }
+
+  const handleWaRevokeCancel = () => {
+    setWaRevokeConfirmId(null)
+  }
+
+  const handleWaRevokeDelete = async () => {
+    const id = waRevokeConfirmId
+    setWaRevokeConfirmId(null)
     const ok = await waRevoke(id)
     if (ok) {
-      showToast('✅ Windows Hello dihapus')
+      showToast('Windows Hello dihapus', 'check')
+      // Tunggu sebentar agar server selesai memproses penghapusan sebelum refetch
+      await new Promise(r => setTimeout(r, 300))
       fetchWaList()
     }
   }
@@ -285,6 +302,7 @@ export default function ProfileSettingsPage() {
   const [usbRevokingId, setUsbRevokingId] = useState(null)
   const [usbEditingId, setUsbEditingId] = useState(null)
   const [usbEditLabel, setUsbEditLabel] = useState('')
+  const [usbRevokeConfirmCred, setUsbRevokeConfirmCred] = useState(null)
 
   // Load USB credentials
   const loadUsbCredentials = useCallback(async () => {
@@ -329,7 +347,7 @@ export default function ProfileSettingsPage() {
     const poll = async () => {
       const tokens = await scanForTokens()
       if (!cancelled && tokens.length > 0) {
-        showToast(`✅ USB terdeteksi di ${tokens[0].drive}`)
+        showToast(`USB terdeteksi di ${tokens[0].drive}`, 'check')
         setSelectedUsbDrive(tokens[0].drive)
         setUsbRegisterStep('waiting-pin')
       }
@@ -348,7 +366,7 @@ export default function ProfileSettingsPage() {
       if (!cancelled) {
         const masihAda = tokens.some(t => t.drive === selectedUsbDrive)
         if (!masihAda) {
-          showToast('🔌 USB dicabut. Colokkan kembali untuk melanjutkan.')
+          showToast('USB dicabut. Colokkan kembali untuk melanjutkan.', 'alert')
           setSelectedUsbDrive('')
           setUsbPin('')
           setUsbRegisterError('USB dicabut. Colokkan kembali untuk melanjutkan.')
@@ -391,7 +409,7 @@ export default function ProfileSettingsPage() {
       if (!decryptResult) {
         const msg = usbHookError || ''
         if (msg.includes('not found') || msg.includes('tidak ditemukan') || msg.includes('Read file')) {
-          showToast('🔌 USB dicabut. Colokkan kembali untuk melanjutkan.')
+          showToast('USB dicabut. Colokkan kembali untuk melanjutkan.', 'alert')
           setSelectedUsbDrive('')
           setUsbPin('')
           setUsbRegisterStep('waiting-usb')
@@ -423,7 +441,7 @@ export default function ProfileSettingsPage() {
 
       setUsbRegisterStep('done')
       setUsbPin('')
-      showToast('✅ USB token berhasil didaftarkan!')
+      showToast('USB token berhasil didaftarkan!', 'check')
       loadUsbCredentials()
     } catch (err) {
       setUsbRegisterStep('error')
@@ -505,7 +523,7 @@ export default function ProfileSettingsPage() {
       }
       setUsbCreatedCredentialId(result.credential_id)
       setUsbCreateStep('done')
-      showToast('✅ Token berhasil dibuat di ' + usbCreateDrive)
+      showToast('Token berhasil dibuat di ' + usbCreateDrive, 'check')
     } catch (err) {
       setUsbCreateStep('error')
       setUsbCreateError(err?.message || 'Gagal membuat token.')
@@ -513,15 +531,28 @@ export default function ProfileSettingsPage() {
   }
 
   /* ── USB Revoke ── */
-  const handleUsbRevoke = async (cred) => {
-    if (!window.confirm(`Nonaktifkan token "${cred.label ?? 'tanpa label'}"?\nToken ini tidak akan bisa dipakai lagi untuk MFA.`)) {
-      return
-    }
+  const handleUsbRevokeConfirm = (cred) => {
     setUsbRevokingId(cred.id)
+    setUsbRevokeConfirmCred(cred)
+  }
+
+  const handleUsbRevokeCancel = () => {
+    setUsbRevokeConfirmCred(null)
+    setUsbRevokingId(null)
+  }
+
+  const handleUsbRevokeDelete = async () => {
+    const cred = usbRevokeConfirmCred
+    setUsbRevokeConfirmCred(null)
     const ok = await revokeUsbCredential(cred.id)
     setUsbRevokingId(null)
-    if (ok) loadUsbCredentials()
-    else alert('Gagal menonaktifkan token.')
+    if (ok) {
+      showToast('USB token dinonaktifkan', 'check')
+      await new Promise(r => setTimeout(r, 300))
+      loadUsbCredentials()
+    } else {
+      showToast('Gagal menonaktifkan token', 'alert')
+    }
   }
 
   /* ── USB Edit Label ── */
@@ -537,7 +568,65 @@ export default function ProfileSettingsPage() {
   /* ── Render ── */
   return (
     <div className="settings-shell">
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.message} icon={toast.icon} onClose={() => setToast(null)} />}
+
+      {/* ── Confirm Hapus Windows Hello Modal ── */}
+      {waRevokeConfirmId && (
+        <div className="modal-overlay" onClick={handleWaRevokeCancel}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-icon" style={{ background: '#f13c35' }}>
+                <Icon name="alert" size={28} strokeWidth={2} />
+              </div>
+              <h2>Hapus Windows Hello?</h2>
+              <p className="modal-subtitle">Anda tidak bisa login dengan Windows Hello yang dihapus.</p>
+            </div>
+            <div className="modal-body">
+              <div className="modal-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button className="btn btn-secondary" onClick={handleWaRevokeCancel}>
+                  Batal
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={handleWaRevokeDelete}
+                  disabled={waRevokeLoading}
+                >
+                  {waRevokeLoading ? 'Menghapus…' : 'Hapus'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Nonaktifkan USB Token Modal ── */}
+      {usbRevokeConfirmCred && (
+        <div className="modal-overlay" onClick={handleUsbRevokeCancel}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-icon" style={{ background: '#f13c35' }}>
+                <Icon name="alert" size={28} strokeWidth={2} />
+              </div>
+              <h2>Nonaktifkan USB Token?</h2>
+              <p className="modal-subtitle">Token "{usbRevokeConfirmCred.label ?? 'tanpa label'}" tidak akan bisa dipakai lagi untuk MFA.</p>
+            </div>
+            <div className="modal-body">
+              <div className="modal-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button className="btn btn-secondary" onClick={handleUsbRevokeCancel}>
+                  Batal
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={handleUsbRevokeDelete}
+                  disabled={usbRevokingId}
+                >
+                  {usbRevokingId ? 'Menonaktifkan…' : 'Nonaktifkan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header className="settings-header">
         <button className="settings-back" onClick={() => navigate('/dasbor')}>
@@ -757,7 +846,7 @@ export default function ProfileSettingsPage() {
                         <div className="wa-row-actions">
                           <button
                             className="btn btn-danger btn-icon"
-                            onClick={() => handleWaRevoke(cred.id)}
+                            onClick={() => handleWaRevokeConfirm(cred.id)}
                             disabled={waRevokeLoading}
                             title="Hapus Windows Hello"
                           >
@@ -1052,11 +1141,11 @@ export default function ProfileSettingsPage() {
                               </button>
                               <button
                                 className="btn btn-danger btn-icon"
-                                onClick={() => handleUsbRevoke(cred)}
+                                onClick={() => handleUsbRevokeConfirm(cred)}
                                 title="Nonaktifkan token"
                                 disabled={usbRevokingId === cred.id}
                               >
-                                {usbRevokingId === cred.id ? '⏳' : <Icon name="revoke" size={13} />}
+                                {usbRevokingId === cred.id ? <Icon name="loader" size={13} /> : <Icon name="revoke" size={13} />}
                               </button>
                             </>
                           )}

@@ -43,11 +43,44 @@
   border-radius: 999px;
   font-size: 0.875rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   box-shadow: 0 8px 24px rgba(13, 13, 13, 0.25);
   animation: settingsToastIn 0.25s var(--ease);
   max-width: 90vw;
   text-align: center;
   cursor: pointer;
+}
+
+.settings-toast .toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  color: var(--black);
+}
+
+.settings-toast .toast-icon svg {
+  width: 16px !important;
+  height: 16px !important;
+  stroke-width: 1.5 !important;
+  color: inherit !important;
+}
+
+/* Icon toast sukses — hijau konsisten dengan ikon sukses di halaman lain */
+.settings-toast[data-type="success"] .toast-icon,
+.settings-toast[data-type="success"] .toast-icon svg {
+  color: #166534 !important;
+}
+
+/* Icon toast peringatan — merah konsisten dengan ikon peringatan di halaman lain */
+.settings-toast[data-type="alert"] .toast-icon,
+.settings-toast[data-type="alert"] .toast-icon svg {
+  color: var(--red) !important;
 }
 
 @keyframes settingsToastIn {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import raiseHand from '/raise_hand.jpg'
 import Picture from '/Picture.jpg'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
@@ -38,6 +38,27 @@ export default function LandingPage() {
     { icon: 'chart',  title: 'Hasil Real-Time',            body: 'Admin dapat mempublikasikan hasil secara instan setelah pemilihan ditutup.' },
   ]
 
+  /* ── Cek server saat tombol Masuk diklik ──
+   * Jika backend mati, arahkan ke /server-error tanpa melewati /masuk dulu. */
+  const navigate = useNavigate()
+
+  async function handleMasukClick(e) {
+    e.preventDefault() // hentikan navigasi bawaan Link ke /masuk
+    try {
+      const res = await fetch('http://localhost:8000/health', {
+        method: 'GET',
+        signal: AbortSignal.timeout(2000),
+      })
+      if (!res.ok) {
+        navigate('/server-error')
+      } else {
+        navigate('/masuk')
+      }
+    } catch {
+      navigate('/server-error')
+    }
+  }
+
   return (
     <div className="landing">
 
@@ -58,7 +79,7 @@ export default function LandingPage() {
             yang dapat diverifikasi.
           </p>
           <div className="hero-cta">
-            <Link to="/masuk" className="btn-solid btn-lg">
+            <Link to="/masuk" className="btn-solid btn-lg" onClick={handleMasukClick}>
               <Icon name="login" size={20} />
               Masuk sekarang <Icon name="arrow" size={16} />
             </Link>
@@ -164,7 +185,7 @@ export default function LandingPage() {
             Setiap keputusan desain - dari anonimitas suara hingga manajemen kunci -
             mengikuti prinsip keamanan yang ketat.
           </p>
-          <Link to="/masuk" className="btn-solid btn-lg">
+          <Link to="/masuk" className="btn-solid btn-lg" onClick={handleMasukClick}>
             <Icon name="login" size={20} />
             Masuk ke TrueCount <Icon name="arrow" size={16} />
           </Link>

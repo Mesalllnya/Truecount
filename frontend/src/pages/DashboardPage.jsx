@@ -153,18 +153,23 @@ function InvitesPanel() {
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState('')
 
-  const [showForm, setShowForm]   = useState(false)
-  const [createForm, setCreateForm] = useState({ email: '', role: 'voter' })
-  const [creating, setCreating]   = useState(false)
+  const [showForm, setShowForm]     = useState(false)
+  const [inviteMode, setInviteMode] = useState('single') // 'single' | 'bulk_emails' | 'bulk_count'
+  const [createForm, setCreateForm] = useState({ email: '', emailsText: '', count: 5, role: 'voter' })
+  const [creating, setCreating]     = useState(false)
   const [createError, setCreateError] = useState('')
 
-  const [freshLink, setFreshLink] = useState('')
-  const [copiedId, setCopiedId]   = useState(null)
+  const [freshLinks, setFreshLinks] = useState([]) // array string link
+  const [copiedId, setCopiedId]     = useState(null)
   const [revokingId, setRevokingId] = useState(null)
 
   // Search & Filter state
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery]   = useState('')
   const [statusFilter, setStatusFilter] = useState('semua')
+  const [currentPage, setCurrentPage]   = useState(1)
+  const [jumpInput, setJumpInput]       = useState('')
+  const [activeJump, setActiveJump]     = useState(null) // 'left' | 'right' | null
+  const pageSize = 5
 
   const loadInvites = useCallback(async () => {
     setLoading(true)
@@ -196,6 +201,7 @@ function InvitesPanel() {
     return invites.filter(inv => {
       const matchesSearch = searchQuery === '' ||
         (inv.email && inv.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (inv.used_by_username && inv.used_by_username.toLowerCase().includes(searchQuery.toLowerCase())) ||
         inv.token.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (inv.created_by_username && inv.created_by_username.toLowerCase().includes(searchQuery.toLowerCase()))
 
@@ -205,11 +211,61 @@ function InvitesPanel() {
     })
   }, [invites, searchQuery, statusFilter])
 
+  // Reset page saat filter/search berubah
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, statusFilter])
+
+  const totalPages = Math.ceil(filteredInvites.length / pageSize) || 1
+  const paginatedInvites = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredInvites.slice(start, start + pageSize)
+  }, [filteredInvites, currentPage, pageSize])
+
+  function handlePromptJump(defaultPage) {
+    const res = window.prompt(`Loncat ke halaman (1 - ${totalPages}):`, String(defaultPage || ''))
+    if (res !== null) {
+      const p = parseInt(res, 10)
+      if (!isNaN(p) && p >= 1 && p <= totalPages) {
+        setCurrentPage(p)
+      } else {
+        alert(`Harap masukkan halaman valid antara 1 dan ${totalPages}.`)
+      }
+    }
+  }
+
   async function handleCreate(e) {
     e.preventDefault()
     setCreating(true)
     setCreateError('')
-    setFreshLink('')
+    setFreshLinks([])
+
+    let payload = { role: createForm.role }
+
+    if (inviteMode === 'bulk_emails') {
+      const parsedEmails = createForm.emailsText
+        .split(/[\n,;]+/)
+        .map(em => em.trim())
+        .filter(Boolean)
+
+      if (parsedEmails.length === 0) {
+        setCreateError('Masukkan setidaknya satu alamat email.')
+        setCreating(false)
+        return
+      }
+      payload.emails = parsedEmails
+    } else if (inviteMode === 'bulk_count') {
+      const num = parseInt(createForm.count, 10)
+      if (isNaN(num) || num < 1 || num > 100) {
+        setCreateError('Jumlah undangan harus antara 1 dan 100.')
+        setCreating(false)
+        return
+      }
+      payload.count = num
+    } else {
+      payload.email = createForm.email.trim()
+    }
+
     try {
       const token = localStorage.getItem('tc_token')
       const res = await fetch('http://localhost:8000/invites', {
@@ -218,13 +274,19 @@ function InvitesPanel() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(createForm),
+        body: JSON.stringify(payload),
       })
       const data = await readJson(res)
       if (!res.ok) { setCreateError(data.error || 'Gagal membuat undangan.'); return }
-      setFreshLink(`${window.location.origin}${data.invite.link}`)
+
+      if (data.invites && Array.isArray(data.invites)) {
+        setFreshLinks(data.invites.map(inv => `${window.location.origin}${inv.link}`))
+      } else if (data.invite) {
+        setFreshLinks([`${window.location.origin}${data.invite.link}`])
+      }
+
       setShowForm(false)
-      setCreateForm({ email: '', role: 'voter' })
+      setCreateForm({ email: '', emailsText: '', count: 5, role: 'voter' })
       loadInvites()
     } catch (err) {
       setCreateError(
@@ -241,6 +303,15 @@ function InvitesPanel() {
     const ok = await copyText(`${window.location.origin}${invite.link}`)
     if (ok) {
       setCopiedId(id)
+      window.setTimeout(() => setCopiedId(null), 1800)
+    }
+  }
+
+  async function handleCopyAllFresh() {
+    const text = freshLinks.join('\n')
+    const ok = await copyText(text)
+    if (ok) {
+      setCopiedId('all_fresh')
       window.setTimeout(() => setCopiedId(null), 1800)
     }
   }
@@ -296,7 +367,7 @@ function InvitesPanel() {
         </div>
         <button
           className="admin-create-btn"
-          onClick={() => { setShowForm(v => !v); setCreateError(''); setFreshLink('') }}
+          onClick={() => { setShowForm(v => !v); setCreateError(''); setFreshLinks([]) }}
           aria-expanded={showForm}
         >
           <PlusIcon />
@@ -304,21 +375,82 @@ function InvitesPanel() {
         </button>
       </div>
 
-      {/* ── Form buat undangan ── */}
+      {/* ── Form buat undangan (Mendukung Satuan, Banyak Email, & Batch Kuota) ── */}
       {showForm && (
         <form className="create-panel" onSubmit={handleCreate}>
+          {/* Pilihan mode undangan */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.6rem' }}>
+            <button
+              type="button"
+              className={inviteMode === 'single' ? 'create-submit' : 'copy-btn'}
+              onClick={() => { setInviteMode('single'); setCreateError('') }}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem' }}
+            >
+              Satu Undangan
+            </button>
+            <button
+              type="button"
+              className={inviteMode === 'bulk_emails' ? 'create-submit' : 'copy-btn'}
+              onClick={() => { setInviteMode('bulk_emails'); setCreateError('') }}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem' }}
+            >
+              Banyak Email Sekaligus
+            </button>
+            <button
+              type="button"
+              className={inviteMode === 'bulk_count' ? 'create-submit' : 'copy-btn'}
+              onClick={() => { setInviteMode('bulk_count'); setCreateError('') }}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem' }}
+            >
+              Banyak Undangan Terbuka
+            </button>
+          </div>
+
           <div className="create-fields">
-            <div className="create-field">
-              <label htmlFor="invite-email">Email calon (opsional)</label>
-              <input
-                id="invite-email"
-                type="email"
-                placeholder="anda@contoh.com"
-                value={createForm.email}
-                onChange={e => { setCreateForm(p => ({ ...p, email: e.target.value })); setCreateError('') }}
-              />
-              <span className="create-hint">Kosongkan agar undangan bisa diklaim oleh siapa pun.</span>
-            </div>
+            {inviteMode === 'single' && (
+              <div className="create-field">
+                <label htmlFor="invite-email">Email calon (opsional)</label>
+                <input
+                  id="invite-email"
+                  type="email"
+                  placeholder="anda@contoh.com"
+                  value={createForm.email}
+                  onChange={e => { setCreateForm(p => ({ ...p, email: e.target.value })); setCreateError('') }}
+                />
+                <span className="create-hint">Kosongkan agar undangan bisa diklaim oleh siapa pun.</span>
+              </div>
+            )}
+
+            {inviteMode === 'bulk_emails' && (
+              <div className="create-field" style={{ gridColumn: '1 / -1' }}>
+                <label htmlFor="invite-bulk-emails">Daftar Email (pisahkan dengan koma atau baris baru) *</label>
+                <textarea
+                  id="invite-bulk-emails"
+                  rows={4}
+                  placeholder={"budi@kampus.ac.id\nsiti@kampus.ac.id, andi@kampus.ac.id"}
+                  value={createForm.emailsText}
+                  onChange={e => { setCreateForm(p => ({ ...p, emailsText: e.target.value })); setCreateError('') }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.85rem', fontFamily: 'inherit' }}
+                />
+                <span className="create-hint">Sistem akan otomatis membangkitkan link undangan terpisah untuk setiap email (maks 100).</span>
+              </div>
+            )}
+
+            {inviteMode === 'bulk_count' && (
+              <div className="create-field">
+                <label htmlFor="invite-count">Jumlah Link Undangan Dibuat *</label>
+                <input
+                  id="invite-count"
+                  type="number"
+                  min="2"
+                  max="100"
+                  value={createForm.count}
+                  onChange={e => { setCreateForm(p => ({ ...p, count: e.target.value })); setCreateError('') }}
+                />
+                <span className="create-hint">Buat 2 hingga 100 token undangan anonim sekaligus untuk dibagikan secara bebas.</span>
+              </div>
+            )}
+
             <div className="create-field">
               <label htmlFor="invite-role">Peran akun</label>
               <select
@@ -336,7 +468,7 @@ function InvitesPanel() {
 
           <div className="create-actions">
             <button type="submit" className="create-submit" disabled={creating}>
-              {creating ? 'Membuat…' : 'Buat undangan'}
+              {creating ? 'Membuat…' : inviteMode === 'single' ? 'Buat undangan' : 'Buat Undangan Massal'}
             </button>
             <button type="button" className="create-cancel" onClick={() => setShowForm(false)}>
               Batal
@@ -345,19 +477,39 @@ function InvitesPanel() {
         </form>
       )}
 
-      {/* ── Tautan undangan baru ── */}
-      {freshLink && (
-        <div className="link-box" role="status">
-          <span className="link-box-label">Undangan dibuat - bagikan tautan ini:</span>
-          <code>{freshLink}</code>
-          <button
-            className="copy-btn"
-            onClick={() => { copyText(freshLink); setCopiedId('fresh') }}
-            title="Salin tautan"
-          >
-            {copiedId === 'fresh' ? <CheckIcon /> : <CopyIcon />}
-            {copiedId === 'fresh' ? 'Tersalin' : 'Salin'}
-          </button>
+      {/* ── Tautan undangan baru (Tunggal maupun Banyak) ── */}
+      {freshLinks.length > 0 && (
+        <div className="link-box" role="status" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="link-box-label" style={{ fontWeight: 700 }}>
+              {freshLinks.length} Undangan Berhasil Dibuat - Bagikan Tautan:
+            </span>
+            <button
+              className="copy-btn"
+              onClick={handleCopyAllFresh}
+              title="Salin semua tautan sekaligus"
+              style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+            >
+              {copiedId === 'all_fresh' ? <CheckIcon /> : <CopyIcon />}
+              {copiedId === 'all_fresh' ? 'Semua Tersalin' : 'Salin Semua Link'}
+            </button>
+          </div>
+
+          <div style={{ maxHeight: '140px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem', background: 'var(--white)', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+            {freshLinks.map((link, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', fontSize: '0.78rem' }}>
+                <code style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link}</code>
+                <button
+                  type="button"
+                  className="copy-btn"
+                  onClick={() => { copyText(link); setCopiedId(`fresh_${idx}`); setTimeout(() => setCopiedId(null), 1500) }}
+                  style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
+                >
+                  {copiedId === `fresh_${idx}` ? 'Tersalin' : 'Salin'}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -415,7 +567,7 @@ function InvitesPanel() {
           <span>Pembuat</span>
           <span>Dibuat</span>
           <span>Kedaluwarsa</span>
-          <span />
+          <span>Aksi</span>
         </div>
 
         {loading && (
@@ -435,65 +587,153 @@ function InvitesPanel() {
           </p>
         )}
 
-        {!loading && filteredInvites.map(inv => (
-          <div className="invite-row" key={inv.id}>
-            <div className="invite-cell invite-cell--email">
-              <span className="invite-cell-label">Email</span>
-              <span className="invite-email">{inv.email ?? '-'}</span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Peran</span>
-              <span className="invite-role">{ROLE_LABEL[inv.role] ?? inv.role}</span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Status</span>
-              <span className={`badge badge--${inv.status}`}>
-                {STATUS_META[inv.status]?.label ?? inv.status}
-              </span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Pembuat</span>
-              <span className="invite-creator">{inv.created_by_username ?? '-'}</span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Dibuat</span>
-              <span className="invite-date">{formatDate(inv.created_at)}</span>
-            </div>
-            <div className="invite-cell">
-              <span className="invite-cell-label">Kedaluwarsa</span>
-              <span className="invite-date">{formatDate(inv.expires_at)}</span>
-            </div>
-            <div className="invite-cell invite-cell--action">
-              <span className="invite-cell-label">Aksi</span>
-              <div className="invite-actions">
-                <button
-                  className="copy-btn"
-                  onClick={() => handleCopy(inv, inv.id)}
-                  title="Salin tautan undangan"
-                  disabled={inv.status === 'diterima' || inv.status === 'kedaluwarsa' || inv.status === 'dibatalkan'}
-                >
-                  {copiedId === inv.id ? <CheckIcon /> : <CopyIcon />}
-                  {copiedId === inv.id ? 'Tersalin' : 'Salin'}
-                </button>
-                {inv.status === 'menunggu' && (
+        {/* ── Daftar baris undangan (Paginasi) ── */}
+        <div>
+          {!loading && paginatedInvites.map(inv => (
+            <div className="invite-row" key={inv.id}>
+              <div className="invite-cell invite-cell--email">
+                <span className="invite-cell-label">Email</span>
+                <span className="invite-email" title={inv.used_by_username ? `Diklaim oleh: ${inv.used_by_username}` : undefined}>
+                  {inv.email ?? '-'}
+                </span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Peran</span>
+                <span className="invite-role">{ROLE_LABEL[inv.role] ?? inv.role}</span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Status</span>
+                <span className={`badge badge--${inv.status}`}>
+                  {STATUS_META[inv.status]?.label ?? inv.status}
+                </span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Pembuat</span>
+                <span className="invite-creator">{inv.created_by_username ?? '-'}</span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Dibuat</span>
+                <span className="invite-date">{formatDate(inv.created_at)}</span>
+              </div>
+              <div className="invite-cell">
+                <span className="invite-cell-label">Kedaluwarsa</span>
+                <span className="invite-date">{formatDate(inv.expires_at)}</span>
+              </div>
+              <div className="invite-cell invite-cell--action">
+                <span className="invite-cell-label">Aksi</span>
+                <div className="invite-actions">
                   <button
-                    className="revoke-btn"
-                    onClick={() => handleRevoke(inv)}
-                    title="Batalkan undangan"
-                    disabled={revokingId === inv.id}
+                    className="copy-btn"
+                    onClick={() => handleCopy(inv, inv.id)}
+                    title="Salin tautan undangan"
+                    disabled={inv.status === 'diterima' || inv.status === 'kedaluwarsa' || inv.status === 'dibatalkan'}
                   >
-                    {revokingId === inv.id ? 'Membatalkan…' : <RevokeIcon />}
+                    {copiedId === inv.id ? <CheckIcon /> : <CopyIcon />}
+                    {copiedId === inv.id ? 'Tersalin' : 'Salin'}
+                  </button>
+                  {inv.status === 'menunggu' && (
+                    <button
+                      className="revoke-btn"
+                      onClick={() => handleRevoke(inv)}
+                      title="Batalkan undangan"
+                      disabled={revokingId === inv.id}
+                    >
+                      {revokingId === inv.id ? 'Membatalkan…' : <RevokeIcon />}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Kontrol Paginasi ── */}
+        {!loading && filteredInvites.length > pageSize && (
+          <div className="table-pagination">
+            <span className="pagination-info">
+              Halaman <strong>{currentPage}</strong> dari <strong>{totalPages}</strong> ({filteredInvites.length} data)
+            </span>
+            <div className="pagination-nav">
+              <button
+                type="button"
+                className="copy-btn"
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              >
+                ← Sebelumnya
+              </button>
+              <div className="pagination-pages">
+                {/* Halaman Pertama (1) */}
+                <button
+                  type="button"
+                  className={`pagination-num ${currentPage === 1 ? 'pagination-num--active' : ''}`}
+                  onClick={() => setCurrentPage(1)}
+                >
+                  1
+                </button>
+
+                {/* Ellipsis / Shortcut Loncat Kiri (jika currentPage > 2) */}
+                {currentPage > 2 && (
+                  <button
+                    type="button"
+                    className="pagination-ellipsis-btn"
+                    onClick={() => handlePromptJump(Math.floor((1 + currentPage) / 2))}
+                    title="Klik untuk loncat halaman"
+                  >
+                    …
+                  </button>
+                )}
+
+                {/* Halaman Saat Ini (jika bukan halaman pertama dan bukan halaman terakhir) */}
+                {currentPage !== 1 && currentPage !== totalPages && (
+                  <button
+                    type="button"
+                    className="pagination-num pagination-num--active"
+                  >
+                    {currentPage}
+                  </button>
+                )}
+
+                {/* Ellipsis / Shortcut Loncat Kanan (jika currentPage < totalPages - 1) */}
+                {currentPage < totalPages - 1 && (
+                  <button
+                    type="button"
+                    className="pagination-ellipsis-btn"
+                    onClick={() => handlePromptJump(Math.floor((currentPage + totalPages) / 2))}
+                    title="Klik untuk loncat halaman"
+                  >
+                    …
+                  </button>
+                )}
+
+                {/* Halaman Terakhir */}
+                {totalPages > 1 && (
+                  <button
+                    type="button"
+                    className={`pagination-num ${currentPage === totalPages ? 'pagination-num--active' : ''}`}
+                    onClick={() => setCurrentPage(totalPages)}
+                  >
+                    {totalPages}
                   </button>
                 )}
               </div>
+              <button
+                type="button"
+                className="copy-btn"
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              >
+                Selanjutnya →
+              </button>
             </div>
           </div>
-        ))}
+        )}
       </div>
 
       <p className="admin-footnote">
-        Undangan yang belum diklaim otomatis kedaluwarsa setelah 7 hari. Masa berlaku bisa diubah lewat
-        <code> INVITE_EXPIRE_DAYS</code> di <code>.env</code>.
+        Undangan yang belum diklaim otomatis kedaluwarsa setelah 7 hari.
       </p>
     </section>
   )
@@ -546,7 +786,7 @@ function UserSecuritySearchPanel() {
   }, [query, loadUsers])
 
   return (
-    <section className="admin-panel" aria-label="Pencarian pengguna" style={{ marginTop: '3rem' }}>
+    <section className="admin-panel" aria-label="Pencarian pengguna">
       <div className="admin-head">
         <div className="admin-title">
           <h1>Log Keamanan Pengguna</h1>
@@ -734,7 +974,6 @@ function BlockchainAuditPanel() {
     <section
       className="admin-panel"
       aria-label="Blockchain audit"
-      style={{ marginTop: '3rem' }}
     >
       <div className="admin-head">
         <div>
@@ -1101,7 +1340,7 @@ function ElectionsPanel() {
   }
 
   return (
-    <section className="admin-panel" aria-label="Manajemen pemilihan" style={{ marginTop: '3rem' }}>
+    <section className="admin-panel" aria-label="Manajemen pemilihan">
       <div className="admin-head">
         <div className="admin-title">
           <h1>Pemilihan</h1>
@@ -1246,7 +1485,16 @@ function ElectionsPanel() {
       {listError && <p className="invite-error" role="alert">{listError}</p>}
 
       {/* ── Daftar election ── */}
-      <div className="invite-card">
+      <div
+        className="invite-card"
+        style={{
+          maxHeight: '430px',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         {loading && <p className="invite-list-note">Memuat pemilihan…</p>}
 
         {!loading && elections.length === 0 && (
@@ -1275,15 +1523,15 @@ function ElectionsPanel() {
                 </div>
               </div>
 
-              {/* Aksi Paslon & Pemilih */}
-              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              {/* Aksi Paslon, Pemilih, & Status */}
+              <div className="el-actions">
                 <button
                   type="button"
                   className="copy-btn"
                   onClick={() => setSelectedCandidatesEl(el)}
                   title="Kelola Paslon & Foto"
                 >
-                  👥 Paslon ({el.candidate_count})
+                  Paslon ({el.candidate_count})
                 </button>
                 <button
                   type="button"
@@ -1291,12 +1539,9 @@ function ElectionsPanel() {
                   onClick={() => setSelectedVotersEl(el)}
                   title="Tentukan Peserta Pemilih"
                 >
-                  📋 Peserta ({el.voter_count ?? 0})
+                  Peserta ({el.voter_count ?? 0})
                 </button>
-              </div>
 
-              {/* Aksi status */}
-              <div className="invite-cell invite-cell--action el-actions">
                 {el.status === 'draft' && (
                   <>
                     <button
@@ -1307,7 +1552,7 @@ function ElectionsPanel() {
                       onClick={() => startEditElection(el)}
                       title="Edit informasi pemilihan"
                     >
-                      ✏️ Edit
+                      Edit
                     </button>
                     <button
                       className="create-submit"
@@ -1480,7 +1725,7 @@ function VoterDashboardView() {
                     </span>
                     {el.has_voted ? (
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#e8f5e9', color: '#2a7a3b' }}>
-                        ✓ Suara Telah Diinput
+                        Suara Telah Diinput
                       </span>
                     ) : (
                       <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c' }}>

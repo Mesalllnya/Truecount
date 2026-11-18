@@ -99,7 +99,7 @@ export default function ResultsPage() {
         <div className="results-head">
           <div>
             <span className={`results-status-badge results-status-badge--${isClosed ? 'closed' : 'active'}`}>
-              {isClosed ? '✓ Selesai' : '⏳ Sedang berlangsung'}
+              {isClosed ? 'Selesai' : 'Sedang berlangsung'}
             </span>
           </div>
           <h1>{election.title}</h1>

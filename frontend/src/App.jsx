@@ -19,9 +19,10 @@ import DevPage from './pages/DevPage'
 import RoleGuard from './components/RoleGuard'
 import AuthGuard from './components/AuthGuard'
 import { useAuth } from './hooks/useAuthSession'
+import AdminVoiceMessagesPage from './pages/AdminVoiceMessagesPage'
 import { FailedAttemptsProvider, stopAllCameraStreams } from './hooks/useAuthSecurity'
 import { AuthProvider } from './hooks/useAuthSession'
-import { Home, Info, LayoutDashboard, Vote, Mail, Settings, Code2 } from 'lucide-react'
+import { Home, Info, LayoutDashboard, Vote, Mail, Settings, Code2, Mic } from 'lucide-react'
 
 /* Ikon navbar (lucide, outline: tengah kosong) — ukuran & ketebalan seragam */
 const navIcon = { size: 18, strokeWidth: 1.5 }
@@ -87,6 +88,7 @@ function AppRoutes() {
     location.pathname.startsWith('/pilih') ||
     location.pathname.startsWith('/hasil') ||
     location.pathname.startsWith('/pesan-terenkripsi') ||
+    location.pathname.startsWith('/pesan-suara') ||
     location.pathname.startsWith('/pengaturan') ||
     location.pathname.startsWith('/usb-token-test') ||
     location.pathname.startsWith('/log-keamanan') ||
@@ -98,6 +100,10 @@ function AppRoutes() {
     ? { href: '/dev', label: 'Dev', icon: <Code2 {...navIcon} /> }
     : null
 
+  const adminVoiceLink = user?.role === 'admin'
+    ? { href: '/pesan-suara', label: 'Pesan Suara', icon: <Mic {...navIcon} /> }
+    : null
+
   const isLoginPage =
     location.pathname.startsWith('/masuk') ||
     location.pathname.startsWith('/login')
@@ -105,7 +111,7 @@ function AppRoutes() {
   return (
     <>
       <CameraRouteGuard />
-      {!isLoginPage && <Nav links={[...navLinks, devLink].filter(Boolean)} />}
+      {!isLoginPage && <Nav links={[...navLinks, adminVoiceLink, devLink].filter(Boolean)} />}
       <Routes>
         <Route path="/"           element={<LandingPage />} />
         <Route path="/tentang"    element={<AboutPage />} />
@@ -130,9 +136,13 @@ function AppRoutes() {
           <Route element={<RoleGuard allowedRoles={['admin', 'dev']} />}>
             <Route path="/dev" element={<DevPage />} />
           </Route>
+          <Route element={<RoleGuard allowedRoles={['admin']} />}>
+            <Route path="/pesan-suara" element={<AdminVoiceMessagesPage />} />
+          </Route>
         </Route>
         
         <Route path="*"                element={<Navigate to="/" replace />} />
+        <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
       </Routes>
     </>
   )

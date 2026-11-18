@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 const API = 'http://localhost:8000'
 
@@ -96,9 +96,12 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: fallbackSize,
+        color: '#9ca3af',
       }}>
-        👤
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
       </div>
     );
   }
@@ -111,7 +114,7 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
       onError={(e) => {
         e.target.style.display = 'none';
         if (e.target.parentElement) {
-          e.target.parentElement.innerHTML = `<div style="width:100%;height:100%;background:#f0f0ec;display:flex;align-items:center;justify-content:center;font-size:${fallbackSize};">👤</div>`;
+          e.target.parentElement.innerHTML = `<div style="width:100%;height:100%;background:#f0f0ec;display:flex;align-items:center;justify-content:center;color:#9ca3af;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`;
         }
       }}
     />
@@ -166,10 +169,30 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
   
 async function handleAddCandidate(e) {
   e.preventDefault()
-  if (!name.trim()) return
+  setError('')
+
+  if (!name.trim()) {
+    setError('Nama paslon wajib diisi. Mohon lengkapi bagian nama paslon.')
+    return
+  }
+  if (!vision.trim()) {
+    setError('Visi paslon wajib diisi. Mohon lengkapi bagian visi paslon.')
+    return
+  }
+  if (!mission.trim()) {
+    setError('Misi paslon wajib diisi. Mohon lengkapi bagian misi paslon.')
+    return
+  }
+  if (!photoFile) {
+    setError('Foto paslon wajib diunggah. Mohon pilih foto paslon (maksimal 2MB).')
+    return
+  }
+  if (photoFile.size > 2 * 1024 * 1024) {
+    setError(`Ukuran foto paslon terlalu besar (${(photoFile.size / (1024 * 1024)).toFixed(2)} MB). Maksimal ukuran foto adalah 2 MB. Silakan input ulang gambar paslon yang lebih kecil.`)
+    return
+  }
 
   setSubmitting(true)
-  setError('')
 
   try {
     // 1. Buat kandidat terlebih dahulu
@@ -284,14 +307,35 @@ async function handleUpdateCandidate(e) {
   e.preventDefault()
 
   if (!editingCandidate) return
+  setError('')
 
   if (!editName.trim()) {
-    setError('Nama kandidat tidak boleh kosong.')
+    setError('Nama paslon tidak boleh kosong. Mohon isi nama paslon.')
+    return
+  }
+  if (!editVision.trim()) {
+    setError('Visi paslon tidak boleh kosong. Mohon isi visi paslon.')
+    return
+  }
+  if (!editMission.trim()) {
+    setError('Misi paslon tidak boleh kosong. Mohon isi misi paslon.')
+    return
+  }
+
+  // Cek apakah paslon sudah punya foto sebelumnya atau memilih foto baru
+  const hasExistingPhoto = Boolean(editingCandidate.photo_file_id || editingCandidate.photo_path)
+  if (!hasExistingPhoto && !editPhotoFile) {
+    setError('Foto paslon wajib diunggah. Silakan pilih foto paslon (maks 2MB).')
+    return
+  }
+
+  // Jika mengunggah foto baru, validasi ukuran < 2MB
+  if (editPhotoFile && editPhotoFile.size > 2 * 1024 * 1024) {
+    setError(`Ukuran foto baru terlalu besar (${(editPhotoFile.size / (1024 * 1024)).toFixed(2)} MB). Maksimal 2 MB. Silakan pilih/input ulang gambar yang lebih kecil.`)
     return
   }
 
   setUpdating(true)
-  setError('')
 
   try {
     const candidateId = editingCandidate.id
@@ -418,9 +462,10 @@ async function handleUpdateCandidate(e) {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Visi (singkat)</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Visi (singkat) *</label>
                   <input
                     type="text"
+                    required
                     placeholder="Contoh: Transparansi & Inovasi Kampus"
                     value={vision}
                     onChange={e => setVision(e.target.value)}
@@ -428,13 +473,22 @@ async function handleUpdateCandidate(e) {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Foto Paslon (JPEG/PNG, maks 2MB)</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Foto Paslon (JPEG/PNG, maks 2MB) *</label>
                   <input
                     key={fileInputKey}
                     type="file"
+                    required
                     accept="image/jpeg,image/png,image/webp"
                     onChange={e => {
                       const file = e.target.files[0] || null
+                      if (file && file.size > 2 * 1024 * 1024) {
+                        setError(`Ukuran foto paslon terlalu besar (${(file.size / (1024 * 1024)).toFixed(2)} MB). Maksimal ukuran foto adalah 2 MB. Silakan pilih gambar lain.`)
+                        e.target.value = ''
+                        setPhotoFile(null)
+                        setPhotoPreview(null)
+                        return
+                      }
+                      setError('')
                       setPhotoFile(file)
                       if (file) {
                         setPhotoPreview(URL.createObjectURL(file))
@@ -456,9 +510,10 @@ async function handleUpdateCandidate(e) {
                   )}
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Misi</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.2rem' }}>Misi *</label>
                   <textarea
                     rows={2}
+                    required
                     placeholder="Poin-poin misi paslon..."
                     value={mission}
                     onChange={e => setMission(e.target.value)}
@@ -574,9 +629,10 @@ async function handleUpdateCandidate(e) {
                           </div>
 
                           <div>
-                            <label>Visi</label>
+                            <label>Visi *</label>
                             <input
                               type="text"
+                              required
                               value={editVision}
                               onChange={e => setEditVision(e.target.value)}
                               style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}
@@ -584,9 +640,10 @@ async function handleUpdateCandidate(e) {
                           </div>
 
                           <div>
-                            <label>Misi</label>
+                            <label>Misi *</label>
                             <textarea
                               rows={3}
+                              required
                               value={editMission}
                               onChange={e => setEditMission(e.target.value)}
                               style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontFamily: 'inherit' }}
@@ -594,11 +651,23 @@ async function handleUpdateCandidate(e) {
                           </div>
 
                           <div>
-                            <label>Ganti Foto</label>
+                            <label>
+                              Foto Paslon {editingCandidate.photo_file_id || editingCandidate.photo_path ? '(Pilih jika ingin mengganti)' : '* (Wajib diunggah)'}
+                            </label>
                             <input
                               type="file"
                               accept="image/jpeg,image/png,image/webp"
-                              onChange={e => setEditPhotoFile(e.target.files?.[0] || null)}
+                              onChange={e => {
+                                const file = e.target.files?.[0] || null
+                                if (file && file.size > 2 * 1024 * 1024) {
+                                  setError(`Ukuran foto paslon terlalu besar (${(file.size / (1024 * 1024)).toFixed(2)} MB). Maksimal 2 MB. Silakan pilih gambar yang lebih kecil.`)
+                                  e.target.value = ''
+                                  setEditPhotoFile(null)
+                                  return
+                                }
+                                setError('')
+                                setEditPhotoFile(file)
+                              }}
                             />
                           </div>
                         </div>
@@ -641,9 +710,19 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
   const [allVoterUsers, setAllVoterUsers]   = useState([])
   const [loading, setLoading]               = useState(true)
   const [error, setError]                   = useState('')
-  const [addingId, setAddingId]             = useState('')
-  const [adding, setAdding]                 = useState(false)
-  const [removingId, setRemovingId]         = useState(null)
+  const [successMsg, setSuccessMsg]         = useState('')
+  
+  // Selection state untuk multi-select (Checkbox)
+  const [selectedAvailableIds, setSelectedAvailableIds] = useState(new Set())
+  const [selectedEnrolledIds, setSelectedEnrolledIds]   = useState(new Set())
+
+  // Search filter
+  const [searchAvailable, setSearchAvailable] = useState('')
+  const [searchEnrolled, setSearchEnrolled]   = useState('')
+
+  const [processingAdd, setProcessingAdd]       = useState(false)
+  const [processingRemove, setProcessingRemove] = useState(false)
+  const [removingId, setRemovingId]             = useState(null)
 
   const token = localStorage.getItem('tc_token')
 
@@ -677,46 +756,145 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
   useEffect(() => { loadData() }, [loadData])
 
   // User yang belum terdaftar di election ini
-  const enrolledUserIds = new Set(electionVoters.map(v => v.user_id))
-  const availableUsers  = allVoterUsers.filter(u => !enrolledUserIds.has(u.id))
+  const enrolledUserIds = useMemo(() => new Set(electionVoters.map(v => v.user_id)), [electionVoters])
+  
+  const availableUsers = useMemo(() => {
+    return allVoterUsers
+      .filter(u => !enrolledUserIds.has(u.id))
+      .filter(u => {
+        if (!searchAvailable.trim()) return true
+        const q = searchAvailable.toLowerCase()
+        return u.username.toLowerCase().includes(q) || (u.email && u.email.toLowerCase().includes(q))
+      })
+  }, [allVoterUsers, enrolledUserIds, searchAvailable])
 
-  async function handleAddVoter(e) {
-    e.preventDefault()
-    if (!addingId) return
-    setAdding(true)
+  const displayedEnrolledVoters = useMemo(() => {
+    return electionVoters.filter(v => {
+      if (!searchEnrolled.trim()) return true
+      const q = searchEnrolled.toLowerCase()
+      return v.username.toLowerCase().includes(q) || (v.email && v.email.toLowerCase().includes(q))
+    })
+  }, [electionVoters, searchEnrolled])
+
+  // Checkbox helpers untuk Available Users
+  function toggleAvailable(id) {
+    setSelectedAvailableIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAllAvailable() {
+    if (selectedAvailableIds.size === availableUsers.length && availableUsers.length > 0) {
+      setSelectedAvailableIds(new Set())
+    } else {
+      setSelectedAvailableIds(new Set(availableUsers.map(u => u.id)))
+    }
+  }
+
+  // Checkbox helpers untuk Enrolled Voters
+  function toggleEnrolled(userId, hasVoted) {
+    if (hasVoted) return // yang sudah vote tidak bisa dipilih untuk dihapus
+    setSelectedEnrolledIds(prev => {
+      const next = new Set(prev)
+      if (next.has(userId)) next.delete(userId)
+      else next.add(userId)
+      return next
+    })
+  }
+
+  const removableVoters = displayedEnrolledVoters.filter(v => !v.has_voted)
+  function toggleSelectAllEnrolled() {
+    if (selectedEnrolledIds.size === removableVoters.length && removableVoters.length > 0) {
+      setSelectedEnrolledIds(new Set())
+    } else {
+      setSelectedEnrolledIds(new Set(removableVoters.map(v => v.user_id)))
+    }
+  }
+
+  // ── Tambah Banyak Pemilih Sekaligus (Batch / Checkbox) ──
+  async function handleBatchAddVoters() {
+    if (selectedAvailableIds.size === 0) return
+    setProcessingAdd(true)
     setError('')
+    setSuccessMsg('')
     try {
+      const userIds = Array.from(selectedAvailableIds)
       const res = await fetch(`${API}/elections/${election.id}/voters`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ user_id: Number(addingId) }),
+        body: JSON.stringify({ user_ids: userIds }),
       })
       const data = await readJson(res)
-      if (!res.ok) { setError(data.error || 'Gagal mendaftarkan pemilih.'); return }
-      setAddingId('')
-      loadData()
+      if (!res.ok) throw new Error(data.error || 'Gagal mendaftarkan pemilih.')
+      
+      setSuccessMsg(`Berhasil mendaftarkan ${data.registered ?? userIds.length} pemilih ke pemilihan!`)
+      setSelectedAvailableIds(new Set())
+      await loadData()
       onRefreshElection()
     } catch (err) {
       setError(err?.message || 'Gagal mendaftarkan pemilih.')
     } finally {
-      setAdding(false)
+      setProcessingAdd(false)
     }
   }
 
+  // ── Hapus Banyak Pemilih Sekaligus (Batch / Checkbox) ──
+  async function handleBatchRemoveVoters() {
+    if (selectedEnrolledIds.size === 0) return
+    const count = selectedEnrolledIds.size
+    if (!window.confirm(`Keluarkan ${count} akun pemilih terpilih dari pemilihan ini?`)) return
+
+    setProcessingRemove(true)
+    setError('')
+    setSuccessMsg('')
+    try {
+      const userIds = Array.from(selectedEnrolledIds)
+      const res = await fetch(`${API}/elections/${election.id}/voters`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ user_ids: userIds }),
+      })
+      const data = await readJson(res)
+      if (!res.ok) throw new Error(data.error || 'Gagal mengeluarkan pemilih terpilih.')
+
+      setSuccessMsg(`Berhasil mengeluarkan ${data.deleted ?? count} pemilih dari pemilihan.`)
+      setSelectedEnrolledIds(new Set())
+      await loadData()
+      onRefreshElection()
+    } catch (err) {
+      setError(err?.message || 'Gagal mengeluarkan pemilih terpilih.')
+    } finally {
+      setProcessingRemove(false)
+    }
+  }
+
+  // Single remove
   async function handleRemoveVoter(userId, username) {
     if (!window.confirm(`Keluarkan ${username} dari pemilihan ini?`)) return
     setRemovingId(userId)
+    setError('')
+    setSuccessMsg('')
     try {
       const res = await fetch(`${API}/elections/${election.id}/voters/${userId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await readJson(res)
-      if (!res.ok) { alert(data.error || 'Gagal mengeluarkan pemilih.'); return }
-      loadData()
+      if (!res.ok) throw new Error(data.error || 'Gagal mengeluarkan pemilih.')
+      
+      setSuccessMsg(`Pemilih ${username} berhasil dikeluarkan.`)
+      setSelectedEnrolledIds(prev => {
+        const next = new Set(prev)
+        next.delete(userId)
+        return next
+      })
+      await loadData()
       onRefreshElection()
     } catch (err) {
-      alert(err?.message || 'Gagal mengeluarkan pemilih.')
+      setError(err?.message || 'Gagal mengeluarkan pemilih.')
     } finally {
       setRemovingId(null)
     }
@@ -724,90 +902,224 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-content" style={{ maxWidth: '820px', width: '95%' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Peserta Pemilih: {election.title}</h2>
+          <div>
+            <h2 style={{ fontSize: '1.2rem', margin: 0 }}>Peserta Pemilih: {election.title}</h2>
+            <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+              Pilih akun secara massal dengan checkbox untuk memberi atau menghapus hak suara.
+            </span>
+          </div>
           <button className="modal-close-btn" onClick={onClose} aria-label="Tutup">✕</button>
         </div>
 
-        <div className="modal-body">
-          {error && <p className="invite-error" role="alert">{error}</p>}
-
-          {/* Form pilih akun untuk ditambahkan ke pemilihan */}
-          {election.status !== 'closed' && (
-            <form onSubmit={handleAddVoter} style={{ background: 'var(--cream)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                Tentukan Siapa yang Bisa Mengikuti Pemilihan Ini
-              </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: '0.75rem' }}>
-                Pilih dari daftar akun pemilih yang telah terdaftar di TrueCount untuk diikutsertakan ke pemilihan ini.
-              </p>
-
-              <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-                <select
-                  value={addingId}
-                  onChange={e => setAddingId(e.target.value)}
-                  style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.85rem' }}
-                >
-                  <option value="">-- Pilih Akun Pemilih --</option>
-                  {availableUsers.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.username} ({u.email})
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="submit"
-                  className="create-submit"
-                  disabled={!addingId || adding}
-                  style={{ fontSize: '0.82rem', padding: '0.5rem 1.1rem', whiteSpace: 'nowrap' }}
-                >
-                  {adding ? 'Menambahkan…' : '+ Beri Akses'}
-                </button>
-              </div>
-            </form>
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {error && <p className="invite-error" role="alert" style={{ margin: 0 }}>{error}</p>}
+          {successMsg && (
+            <p style={{ margin: 0, padding: '0.6rem 0.9rem', background: '#e8f5e9', border: '1px solid #c8e6c9', borderRadius: '8px', color: '#2a7a3b', fontSize: '0.85rem', fontWeight: 600 }}>
+              {successMsg}
+            </p>
           )}
 
-          {/* Daftar pemilih yang sudah diikutsertakan */}
+          {/* ── BAGIAN 1: PILIH AKUN PEMILIH UNTUK DITAMBAHKAN (CHECKBOX BATCH) ── */}
+          {election.status !== 'closed' && (
+            <div style={{ background: 'var(--cream)', padding: '1.1rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+                  Tambah Hak Suara Akun Pemilih ({availableUsers.length} Tersedia)
+                </h3>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="Cari username / email…"
+                    value={searchAvailable}
+                    onChange={e => setSearchAvailable(e.target.value)}
+                    style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border)', width: '180px' }}
+                  />
+                  <button
+                    type="button"
+                    className="copy-btn"
+                    onClick={toggleSelectAllAvailable}
+                    disabled={availableUsers.length === 0}
+                    style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                  >
+                    {selectedAvailableIds.size === availableUsers.length && availableUsers.length > 0
+                      ? 'Batal Pilih Semua'
+                      : 'Pilih Semua'}
+                  </button>
+                  <button
+                    type="button"
+                    className="create-submit"
+                    disabled={selectedAvailableIds.size === 0 || processingAdd}
+                    onClick={handleBatchAddVoters}
+                    style={{ fontSize: '0.78rem', padding: '0.35rem 0.9rem' }}
+                  >
+                    {processingAdd ? 'Memproses…' : `+ Beri Akses (${selectedAvailableIds.size})`}
+                  </button>
+                </div>
+              </div>
+
+              {availableUsers.length === 0 ? (
+                <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0.5rem 0 0 0' }}>
+                  {allVoterUsers.length === 0
+                    ? 'Belum ada akun pemilih terdaftar di sistem. Buat undangan terlebih dahulu.'
+                    : 'Semua akun pemilih di sistem sudah dimasukkan ke pemilihan ini.'}
+                </p>
+              ) : (
+                <div style={{
+                  maxHeight: '220px',
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  background: 'var(--white)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '0.5rem',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
+                  gap: '0.45rem'
+                }}>
+                  {availableUsers.map(u => {
+                    const isChecked = selectedAvailableIds.has(u.id)
+                    return (
+                      <label
+                        key={u.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.55rem',
+                          padding: '0.5rem 0.65rem',
+                          borderRadius: '6px',
+                          background: isChecked ? '#eff6ff' : 'var(--cream)',
+                          border: `1px solid ${isChecked ? '#3468b0' : 'var(--border)'}`,
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          fontSize: '0.82rem',
+                          transition: 'all 120ms ease-in-out'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleAvailable(u.id)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--black)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {u.username}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--muted)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {u.email || 'Tanpa email'}
+                          </div>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── BAGIAN 2: DAFTAR PEMILIH TERDAFTAR (DENGAN CHECKBOX KELUARKAN MASSAL) ── */}
           <div>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem' }}>
-              Daftar Pemilih yang Berhak Ikut ({electionVoters.length})
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+                Daftar Pemilih yang Berhak Ikut ({electionVoters.length})
+              </h3>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="Cari pemilih terdaftar…"
+                  value={searchEnrolled}
+                  onChange={e => setSearchEnrolled(e.target.value)}
+                  style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border)', width: '180px' }}
+                />
+                {election.status !== 'closed' && removableVoters.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      onClick={toggleSelectAllEnrolled}
+                      style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                    >
+                      {selectedEnrolledIds.size === removableVoters.length && removableVoters.length > 0
+                        ? 'Batal Pilih'
+                        : 'Pilih Belum Memilih'}
+                    </button>
+                    <button
+                      type="button"
+                      className="revoke-btn"
+                      disabled={selectedEnrolledIds.size === 0 || processingRemove}
+                      onClick={handleBatchRemoveVoters}
+                      style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
+                    >
+                      {processingRemove ? 'Memproses…' : `Hapus Terpilih (${selectedEnrolledIds.size})`}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
             {loading ? (
               <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Memuat pemilih…</p>
             ) : electionVoters.length === 0 ? (
               <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Belum ada akun pemilih yang ditentukan untuk pemilihan ini.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {electionVoters.map((v) => (
-                  <div key={v.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.9rem', background: 'var(--white)', border: '1px solid var(--border)', borderRadius: '8px' }}>
-                    <div>
-                      <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{v.username}</span>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginLeft: '0.6rem' }}>{v.email}</span>
-                      {v.has_voted ? (
-                        <span style={{ marginLeft: '0.6rem', fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: '#e9f4ec', color: '#2a7a3b', fontWeight: 700 }}>
-                          ✓ Sudah Memilih
-                        </span>
-                      ) : (
-                        <span style={{ marginLeft: '0.6rem', fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: '#fef2f2', color: '#b91c1c', fontWeight: 600 }}>
-                          Belum Memilih
-                        </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '0.2rem' }}>
+                {displayedEnrolledVoters.map((v) => {
+                  const isChecked = selectedEnrolledIds.has(v.user_id)
+                  return (
+                    <div
+                      key={v.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.55rem 0.85rem',
+                        background: isChecked ? '#fff1f2' : 'var(--white)',
+                        border: `1px solid ${isChecked ? '#fecdd3' : 'var(--border)'}`,
+                        borderRadius: '8px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        {!v.has_voted && election.status !== 'closed' && (
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleEnrolled(v.user_id, v.has_voted)}
+                            style={{ cursor: 'pointer' }}
+                            title="Pilih untuk hapus akses massal"
+                          />
+                        )}
+                        <div>
+                          <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{v.username}</span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--muted)', marginLeft: '0.6rem' }}>{v.email}</span>
+                          {v.has_voted ? (
+                            <span style={{ marginLeft: '0.6rem', fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: '#e9f4ec', color: '#2a7a3b', fontWeight: 700 }}>
+                              Sudah Memilih
+                            </span>
+                          ) : (
+                            <span style={{ marginLeft: '0.6rem', fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: '#fef2f2', color: '#b91c1c', fontWeight: 600 }}>
+                              Belum Memilih
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {!v.has_voted && election.status !== 'closed' && (
+                        <button
+                          type="button"
+                          className="revoke-btn"
+                          style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+                          disabled={removingId === v.user_id}
+                          onClick={() => handleRemoveVoter(v.user_id, v.username)}
+                          title="Keluarkan dari pemilihan"
+                        >
+                          {removingId === v.user_id ? '…' : 'Hapus Akses'}
+                        </button>
                       )}
                     </div>
-
-                    {!v.has_voted && election.status !== 'closed' && (
-                      <button
-                        className="revoke-btn"
-                        style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
-                        disabled={removingId === v.user_id}
-                        onClick={() => handleRemoveVoter(v.user_id, v.username)}
-                        title="Keluarkan dari pemilihan"
-                      >
-                        {removingId === v.user_id ? '…' : 'Hapus Akses'}
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

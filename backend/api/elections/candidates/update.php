@@ -64,25 +64,37 @@ $params     = [];
 if (isset($body['name'])) {
     $name = trim($body['name']);
     if ($name === '') {
-        jsonResponse(['error' => 'Nama tidak boleh kosong.'], 422);
+        jsonResponse(['error' => 'Nama paslon wajib diisi dan tidak boleh kosong.'], 422);
     }
     if (strlen($name) > 150) {
         jsonResponse(['error' => 'Nama kandidat maksimal 150 karakter.'], 422);
     }
     $setClauses[] = 'name = ?';
     $params[]     = $name;
+} else {
+    jsonResponse(['error' => 'Nama paslon wajib diisi.'], 422);
 }
 
-if (array_key_exists('vision', $body)) {
-    $v            = trim($body['vision']);
+if (isset($body['vision'])) {
+    $v = trim($body['vision']);
+    if ($v === '') {
+        jsonResponse(['error' => 'Visi paslon wajib diisi dan tidak boleh kosong.'], 422);
+    }
     $setClauses[] = 'vision = ?';
-    $params[]     = $v === '' ? null : $v;
+    $params[]     = $v;
+} else {
+    jsonResponse(['error' => 'Visi paslon wajib diisi.'], 422);
 }
 
-if (array_key_exists('mission', $body)) {
-    $v            = trim($body['mission']);
+if (isset($body['mission'])) {
+    $v = trim($body['mission']);
+    if ($v === '') {
+        jsonResponse(['error' => 'Misi paslon wajib diisi dan tidak boleh kosong.'], 422);
+    }
     $setClauses[] = 'mission = ?';
-    $params[]     = $v === '' ? null : $v;
+    $params[]     = $v;
+} else {
+    jsonResponse(['error' => 'Misi paslon wajib diisi.'], 422);
 }
 
 if (array_key_exists('photo_path', $body)) {

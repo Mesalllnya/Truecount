@@ -760,6 +760,8 @@ bind-address = 127.0.0.1
 
 Setelah mengubah `my.ini`, restart service MySQL. `scripts/deploy-server.ps1` akan memperingatkan di preflight kalau MySQL masih listen di `0.0.0.0:3306`.
 
+> **XAMPP:** MySQL XAMPP memakai `my.ini` sendiri, biasanya `<folder-xampp>\mysql\bin\my.ini`. Cari baris `bind-address` yang masih dikomentari, aktifkan, lalu **Stop → Start** MySQL dari XAMPP Control Panel. Jangan edit `C:\ProgramData\MySQL\...` kalau MySQL yang jalan berasal dari XAMPP.
+
 Verifikasi dari PC lain:
 
 ```powershell

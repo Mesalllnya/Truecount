@@ -381,6 +381,7 @@ Script ini hanya untuk Windows (PowerShell 5.1+) dan memakai `php -S`, bukan Ngi
 | `Port 8000 masih dipakai` | PHP/server lain jalan | `.\scripts\free-ports.ps1` atau `-Force` |
 | `-OpenFirewall butuh Administrator` | Terminal tidak elevated | Buka PowerShell as Administrator |
 | Client tidak bisa connect | Firewall / AP isolation | Cek rule Private, coba hotspot sendiri |
+| Peringatan `MySQL listen di 0.0.0.0:3306` | `bind-address` masih dikomentari | Set `bind-address=127.0.0.1` di `my.ini` lalu restart MySQL. XAMPP: `<folder-xampp>\mysql\bin\my.ini` |
 
 ---
 

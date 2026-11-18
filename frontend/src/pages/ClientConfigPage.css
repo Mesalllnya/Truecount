@@ -338,12 +338,12 @@
 }
 
 .cc-btn--primary {
-  background: var(--cc-red);
+  background: var(--cc-red-dark);
   color: #ffffff;
 }
 
 .cc-btn--primary:hover:not(:disabled) {
-  background: var(--cc-red-dark);
+  background: #a8241e;
   transform: translateY(-1px);
 }
 

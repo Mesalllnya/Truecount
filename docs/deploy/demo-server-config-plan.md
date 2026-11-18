@@ -749,6 +749,7 @@ New-NetFirewallRule `
 - Batasi ke profil **Private** (jangan Public).
 - Jangan membuka 3306.
 - Cek dari PC lain: `Test-NetConnection 192.168.1.10 -Port 8000`.
+- `scripts/deploy-server.ps1` memperingatkan kalau MySQL listen di `0.0.0.0:3306` (lihat 9.4).
 
 ### 9.4 MySQL tetap lokal
 
@@ -756,6 +757,8 @@ New-NetFirewallRule `
 # my.ini
 bind-address = 127.0.0.1
 ```
+
+Setelah mengubah `my.ini`, restart service MySQL. `scripts/deploy-server.ps1` akan memperingatkan di preflight kalau MySQL masih listen di `0.0.0.0:3306`.
 
 Verifikasi dari PC lain:
 

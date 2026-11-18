@@ -322,8 +322,8 @@ Script ini hanya untuk Windows (PowerShell 5.1+) dan memakai `php -S`, bukan Ngi
 1. **Preflight** - cek PHP >= 8.1 di PATH, ekstensi `pdo_mysql`, `mbstring`, `openssl`, `gd`, `fileinfo`, dan MySQL/MariaDB berjalan.
 2. **Siapkan `.env`** - kalau belum ada, salin dari `.env.example` lalu buat otomatis `JWT_SECRET`, `ENCRYPTION_KEY_B64`, `CHACHA20_KEY_B64`, `SERVER_ID`, `SETUP_TOKEN`. Kalau `.env` sudah ada, hanya key yang hilang/kosong yang dilengkapi (dengan backup `.env.bak.<timestamp>`).
 3. **Cek port** - kalau port dipakai, script berhenti dan menyarankan `scripts/free-ports.ps1`. Dengan `-Force`, proses pemilik port dihentikan.
-4. **Migrasi** (`-Migrate`) - `php database/migrate.php`, tanpa `--seed` dan tanpa `--fresh`.
-5. **Seed admin** (`-SeedAdmin`) - `php scripts/seed_admin.php`, hanya akun admin.
+4. **Migrasi** (`-Migrate`) - `php database/migrate.php`, tanpa `--seed` dan tanpa `--fresh`. Migration yang sudah berhasil dicatat di tabel `schema_migrations`, jadi aman dijalankan berulang; database lama yang belum punya catatan akan ditandai otomatis saat objeknya sudah ada.
+5. **Seed admin** (`-SeedAdmin`) - `php scripts/seed_admin.php`, hanya akun admin dan idempoten (`ON DUPLICATE KEY UPDATE`).
 6. **Build frontend** (`-BuildFrontend`) - `npm run build` di `frontend/`.
 7. **Firewall** (`-OpenFirewall`) - rule inbound TCP port API, profil **Private** saja. Butuh PowerShell Administrator.
 8. **Nyalakan server** - `php -S 0.0.0.0:8000 -t backend backend/index.php`, lalu polling `/health` dan menampilkan status database.
@@ -361,6 +361,7 @@ Script ini hanya untuk Windows (PowerShell 5.1+) dan memakai `php -S`, bukan Ngi
 #### Keamanan
 
 - Script tidak pernah membuka port 3306 dan tidak membuat rule firewall untuk profil Public.
+- Script **memperingatkan** kalau MySQL ternyata listen di `0.0.0.0:3306`. Perbaikannya manual: set `bind-address = 127.0.0.1` di `my.ini`, lalu restart MySQL. Cek dari PC lain dengan `Test-NetConnection <ip-laptop> -Port 3306` (harus gagal).
 - Secret tidak dicetak ke console maupun log.
 - `.env` yang sudah ada tidak ditimpa. `-RecreateEnv` membuat kunci enkripsi baru sehingga **data lama tidak bisa dibuka**.
 - `migrate.php --fresh` dan `--seed` tidak pernah dijalankan otomatis.

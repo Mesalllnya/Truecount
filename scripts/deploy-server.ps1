@@ -402,6 +402,20 @@ function Test-Preflight {
         throw 'MySQL/MariaDB tidak berjalan. Nyalakan service MySQL atau Laragon, lalu jalankan ulang.'
     }
     Write-Ok 'MySQL/MariaDB berjalan.'
+
+    Test-MysqlExposure
+}
+
+function Test-MysqlExposure {
+    $publicListeners = Get-NetTCPConnection -LocalPort 3306 -State Listen -ErrorAction SilentlyContinue |
+        Where-Object { $_.LocalAddress -notin @('127.0.0.1', '::1') }
+
+    if (-not $publicListeners) { return }
+
+    $addresses = ($publicListeners | Select-Object -ExpandProperty LocalAddress -Unique) -join ', '
+
+    Write-Warn "MySQL listen di $addresses (port 3306) - bisa diakses dari LAN."
+    Write-Warn 'Ini bukan dilakukan script. Perbaiki my.ini: bind-address = 127.0.0.1, lalu restart MySQL.'
 }
 
 function Test-Database {

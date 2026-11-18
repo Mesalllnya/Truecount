@@ -197,7 +197,9 @@ Tanpa parameter, script hanya memeriksa prasyarat dan menyalakan server memakai 
 | `-Force` | Izinkan script menghentikan proses yang memakai port |
 | `-RecreateEnv` | Buat ulang `.env` (butuh ketik `OVERWRITE`) |
 
-Yang **tidak** dilakukan script: membuka port 3306, membuat rule profil Public, mencetak secret ke console, atau menjalankan `migrate.php --fresh`/`--seed`.
+Yang **tidak** dilakukan script: membuka port 3306, membuat rule profil Public, mencetak secret ke console, atau menjalankan `migrate.php --fresh`/`--seed`. Migration aman dijalankan berulang karena setiap file dicatat di tabel `schema_migrations`.
+
+Script juga memperingatkan kalau MySQL listen di `0.0.0.0:3306` (seharusnya `127.0.0.1`) — perbaiki lewat `bind-address` di `my.ini`.
 
 Panduan lengkap + keamanan: [`docs/deploy/deploy.md`](docs/deploy/deploy.md#211-script-deploy-server-lokal-windows) · rencana topologi: [`docs/deploy/demo-server-config-plan.md`](docs/deploy/demo-server-config-plan.md).
 

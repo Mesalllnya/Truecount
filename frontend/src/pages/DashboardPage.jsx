@@ -155,17 +155,18 @@ function InvitesPanel() {
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState('')
 
-  const [showForm, setShowForm]   = useState(false)
-  const [createForm, setCreateForm] = useState({ email: '', role: 'voter' })
-  const [creating, setCreating]   = useState(false)
+  const [showForm, setShowForm]     = useState(false)
+  const [inviteMode, setInviteMode] = useState('single') // 'single' | 'bulk_emails' | 'bulk_count'
+  const [createForm, setCreateForm] = useState({ email: '', emailsText: '', count: 5, role: 'voter' })
+  const [creating, setCreating]     = useState(false)
   const [createError, setCreateError] = useState('')
 
-  const [freshLink, setFreshLink] = useState('')
-  const [copiedId, setCopiedId]   = useState(null)
+  const [freshLinks, setFreshLinks] = useState([]) // array string link
+  const [copiedId, setCopiedId]     = useState(null)
   const [revokingId, setRevokingId] = useState(null)
 
   // Search & Filter state
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery]   = useState('')
   const [statusFilter, setStatusFilter] = useState('semua')
 
   const loadInvites = useCallback(async () => {
@@ -211,7 +212,34 @@ function InvitesPanel() {
     e.preventDefault()
     setCreating(true)
     setCreateError('')
-    setFreshLink('')
+    setFreshLinks([])
+
+    let payload = { role: createForm.role }
+
+    if (inviteMode === 'bulk_emails') {
+      const parsedEmails = createForm.emailsText
+        .split(/[\n,;]+/)
+        .map(em => em.trim())
+        .filter(Boolean)
+
+      if (parsedEmails.length === 0) {
+        setCreateError('Masukkan setidaknya satu alamat email.')
+        setCreating(false)
+        return
+      }
+      payload.emails = parsedEmails
+    } else if (inviteMode === 'bulk_count') {
+      const num = parseInt(createForm.count, 10)
+      if (isNaN(num) || num < 1 || num > 100) {
+        setCreateError('Jumlah undangan harus antara 1 dan 100.')
+        setCreating(false)
+        return
+      }
+      payload.count = num
+    } else {
+      payload.email = createForm.email.trim()
+    }
+
     try {
       const token = localStorage.getItem('tc_token')
       const res = await fetch('http://localhost:8000/invites', {
@@ -220,13 +248,19 @@ function InvitesPanel() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(createForm),
+        body: JSON.stringify(payload),
       })
       const data = await readJson(res)
       if (!res.ok) { setCreateError(data.error || 'Gagal membuat undangan.'); return }
-      setFreshLink(`${window.location.origin}${data.invite.link}`)
+
+      if (data.invites && Array.isArray(data.invites)) {
+        setFreshLinks(data.invites.map(inv => `${window.location.origin}${inv.link}`))
+      } else if (data.invite) {
+        setFreshLinks([`${window.location.origin}${data.invite.link}`])
+      }
+
       setShowForm(false)
-      setCreateForm({ email: '', role: 'voter' })
+      setCreateForm({ email: '', emailsText: '', count: 5, role: 'voter' })
       loadInvites()
     } catch (err) {
       setCreateError(
@@ -243,6 +277,15 @@ function InvitesPanel() {
     const ok = await copyText(`${window.location.origin}${invite.link}`)
     if (ok) {
       setCopiedId(id)
+      window.setTimeout(() => setCopiedId(null), 1800)
+    }
+  }
+
+  async function handleCopyAllFresh() {
+    const text = freshLinks.join('\n')
+    const ok = await copyText(text)
+    if (ok) {
+      setCopiedId('all_fresh')
       window.setTimeout(() => setCopiedId(null), 1800)
     }
   }
@@ -298,7 +341,7 @@ function InvitesPanel() {
         </div>
         <button
           className="admin-create-btn"
-          onClick={() => { setShowForm(v => !v); setCreateError(''); setFreshLink('') }}
+          onClick={() => { setShowForm(v => !v); setCreateError(''); setFreshLinks([]) }}
           aria-expanded={showForm}
         >
           <PlusIcon />
@@ -306,21 +349,82 @@ function InvitesPanel() {
         </button>
       </div>
 
-      {/* ── Form buat undangan ── */}
+      {/* ── Form buat undangan (Mendukung Satuan, Banyak Email, & Batch Kuota) ── */}
       {showForm && (
         <form className="create-panel" onSubmit={handleCreate}>
+          {/* Pilihan mode undangan */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.6rem' }}>
+            <button
+              type="button"
+              className={inviteMode === 'single' ? 'create-submit' : 'copy-btn'}
+              onClick={() => { setInviteMode('single'); setCreateError('') }}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem' }}
+            >
+              Satu Undangan
+            </button>
+            <button
+              type="button"
+              className={inviteMode === 'bulk_emails' ? 'create-submit' : 'copy-btn'}
+              onClick={() => { setInviteMode('bulk_emails'); setCreateError('') }}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem' }}
+            >
+              Banyak Email Sekaligus
+            </button>
+            <button
+              type="button"
+              className={inviteMode === 'bulk_count' ? 'create-submit' : 'copy-btn'}
+              onClick={() => { setInviteMode('bulk_count'); setCreateError('') }}
+              style={{ fontSize: '0.8rem', padding: '0.35rem 0.8rem' }}
+            >
+              Banyak Undangan Terbuka
+            </button>
+          </div>
+
           <div className="create-fields">
-            <div className="create-field">
-              <label htmlFor="invite-email">Email calon (opsional)</label>
-              <input
-                id="invite-email"
-                type="email"
-                placeholder="anda@contoh.com"
-                value={createForm.email}
-                onChange={e => { setCreateForm(p => ({ ...p, email: e.target.value })); setCreateError('') }}
-              />
-              <span className="create-hint">Kosongkan agar undangan bisa diklaim oleh siapa pun.</span>
-            </div>
+            {inviteMode === 'single' && (
+              <div className="create-field">
+                <label htmlFor="invite-email">Email calon (opsional)</label>
+                <input
+                  id="invite-email"
+                  type="email"
+                  placeholder="anda@contoh.com"
+                  value={createForm.email}
+                  onChange={e => { setCreateForm(p => ({ ...p, email: e.target.value })); setCreateError('') }}
+                />
+                <span className="create-hint">Kosongkan agar undangan bisa diklaim oleh siapa pun.</span>
+              </div>
+            )}
+
+            {inviteMode === 'bulk_emails' && (
+              <div className="create-field" style={{ gridColumn: '1 / -1' }}>
+                <label htmlFor="invite-bulk-emails">Daftar Email (pisahkan dengan koma atau baris baru) *</label>
+                <textarea
+                  id="invite-bulk-emails"
+                  rows={4}
+                  placeholder={"budi@kampus.ac.id\nsiti@kampus.ac.id, andi@kampus.ac.id"}
+                  value={createForm.emailsText}
+                  onChange={e => { setCreateForm(p => ({ ...p, emailsText: e.target.value })); setCreateError('') }}
+                  style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.85rem', fontFamily: 'inherit' }}
+                />
+                <span className="create-hint">Sistem akan otomatis membangkitkan link undangan terpisah untuk setiap email (maks 100).</span>
+              </div>
+            )}
+
+            {inviteMode === 'bulk_count' && (
+              <div className="create-field">
+                <label htmlFor="invite-count">Jumlah Link Undangan Dibuat *</label>
+                <input
+                  id="invite-count"
+                  type="number"
+                  min="2"
+                  max="100"
+                  value={createForm.count}
+                  onChange={e => { setCreateForm(p => ({ ...p, count: e.target.value })); setCreateError('') }}
+                />
+                <span className="create-hint">Buat 2 hingga 100 token undangan anonim sekaligus untuk dibagikan secara bebas.</span>
+              </div>
+            )}
+
             <div className="create-field">
               <label htmlFor="invite-role">Peran akun</label>
               <select
@@ -338,7 +442,7 @@ function InvitesPanel() {
 
           <div className="create-actions">
             <button type="submit" className="create-submit" disabled={creating}>
-              {creating ? 'Membuat…' : 'Buat undangan'}
+              {creating ? 'Membuat…' : inviteMode === 'single' ? 'Buat undangan' : 'Buat Undangan Massal'}
             </button>
             <button type="button" className="create-cancel" onClick={() => setShowForm(false)}>
               Batal
@@ -347,19 +451,39 @@ function InvitesPanel() {
         </form>
       )}
 
-      {/* ── Tautan undangan baru ── */}
-      {freshLink && (
-        <div className="link-box" role="status">
-          <span className="link-box-label">Undangan dibuat - bagikan tautan ini:</span>
-          <code>{freshLink}</code>
-          <button
-            className="copy-btn"
-            onClick={() => { copyText(freshLink); setCopiedId('fresh') }}
-            title="Salin tautan"
-          >
-            {copiedId === 'fresh' ? <CheckIcon /> : <CopyIcon />}
-            {copiedId === 'fresh' ? 'Tersalin' : 'Salin'}
-          </button>
+      {/* ── Tautan undangan baru (Tunggal maupun Banyak) ── */}
+      {freshLinks.length > 0 && (
+        <div className="link-box" role="status" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="link-box-label" style={{ fontWeight: 700 }}>
+              ✓ {freshLinks.length} Undangan Berhasil Dibuat - Bagikan Tautan:
+            </span>
+            <button
+              className="copy-btn"
+              onClick={handleCopyAllFresh}
+              title="Salin semua tautan sekaligus"
+              style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+            >
+              {copiedId === 'all_fresh' ? <CheckIcon /> : <CopyIcon />}
+              {copiedId === 'all_fresh' ? 'Semua Tersalin' : 'Salin Semua Link'}
+            </button>
+          </div>
+
+          <div style={{ maxHeight: '140px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.35rem', background: 'var(--white)', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+            {freshLinks.map((link, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', fontSize: '0.78rem' }}>
+                <code style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{link}</code>
+                <button
+                  type="button"
+                  className="copy-btn"
+                  onClick={() => { copyText(link); setCopiedId(`fresh_${idx}`); setTimeout(() => setCopiedId(null), 1500) }}
+                  style={{ fontSize: '0.72rem', padding: '0.15rem 0.5rem' }}
+                >
+                  {copiedId === `fresh_${idx}` ? 'Tersalin' : 'Salin'}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

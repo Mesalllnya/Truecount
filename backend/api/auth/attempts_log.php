@@ -62,10 +62,8 @@ if ($authPhoto && str_starts_with($authPhoto, 'data:image/')) {
             $base64 = $parts[1];
             $imageData = base64_decode($base64);
             if ($imageData !== false) {
-                $uploadDir = __DIR__ . '/../../../storage/auth_photos/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
+                $uploadDir = storagePath('auth_photos') . '/';
+                ensureStorageDir(rtrim($uploadDir, '/'));
                 $filename = 'attempt_' . date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.jpg';
                 $filepath = $uploadDir . $filename;
                 if (file_put_contents($filepath, $imageData) !== false) {

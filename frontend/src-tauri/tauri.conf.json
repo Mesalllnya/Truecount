@@ -40,7 +40,12 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../backend": "backend"
+      "../../backend/index.php": "backend/index.php",
+      "../../backend/api": "backend/api",
+      "../../backend/config": "backend/config",
+      "../../backend/helpers": "backend/helpers",
+      "../../backend/middleware": "backend/middleware",
+      "../../backend/services": "backend/services"
     },
     "windows": {
       "webviewInstallMode": {

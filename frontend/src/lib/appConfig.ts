@@ -139,16 +139,38 @@ export async function saveAppConfig(next: AppConfig): Promise<void> {
   const normalized = normalizeServerUrl(next.serverUrl)
   if (!normalized.ok) throw new Error(normalized.error)
 
-  config = { mode: coerceMode(next.mode), serverUrl: normalized.url }
-  writeStorage(config)
+  const resolved: AppConfig = { mode: coerceMode(next.mode), serverUrl: normalized.url }
 
+  // Tauri dulu: kalau spawn/validasi backend gagal, config lama tetap dipakai.
   if (isTauri) {
-    await invoke('set_app_config', { config })
+    await invoke('set_app_config', { config: resolved })
   }
+
+  config = resolved
+  writeStorage(config)
 }
 
 export function defaultAppConfig(): AppConfig {
   return { mode: BUILD_MODE, serverUrl: BUILD_SERVER_URL }
+}
+
+/** IP LAN laptop ini (IPv4) untuk saran alamat server. */
+export async function getLanIp(): Promise<string | null> {
+  if (isTauri) {
+    try {
+      const ip = await invoke<string | null>('get_lan_ip')
+      return typeof ip === 'string' && ip.trim() ? ip.trim() : null
+    } catch {
+      return null
+    }
+  }
+
+  // Browser dev: kalau diakses lewat IP LAN, pakai hostname itu.
+  const host = window.location.hostname
+  if (!host || host === 'localhost' || host === '127.0.0.1' || host === '::1') {
+    return null
+  }
+  return host
 }
 
 /** Base URL API aktif, tanpa trailing slash. */

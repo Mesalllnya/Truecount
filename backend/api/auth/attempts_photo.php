@@ -41,8 +41,9 @@ if (!$row || empty($row['photo_path'])) {
 }
 
 // photo_path disimpan sebagai "storage/auth_photos/xxx.jpg"
+// Path absolut di-resolve lewat storage root (bisa dioverride TC_STORAGE_ROOT).
 $filename = basename($row['photo_path']);
-$dir      = realpath(__DIR__ . '/../../../storage/auth_photos');
+$dir      = realpath(storagePath('auth_photos'));
 $file     = $dir ? realpath($dir . DIRECTORY_SEPARATOR . $filename) : false;
 
 // Cegah path traversal: file harus benar-benar di dalam folder auth_photos

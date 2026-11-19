@@ -4,6 +4,7 @@ import Icon from '../components/Icon'
 import {
   defaultAppConfig,
   getAppConfig,
+  getLanIp,
   normalizeServerUrl,
   saveAppConfig,
   testServerConnection,
@@ -44,6 +45,15 @@ function formatTime(value) {
   })
 }
 
+function isLoopbackUrl(raw) {
+  try {
+    const host = new URL(raw).hostname
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1'
+  } catch {
+    return false
+  }
+}
+
 function StatusRow({ label, value, tone = 'default' }) {
   return (
     <div className="cc-status-row">
@@ -59,6 +69,7 @@ export default function ClientConfigPage() {
 
   const [mode, setMode] = useState(saved.mode)
   const [url, setUrl] = useState(saved.serverUrl)
+  const [lanIp, setLanIp] = useState(null)
   const [test, setTest] = useState({ state: 'idle', health: null, error: null })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
@@ -66,11 +77,33 @@ export default function ClientConfigPage() {
   const validation = normalizeServerUrl(url)
   const activeMode = MODES.find((item) => item.id === mode) ?? MODES[0]
   const isTesting = test.state === 'testing'
+  const lanUrl = lanIp ? `http://${lanIp}:8000` : ''
 
   useEffect(() => {
     document.title = 'Koneksi Server - TrueCount'
     return () => { document.title = 'TrueCount - Secure E-Voting' }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    getLanIp().then((ip) => {
+      if (!cancelled && ip) setLanIp(ip)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  // Mode Server: isi otomatis dengan IP LAN laptop ini, bukan localhost.
+  // Hanya saat lanIp/mode berubah, supaya user tetap bisa mengetik alamat lain.
+  useEffect(() => {
+    if (!lanUrl || mode !== 'server') return
+    setUrl((current) => (isLoopbackUrl(current) ? lanUrl : current))
+  }, [lanUrl, mode])
+
+  function useLanAddress() {
+    if (!lanUrl) return
+    setUrl(lanUrl)
+    setTest({ state: 'idle', health: null, error: null })
+  }
 
   async function handleTest() {
     setSaveError(null)
@@ -158,7 +191,10 @@ export default function ClientConfigPage() {
                   role="radio"
                   aria-checked={mode === item.id}
                   className={`cc-mode${mode === item.id ? ' is-active' : ''}`}
-                  onClick={() => setMode(item.id)}
+                  onClick={() => {
+                    setMode(item.id)
+                    setTest({ state: 'idle', health: null, error: null })
+                  }}
                 >
                   <Icon name={item.icon} size={18} />
                   <span>{item.label}</span>
@@ -196,6 +232,16 @@ export default function ClientConfigPage() {
             ) : (
               <p className="cc-error" id="cc-url-error" role="alert">
                 {validation.error}
+              </p>
+            )}
+            {mode === 'server' && lanUrl && (
+              <p className="cc-hint cc-lan-hint">
+                IP LAN laptop ini: <code>{lanUrl}</code>
+                {url !== lanUrl && (
+                  <button type="button" className="cc-lan-use" onClick={useLanAddress}>
+                    Pakai
+                  </button>
+                )}
               </p>
             )}
           </div>

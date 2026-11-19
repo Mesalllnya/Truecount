@@ -116,6 +116,12 @@ Isi alamat (host + port saja), tekan **Tes koneksi**, lalu **Simpan & muat ulang
 Tes koneksi memanggil `/health` dan menampilkan `server_label`, `server_id`,
 status database, dan waktu server.
 
+Saat mode **Server** dipilih, halaman otomatis menawarkan alamat IP LAN laptop
+(lewat command Rust `get_lan_ip`, deteksi IPv4 dari routing table) dan mengganti
+`localhost` menjadi mis. `http://192.168.2.102:8000`. Tombol **Pakai** tersedia
+kalau kolom alamat diubah manual. Mode **Standalone** tetap memakai `localhost`,
+karena PHP hanya listen loopback.
+
 ### Lokasi & isi file
 
 | OS | Lokasi |
@@ -152,10 +158,35 @@ VITE_DEFAULT_SERVER_URL=http://192.168.2.102:8000
 
 `set_app_config` di Rust akan:
 
-1. Menulis `app_config.json`.
-2. Menghentikan child PHP lama (kalau ada) dan menunggu port 8000 bebas.
+1. Menghentikan child PHP lama (kalau ada) dan menunggu port 8000 bebas.
+2. Menyiapkan backend writable + memvalidasi `.env` (khusus mode `server`/`standalone`).
 3. Menjalankan ulang PHP hanya kalau mode berubah, atau PHP seharusnya jalan tapi mati.
-4. Mode `client` tidak menjalankan PHP sama sekali.
+4. Menulis `app_config.json` setelah backend berhasil disiapkan. Kalau gagal,
+   config lama tetap dipakai dan halaman `/__server` menampilkan pesan error.
+5. Mode `client` tidak menjalankan PHP sama sekali.
+
+### Syarat mode Server / Standalone (aplikasi terinstal)
+
+Installer **tidak** membawa `.env` (agar kredensial DB tidak ikut ke PC peserta).
+Saat mode `server`/`standalone` dipilih, Rust:
+
+1. Menyalin folder backend dari resource installer ke folder writable:
+   `%APPDATA%\com.truecount.app\backend`
+2. Mencari `.env` di folder aplikasi, lalu di sekitar folder backend/repo. Kalau
+   belum ada, simpan sekali secara manual **di laptop server saja**:
+
+   ```powershell
+   Copy-Item .env "$env:APPDATA\com.truecount.app\.env"
+   ```
+
+3. Menjalankan PHP dengan env `TC_ENV_PATH=%APPDATA%\com.truecount.app\.env`.
+   `backend/config/env.php` membaca variabel ini lebih dulu.
+4. Penanda versi backend disimpan di `%APPDATA%\com.truecount.app\backend.version`.
+   Saat versi aplikasi naik, kode backend disalin ulang tetapi data di
+   `storage/` dan `uploads/` tidak ditimpa.
+
+> Larangan: jangan pernah menambahkan `.env` ke `tauri.conf.json` resources.
+> File itu berisi kredensial database dan akan ikut terpasang di semua client.
 
 ---
 
@@ -232,10 +263,40 @@ PHP backend di-spawn otomatis di `lib.rs`, tetapi sekarang mengikuti `app_config
 2. **Tentukan bind** - `client` = tidak spawn, `server` = `0.0.0.0:8000`,
    `standalone` = `127.0.0.1:8000`.
 3. **Cek port** - kalau `127.0.0.1:8000` sudah ada server, spawn di-skip.
-4. **Cari folder backend** - urutan: resource dir (installer) → relatif lokasi exe → cwd (dev).
-5. **Spawn** - `php -S <bind> -t <backend> <backend>/index.php` dengan
-   `CREATE_NO_WINDOW` (Windows) sehingga tidak muncul konsol.
-6. **Cleanup** - saat app keluar (`RunEvent::Exit`), child PHP di-kill.
+4. **Siapkan backend writable** - salin resource `backend/` ke
+   `%APPDATA%\com.truecount.app\backend` (Program Files tidak bisa ditulis untuk
+   log/upload). Data `storage/` & `uploads/` yang sudah ada tidak ditimpa saat update.
+5. **Siapkan `.env`** - pakai `%APPDATA%\com.truecount.app\.env`; kalau belum ada,
+   coba salin dari repo/installer. Kalau tetap tidak ada, spawn dibatalkan dengan
+   pesan jelas.
+6. **Spawn** - `php -S <bind> -t <backend> <backend>/index.php` dengan env
+   `TC_ENV_PATH` dan `CREATE_NO_WINDOW` (Windows) sehingga tidak muncul konsol.
+7. **Cleanup** - saat app keluar (`RunEvent::Exit`), child PHP di-kill.
+
+### Penyimpanan file (storage root)
+
+Semua file upload disatukan di **satu root**: `<backend>/storage/`
+
+| Jenis file | Lokasi (default) |
+| --- | --- |
+| Foto login/auth | `<backend>/storage/auth_photos/` |
+| File terenkripsi (foto kandidat, voice) | `<backend>/storage/private/encrypted-files/` |
+| Log aplikasi | `<backend>/storage/logs/` |
+| Upload publik (legacy) | `<backend>/uploads/candidates/` |
+
+Root bisa dioverride lewat env `TC_STORAGE_ROOT` (helper `backend/helpers/storage.php`).
+
+> **Kenapa perlu helper:** Sebelumnya ada dua root berbeda — foto auth pakai
+> `<project-root>/storage/` (3 level `..` dari `backend/api/auth`), sedangkan
+> file terenkripsi pakai `<backend>/storage/`. Saat backend dipindah ke
+> `%APPDATA%`, `<project-root>` ikut berubah sehingga foto lama tidak ditemukan
+> di aplikasi terinstal. Dengan helper `storagePath()`, semua resolve ke
+> `<backend>/storage/` yang selalu ikut lokasi backend.
+
+> **Installer tidak membawa data:** `tauri.conf.json` resources hanya mencakup
+> folder kode (`api`, `config`, `helpers`, `middleware`, `services`, `index.php`).
+> Folder `storage/` dan `uploads/` **tidak** di-bundle agar data user tidak
+> ikut terpasang di PC peserta.
 
 ```rust
 // src-tauri/src/lib.rs (ringkasan)
@@ -246,10 +307,12 @@ let bind = match config.mode.as_str() {
     _ => return,                                     // client: tanpa PHP lokal
 };
 if port_in_use(8000) { return; }
-let dir = clean_path(&resolve_backend_dir(app));      // hapus prefix \\?\
+let source = clean_path(&resolve_backend_dir(app));   // hapus prefix \\?\
+let (dir, env_path) = prepare_runtime_backend(app, &source)?; // writable + .env
 Command::new("php")
     .args(["-S", bind, "-t"])
     .arg(&dir).arg(dir.join("index.php"))
+    .env("TC_ENV_PATH", env_path)
     .creation_flags(0x08000000)                       // CREATE_NO_WINDOW
     .spawn();
 ```

@@ -5,7 +5,10 @@
  * TrueCount - Configuration
  */
 
-$envFile = dirname(__DIR__, 2) . '/.env';
+// Path .env bisa di-override oleh launcher desktop (mode Server/Standalone),
+// supaya backend yang berjalan dari folder read-only (Program Files) tetap
+// membaca konfigurasi dari folder aplikasi yang writable.
+$envFile = getenv('TC_ENV_PATH') ?: dirname(__DIR__, 2) . '/.env';
 
 if (!file_exists($envFile)) {
     throw new RuntimeException('.env file tidak ditemukan.');

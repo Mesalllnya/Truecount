@@ -1,7 +1,7 @@
 # TrueCount — Server 1 Laptop + Client Desktop
 
-> **Status:** Rencana (belum dieksekusi)
-> **Terakhir diperbarui:** 18 November 2026
+> **Status:** Sebagian dieksekusi — konfigurasi client (route `/__server`, `app_config.json`, mode Rust, `/health` identitas server) sudah diimplementasi. Halaman setup server berbasis PHP masih rencana.
+> **Terakhir diperbarui:** 19 November 2026
 > **Topologi:** 1 laptop menjadi server, N PC peserta menjalankan aplikasi desktop yang terhubung ke laptop itu.
 > **Dokumen terkait:** [`deploy.md`](deploy.md) · [`deploy-to-cloud-plan.md`](deploy-to-cloud-plan.md) (ditunda) · [`../desktop/desktop.md`](../desktop/desktop.md)
 
@@ -691,7 +691,26 @@ WEBAUTHN_ORIGIN=http://localhost:8000
 
 ### 9.2 Jalankan server
 
-**Opsi A — mode server lewat app desktop**
+**Opsi A — script deploy (rekomendasi)**
+
+Sudah tersedia: [`scripts/deploy-server.ps1`](../../scripts/deploy-server.ps1).
+
+```powershell
+# Preflight + siapkan .env, tanpa menyalakan server
+.\scripts\deploy-server.ps1 -CheckOnly
+
+# Migrasi + seed admin + buka firewall + nyalakan server LAN
+.\scripts\deploy-server.ps1 -Migrate -SeedAdmin -OpenFirewall
+
+# Hentikan
+.\scripts\deploy-server.ps1 -Stop
+```
+
+Script menangani preflight (PHP, ekstensi, MySQL, port), pembuatan `.env` + secret, migrasi, seed admin, build frontend, firewall profil Private, deteksi IP LAN, health check, dan penghentian server. Detail parameter dan troubleshooting ada di [`deploy.md` § 2.11](deploy.md#211-script-deploy-server-lokal-windows).
+
+Batasan: script memakai `php -S`, jadi tetap terkena batas satu request sekaligus di Windows.
+
+**Opsi B — mode server lewat app desktop**
 
 Set `app_config.json` laptop menjadi:
 
@@ -701,17 +720,21 @@ Set `app_config.json` laptop menjadi:
 
 App akan spawn `php -S 0.0.0.0:8000`.
 
-**Opsi B — terminal**
+**Opsi C — terminal**
 
 ```powershell
 php -S 0.0.0.0:8000 -t backend backend/index.php
 ```
 
-**Opsi C — Apache (Laragon) untuk banyak client**
+**Opsi D — Apache (Laragon) untuk banyak client**
 
 Arahkan document root ke `backend/`, aktifkan `mod_rewrite`, lalu pastikan semua request masuk ke `index.php`. Ini memberi banyak worker dan jauh lebih tahan antrean.
 
 ### 9.3 Firewall
+
+Cara termudah: jalankan `.\scripts\deploy-server.ps1 -OpenFirewall` dari PowerShell Administrator. Script hanya membuat rule untuk profil **Private**.
+
+Kalau mau manual:
 
 ```powershell
 New-NetFirewallRule `
@@ -726,6 +749,7 @@ New-NetFirewallRule `
 - Batasi ke profil **Private** (jangan Public).
 - Jangan membuka 3306.
 - Cek dari PC lain: `Test-NetConnection 192.168.1.10 -Port 8000`.
+- `scripts/deploy-server.ps1` memperingatkan kalau MySQL listen di `0.0.0.0:3306` (lihat 9.4).
 
 ### 9.4 MySQL tetap lokal
 
@@ -733,6 +757,10 @@ New-NetFirewallRule `
 # my.ini
 bind-address = 127.0.0.1
 ```
+
+Setelah mengubah `my.ini`, restart service MySQL. `scripts/deploy-server.ps1` akan memperingatkan di preflight kalau MySQL masih listen di `0.0.0.0:3306`.
+
+> **XAMPP:** MySQL XAMPP memakai `my.ini` sendiri, biasanya `<folder-xampp>\mysql\bin\my.ini`. Cari baris `bind-address` yang masih dikomentari, aktifkan, lalu **Stop → Start** MySQL dari XAMPP Control Panel. Jangan edit `C:\ProgramData\MySQL\...` kalau MySQL yang jalan berasal dari XAMPP.
 
 Verifikasi dari PC lain:
 
@@ -932,6 +960,7 @@ Siapkan laptop server + minimal satu PC client.
 ### 13.1 Sebelum peserta datang
 
 - [ ] Laptop server: MySQL jalan, `.env` benar.
+- [ ] Jalankan `.\scripts\deploy-server.ps1 -Migrate -SeedAdmin -OpenFirewall` (sudah mencakup cek PHP/MySQL, migrasi, seed admin, firewall, dan start server).
 - [ ] PHP server jalan di `0.0.0.0:8000`.
 - [ ] Firewall rule 8000 aktif (Private).
 - [ ] IP laptop sudah static / reservation.
@@ -944,8 +973,8 @@ Siapkan laptop server + minimal satu PC client.
 ### 13.2 Saat peserta datang
 
 - [ ] Pastikan semua PC di jaringan yang sama.
-- [ ] Buka app, cek banner server (label + ID).
-- [ ] Kalau salah, buka `Ctrl+Shift+Alt+S`, isi URL laptop, test, simpan.
+- [ ] Buka halaman config (`Ctrl+Shift+Alt+S`), cek label + `server_id` lewat **Tes koneksi**.
+- [ ] Kalau salah, isi URL laptop, test, simpan & muat ulang.
 - [ ] Login dan vote percobaan dengan satu akun uji.
 - [ ] Hapus vote uji sebelum pemilihan resmi (atau pakai pemilihan terpisah).
 
@@ -1159,6 +1188,10 @@ tc_log_info(sprintf(
 | `backend/setup/*` | **Baru** — halaman config server |
 | `.env.example` | `SERVER_*`, `SETUP_*`, `WEBAUTHN_*` |
 | `.gitignore` | `.env.bak.*`, `.env.tmp.*` |
+| `scripts/deploy-server.ps1` | **Baru** — deploy + start server demo (issue #17) |
+| `scripts/seed_admin.php` | **Baru** — seed akun admin saja |
+| `README.md` | Bagian "Quick Start - Server Demo (1 Laptop)" |
+| `docs/deploy/deploy.md` | Bagian 2.11 script deploy server lokal |
 
 ### F. Contoh `app_config.json`
 

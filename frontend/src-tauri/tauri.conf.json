@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "productName": "TrueCount",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.truecount.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -40,7 +40,12 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../backend": "backend"
+      "../../backend/index.php": "backend/index.php",
+      "../../backend/api": "backend/api",
+      "../../backend/config": "backend/config",
+      "../../backend/helpers": "backend/helpers",
+      "../../backend/middleware": "backend/middleware",
+      "../../backend/services": "backend/services"
     },
     "windows": {
       "webviewInstallMode": {

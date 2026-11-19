@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { getRpId } from '../utils/webauthn';
-
-const API_BASE = 'http://localhost:8000';
+import { apiUrl } from '../lib/appConfig';
 
 /** Hook untuk change password */
 export function useChangePassword() {
@@ -16,7 +15,7 @@ export function useChangePassword() {
     setError(null);
     try {
       const token = localStorage.getItem('tc_token');
-      const res = await fetch(`${API_BASE}/auth/change-password`, {
+      const res = await fetch(apiUrl('/auth/change-password'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -59,7 +58,7 @@ export function useWebAuthnRegister() {
     try {
       // 1. Minta challenge dari server
       const token = localStorage.getItem('tc_token');
-      const res = await fetch(`${API_BASE}/auth/webauthn/register/start`, {
+      const res = await fetch(apiUrl('/auth/webauthn/register/start'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +97,7 @@ export function useWebAuthnRegister() {
 
       // 3. Kirim ke server untuk verifikasi
       const attestationRes = credential.response;
-      const verifyRes = await fetch(`${API_BASE}/auth/webauthn/register/verify`, {
+      const verifyRes = await fetch(apiUrl('/auth/webauthn/register/verify'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +144,7 @@ export function useWebAuthnList() {
     setError(null);
     try {
       const token = localStorage.getItem('tc_token');
-      const res = await fetch(`${API_BASE}/auth/webauthn/list`, {
+      const res = await fetch(apiUrl('/auth/webauthn/list'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -172,7 +171,7 @@ export function useWebAuthnRevoke() {
     setError(null);
     try {
       const token = localStorage.getItem('tc_token');
-      const res = await fetch(`${API_BASE}/auth/webauthn/${credentialId}/revoke`, {
+      const res = await fetch(apiUrl(`/auth/webauthn/${credentialId}/revoke`), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });

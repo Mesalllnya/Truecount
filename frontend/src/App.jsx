@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -19,9 +19,11 @@ import DevPage from './pages/DevPage'
 import RoleGuard from './components/RoleGuard'
 import AuthGuard from './components/AuthGuard'
 import { useAuth } from './hooks/useAuthSession'
+import AdminVoiceMessagesPage from './pages/AdminVoiceMessagesPage'
+import ClientConfigPage from './pages/ClientConfigPage'
 import { FailedAttemptsProvider, stopAllCameraStreams } from './hooks/useAuthSecurity'
 import { AuthProvider } from './hooks/useAuthSession'
-import { Home, Info, LayoutDashboard, Vote, Mail, Settings, Code2 } from 'lucide-react'
+import { Home, Info, LayoutDashboard, Vote, Mail, Settings, Code2, Mic } from 'lucide-react'
 
 /* Ikon navbar (lucide, outline: tengah kosong) — ukuran & ketebalan seragam */
 const navIcon = { size: 18, strokeWidth: 1.5 }
@@ -30,6 +32,43 @@ const navIcon = { size: 18, strokeWidth: 1.5 }
 function RegisterRedirect() {
   const location = useLocation()
   return <Navigate to={`/daftar${location.search}`} replace />
+}
+
+/**
+ * Akses tersembunyi ke halaman koneksi server.
+ * - Shortcut: Ctrl + Shift + Alt + S (berfungsi di route mana pun)
+ * - Console: __tcServerConfig()
+ * Tidak ada tombol/link di navigasi, sesuai rencana demo.
+ */
+let serverHintLogged = false
+
+function ServerConfigShortcut() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (!event.ctrlKey || !event.shiftKey || !event.altKey) return
+      if (event.key.toLowerCase() !== 's') return
+      event.preventDefault()
+      navigate('/__server')
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    window.__tcServerConfig = () => navigate('/__server')
+    if (import.meta.env.DEV && !serverHintLogged) {
+      serverHintLogged = true
+      console.info(
+        '[TrueCount] Koneksi server: Ctrl+Shift+Alt+S atau jalankan __tcServerConfig() di console.',
+      )
+    }
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      delete window.__tcServerConfig
+    }
+  }, [navigate])
+
+  return null
 }
 
 /**
@@ -87,6 +126,7 @@ function AppRoutes() {
     location.pathname.startsWith('/pilih') ||
     location.pathname.startsWith('/hasil') ||
     location.pathname.startsWith('/pesan-terenkripsi') ||
+    location.pathname.startsWith('/pesan-suara') ||
     location.pathname.startsWith('/pengaturan') ||
     location.pathname.startsWith('/usb-token-test') ||
     location.pathname.startsWith('/log-keamanan') ||
@@ -98,16 +138,23 @@ function AppRoutes() {
     ? { href: '/dev', label: 'Dev', icon: <Code2 {...navIcon} /> }
     : null
 
+  const adminVoiceLink = user?.role === 'admin'
+    ? { href: '/pesan-suara', label: 'Pesan Suara', icon: <Mic {...navIcon} /> }
+    : null
+
   const isLoginPage =
     location.pathname.startsWith('/masuk') ||
     location.pathname.startsWith('/login')
+  const isConfigPage = location.pathname.startsWith('/__server')
 
   return (
     <>
       <CameraRouteGuard />
-      {!isLoginPage && <Nav links={[...navLinks, devLink].filter(Boolean)} />}
+      <ServerConfigShortcut />
+      {!isLoginPage && !isConfigPage && <Nav links={[...navLinks, adminVoiceLink, devLink].filter(Boolean)} />}
       <Routes>
         <Route path="/"           element={<LandingPage />} />
+        <Route path="/__server"   element={<ClientConfigPage />} />
         <Route path="/tentang"    element={<AboutPage />} />
         <Route path="/masuk"      element={<LoginPage />} />
         <Route path="/login"      element={<Navigate to="/masuk" replace />} />
@@ -130,9 +177,13 @@ function AppRoutes() {
           <Route element={<RoleGuard allowedRoles={['admin', 'dev']} />}>
             <Route path="/dev" element={<DevPage />} />
           </Route>
+          <Route element={<RoleGuard allowedRoles={['admin']} />}>
+            <Route path="/pesan-suara" element={<AdminVoiceMessagesPage />} />
+          </Route>
         </Route>
         
         <Route path="*"                element={<Navigate to="/" replace />} />
+        <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
       </Routes>
     </>
   )

@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { CandidatePhoto } from '../components/ElectionModals'
+import { apiUrl } from '../lib/appConfig'
 import './VotePage.css'
-
-const API_BASE = 'http://localhost:8000'
 
 // Palet warna fallback untuk kandidat (berputar berdasarkan urutan)
 const CANDIDATE_COLORS = ['#3468b0', '#F13C35', '#2a7a3b', '#b45309', '#7c3aed', '#0891b2']
@@ -77,7 +76,7 @@ export default function VotePage() {
     setLoadingElections(true)
     setError(null)
     try {
-      const res  = await fetch(`${API_BASE}/elections?status=active`, {
+      const res  = await fetch(apiUrl('/elections?status=active'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
@@ -99,7 +98,7 @@ export default function VotePage() {
     setLoadingCandidates(true)
     setError(null)
     try {
-      const res  = await fetch(`${API_BASE}/elections/${electionObj.id}/candidates`, {
+      const res  = await fetch(apiUrl(`/elections/${electionObj.id}/candidates`), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
@@ -140,7 +139,7 @@ export default function VotePage() {
     setSubmitting(true)
     setError(null)
     try {
-      const res  = await fetch(`${API_BASE}/elections/${election.id}/vote`, {
+      const res  = await fetch(apiUrl(`/elections/${election.id}/vote`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -229,11 +228,11 @@ export default function VotePage() {
                       <span className="vote-card-name" style={{ fontSize: '1.15rem' }}>{el.title}</span>
                       {el.has_voted ? (
                         <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#e8f5e9', color: '#2a7a3b' }}>
-                          ✓ Sudah Memilih
+                          Sudah Memilih
                         </span>
                       ) : hasDraft ? (
                         <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#eff6ff', color: '#1d4ed8' }}>
-                          ✎ Pilihan Tersimpan (Belum Diinput)
+                          Pilihan Tersimpan (Belum Diinput)
                         </span>
                       ) : (
                         <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c' }}>
@@ -452,7 +451,7 @@ export default function VotePage() {
 
                 {currentDraftId && !submitting ? (
                   <p className="vote-submit-hint" style={{ marginTop: '0.75rem', color: '#4b5563', fontSize: '0.85rem' }}>
-                    💡 <em>Anda masih dapat mengedit atau mengganti pilihan paslon di atas sebelum menekan tombol "Input Suara". Setelah ditekan, suara Anda akan resmi diinput ke basis data dan tidak dapat diubah lagi.</em>
+                    <em>Anda masih dapat mengedit atau mengganti pilihan paslon di atas sebelum menekan tombol "Input Suara". Setelah ditekan, suara Anda akan resmi diinput ke basis data dan tidak dapat diubah lagi.</em>
                   </p>
                 ) : (
                   <p className="vote-submit-hint" style={{ marginTop: '0.75rem' }}>

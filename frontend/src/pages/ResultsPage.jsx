@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { apiUrl } from '../lib/appConfig'
 import './ResultsPage.css'
-
-const API_BASE = 'http://localhost:8000'
 
 function ArrowLeftIcon() {
   return (
@@ -31,7 +30,7 @@ export default function ResultsPage() {
       setLoading(true)
       setError(null)
       try {
-        const res  = await fetch(`${API_BASE}/elections/${id}/results`, {
+        const res  = await fetch(apiUrl(`/elections/${id}/results`), {
           headers: { Authorization: `Bearer ${token}` },
         })
         const json = await res.json()
@@ -99,7 +98,7 @@ export default function ResultsPage() {
         <div className="results-head">
           <div>
             <span className={`results-status-badge results-status-badge--${isClosed ? 'closed' : 'active'}`}>
-              {isClosed ? '✓ Selesai' : '⏳ Sedang berlangsung'}
+              {isClosed ? 'Selesai' : 'Sedang berlangsung'}
             </span>
           </div>
           <h1>{election.title}</h1>

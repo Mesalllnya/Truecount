@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { apiUrl } from '../lib/appConfig'
 import './EncryptedMessagesPage.css'
-
-const API = 'http://localhost:8000'
 
 async function readJson(response) {
   const text = await response.text()
@@ -42,7 +41,7 @@ export default function EncryptedMessagesPage() {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API}/encrypted-messages`, {
+      const response = await fetch(apiUrl('/encrypted-messages'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +89,7 @@ export default function EncryptedMessagesPage() {
 
     try {
       const response = await fetch(
-        `${API}/encrypted-messages/${encodeURIComponent(id)}`,
+        apiUrl(`/encrypted-messages/${encodeURIComponent(id)}`),
         {
           headers: {
             Authorization: `Bearer ${token}`,

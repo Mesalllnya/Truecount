@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 import { useNavigate, useLocation } from 'react-router-dom';
 
 /** API base URL */
-const API_BASE = 'http://localhost:8000';
+import { apiBase, apiUrl } from '../lib/appConfig';
 
 /** User info from JWT */
 export interface User {
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Fetch user info from /auth/me */
   const fetchUser = useCallback(async (authToken: string): Promise<User | null> => {
     try {
-      const res = await fetch(`${API_BASE}/auth/me`, {
+      const res = await fetch(apiUrl('/auth/me'), {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (!res.ok) throw new Error('Failed to fetch user');
@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
       
       // Only add auth header for API calls
-      if (url.startsWith(API_BASE) && token) {
+      if (url.startsWith(apiBase()) && token) {
         const headers = new Headers(init?.headers);
         if (!headers.has('Authorization')) {
           headers.set('Authorization', `Bearer ${token}`);
@@ -177,7 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await originalFetch(input, init);
 
       // Handle 401 - token expired or invalid
-      if (response.status === 401 && url.startsWith(API_BASE)) {
+      if (response.status === 401 && url.startsWith(apiBase())) {
         console.log('[Auth] Received 401, logging out...');
         logout();
         // Redirect will happen in logout
@@ -231,7 +231,7 @@ export function useApi() {
     }
     headers.set('Content-Type', 'application/json');
 
-    const res = await fetch(`${API_BASE}${endpoint}`, {
+    const res = await fetch(apiUrl(endpoint), {
       ...options,
       headers,
     });

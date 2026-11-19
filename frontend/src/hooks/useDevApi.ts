@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-
-const API_BASE = 'http://localhost:8000'
+import { apiUrl } from '../lib/appConfig'
 
 function getToken(): string | null {
   return localStorage.getItem('tc_token')
@@ -41,7 +40,7 @@ export function useDevApi<T>(endpoint: string): DevApiState<T> {
 
     async function load() {
       try {
-        const res = await fetch(`${API_BASE}${endpoint}`, {
+        const res = await fetch(apiUrl(endpoint), {
           headers: { Authorization: `Bearer ${getToken()}` },
           signal: controller.signal,
         })

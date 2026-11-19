@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { getRpId } from '../utils/webauthn'
+import { apiUrl } from '../lib/appConfig'
 
 /** WebAuthn credential interface */
 export interface WebAuthnCredential {
@@ -121,7 +122,7 @@ export function useWebAuthnLogin() {
     setIsLoading(true)
     setError(null)
     try {
-      const res = await fetch('http://localhost:8000/auth/webauthn/login/start', {
+      const res = await fetch(apiUrl('/auth/webauthn/login/start'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier }),
@@ -212,7 +213,7 @@ export function useWebAuthnLogin() {
         body.user_handle = base64urlEncode(new Uint8Array(assertion.response.userHandle))
       }
 
-      const res = await fetch('http://localhost:8000/auth/webauthn/login/verify', {
+      const res = await fetch(apiUrl('/auth/webauthn/login/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -278,7 +279,7 @@ export function useWebAuthnRegister() {
     setError(null)
     try {
       // 1. Minta challenge dari server (endpoint registrasi perlu dibuat)
-      const res = await fetch('http://localhost:8000/auth/webauthn/register/start', {
+      const res = await fetch(apiUrl('/auth/webauthn/register/start'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, display_name: displayName }),
@@ -320,7 +321,7 @@ export function useWebAuthnRegister() {
 
       // 3. Kirim ke server untuk verifikasi
       const attestationRes = credential.response
-      const verifyRes = await fetch('http://localhost:8000/auth/webauthn/register/verify', {
+      const verifyRes = await fetch(apiUrl('/auth/webauthn/register/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

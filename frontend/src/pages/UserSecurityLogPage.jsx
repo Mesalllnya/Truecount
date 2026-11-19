@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { apiUrl } from '../lib/appConfig'
 import './UserSecurityLogPage.css'
-
-const API_BASE = 'http://localhost:8000'
 
 const METHOD_LABELS = { webauthn: 'Windows Hello', dongle: 'Dongle USB', password: 'Kata Sandi' }
 const METHOD_COLORS = { webauthn: '#3468b0', dongle: '#2a7a3b', password: '#F13C35' }
@@ -56,7 +55,7 @@ function AttemptPhoto({ attemptId, onOpen }) {
     let objectUrl = null
     let cancelled = false
     const token = localStorage.getItem('tc_token')
-    fetch(`${API_BASE}/auth/attempts/${attemptId}/photo`, {
+    fetch(apiUrl(`/auth/attempts/${attemptId}/photo`), {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => {
@@ -132,7 +131,7 @@ export default function UserSecurityLogPage() {
     setError('')
     try {
       // Info user
-      const userRes = await fetch(`${API_BASE}/users/search?id=${encodeURIComponent(userId)}`, {
+      const userRes = await fetch(apiUrl(`/users/search?id=${encodeURIComponent(userId)}`), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const userData = await userRes.json()
@@ -140,7 +139,7 @@ export default function UserSecurityLogPage() {
       setUser(userData.users?.[0] ?? null)
 
       // Riwayat percobaan login user
-      const attemptRes = await fetch(`${API_BASE}/auth/attempts/list?user_id=${encodeURIComponent(userId)}&limit=100`, {
+      const attemptRes = await fetch(apiUrl(`/auth/attempts/list?user_id=${encodeURIComponent(userId)}&limit=100`), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const attemptData = await attemptRes.json()

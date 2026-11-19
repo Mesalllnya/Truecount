@@ -1,6 +1,7 @@
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { useEffect, useState, useCallback } from 'react'
+import { apiUrl } from '../lib/appConfig'
 
 /** Payload event dari Rust saat USB token terdeteksi */
 export interface UsbTokenDetected {
@@ -108,7 +109,12 @@ export function useUsbToken() {
         })
         unlisten = un
       } catch (err) {
-        console.warn('[TrueCount] Gagal listen event Tauri:', err)
+        // Event USB hanya tersedia di desktop; kegagalan capability/plugin adalah
+        // kondisi yang sudah diperkirakan dan tidak perlu memenuhi konsol.
+        const message = err instanceof Error ? err.message : String(err)
+        if (!/not allowed|plugin not found/i.test(message)) {
+          console.warn('[TrueCount] Gagal listen event Tauri:', message)
+        }
       }
     }
     setupListener()
@@ -306,8 +312,6 @@ export async function readTokenFileFromDrive(drive: string): Promise<UsbTokenFil
 
 /* ── API Helpers untuk register flow ─────────────────────── */
 
-const API_BASE = 'http://localhost:8000'
-
 export interface RegisterStartResponse {
   challenge_id: number
   challenge: string // base64url
@@ -328,7 +332,7 @@ export interface UsbCredential {
 export async function startUsbRegister(): Promise<RegisterStartResponse | null> {
   try {
     const token = localStorage.getItem('tc_token')
-    const res = await fetch(`${API_BASE}/mfa/usb/register/start`, {
+    const res = await fetch(apiUrl('/mfa/usb/register/start'), {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -350,7 +354,7 @@ export async function verifyUsbRegister(
 ): Promise<{ message: string } | null> {
   try {
     const token = localStorage.getItem('tc_token')
-    const res = await fetch(`${API_BASE}/mfa/usb/register/verify`, {
+    const res = await fetch(apiUrl('/mfa/usb/register/verify'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -376,7 +380,7 @@ export async function verifyUsbRegister(
 export async function fetchUsbCredentials(): Promise<UsbCredential[] | null> {
   try {
     const token = localStorage.getItem('tc_token')
-    const res = await fetch(`${API_BASE}/mfa/usb/list`, {
+    const res = await fetch(apiUrl('/mfa/usb/list'), {
       headers: { Authorization: `Bearer ${token}` },
     })
     const data = await res.json()
@@ -392,7 +396,7 @@ export async function fetchUsbCredentials(): Promise<UsbCredential[] | null> {
 export async function revokeUsbCredential(id: number): Promise<boolean> {
   try {
     const token = localStorage.getItem('tc_token')
-    const res = await fetch(`${API_BASE}/mfa/usb/${id}/revoke`, {
+    const res = await fetch(apiUrl(`/mfa/usb/${id}/revoke`), {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -409,7 +413,7 @@ export async function revokeUsbCredential(id: number): Promise<boolean> {
 export async function updateUsbLabel(id: number, label: string): Promise<boolean> {
   try {
     const token = localStorage.getItem('tc_token')
-    const res = await fetch(`${API_BASE}/mfa/usb/${id}/label`, {
+    const res = await fetch(apiUrl(`/mfa/usb/${id}/label`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -438,7 +442,7 @@ export interface AuthenticateStartResponse {
 /** Mulai autentikasi USB token (MFA login) - identifier-based */
 export async function startUsbAuthenticate(identifier: string): Promise<AuthenticateStartResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/mfa/usb/authenticate/start`, {
+    const res = await fetch(apiUrl('/mfa/usb/authenticate/start'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier }),
@@ -460,7 +464,7 @@ export async function verifyUsbAuthenticate(
   authPhoto?: string | null
 ): Promise<{ message: string; token: string; user: { id: number; username: string; email: string; role: string } } | null> {
   try {
-    const res = await fetch(`${API_BASE}/mfa/usb/authenticate/verify`, {
+    const res = await fetch(apiUrl('/mfa/usb/authenticate/verify'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

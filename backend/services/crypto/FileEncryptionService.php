@@ -10,6 +10,7 @@
 
 require_once __DIR__ . '/ChaCha20Poly1305Service.php';
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../helpers/storage.php';
 
 class FileEncryptionService
 {
@@ -18,13 +19,11 @@ class FileEncryptionService
 
     /**
      * Direktori penyimpanan di luar public backend.
+     * Root bisa dioverride lewat env TC_STORAGE_ROOT.
      */
     private static function getStorageDirectory(): string
     {
-        return dirname(__DIR__, 2)
-            . DIRECTORY_SEPARATOR . 'storage'
-            . DIRECTORY_SEPARATOR . 'private'
-            . DIRECTORY_SEPARATOR . 'encrypted-files';
+        return storagePath('private', 'encrypted-files');
     }
 
     /**

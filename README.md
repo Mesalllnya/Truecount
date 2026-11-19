@@ -159,6 +159,75 @@ Log aplikasi (jika troubleshooting): `%LOCALAPPDATA%\com.truecount.app\logs\` (W
 
 Lihat [`docs/desktop/desktop.md`](docs/desktop/desktop.md) untuk panduan lengkap.
 
+## Quick Start - Server Demo (1 Laptop)
+
+Topologi demo: **laptopmu menjadi server**, PC peserta menjalankan app desktop yang terhubung ke laptop itu. Satu database, satu sumber kebenaran.
+
+> Prasyarat: PHP 8.1+ di PATH, MySQL/MariaDB berjalan, database `truecount_db` sudah dibuat (atau pakai `-Migrate`).
+
+```powershell
+# Periksa prasyarat + siapkan .env, tanpa menyalakan server
+.\scripts\deploy-server.ps1 -CheckOnly
+
+# Siapkan database + akun admin, lalu nyalakan server untuk LAN
+.\scripts\deploy-server.ps1 -Migrate -SeedAdmin -OpenFirewall
+
+# Hentikan server
+.\scripts\deploy-server.ps1 -Stop
+```
+
+Saat server jalan, script menampilkan:
+
+- URL lokal: `http://localhost:8000/`
+- URL LAN untuk client: `http://<ip-laptop>:8000/`
+- Health check: `http://localhost:8000/health`
+
+Tanpa parameter, script hanya memeriksa prasyarat dan menyalakan server memakai `.env` yang sudah ada.
+
+| Parameter | Fungsi |
+|---|---|
+| `-Port 8000` | Port API |
+| `-BindAddress 0.0.0.0` | Agar bisa diakses client di LAN |
+| `-Migrate` | Jalankan `database/migrate.php` |
+| `-SeedAdmin` | Seed akun admin saja |
+| `-BuildFrontend` | `npm run build` di `frontend/` |
+| `-OpenFirewall` | Rule inbound TCP, profil **Private** (butuh Administrator) |
+| `-CheckOnly` | Preflight saja, jangan nyalakan server |
+| `-Stop` | Hentikan server di port tersebut |
+| `-Force` | Izinkan script menghentikan proses yang memakai port |
+| `-RecreateEnv` | Buat ulang `.env` (butuh ketik `OVERWRITE`) |
+
+Yang **tidak** dilakukan script: membuka port 3306, membuat rule profil Public, mencetak secret ke console, atau menjalankan `migrate.php --fresh`/`--seed`. Migration aman dijalankan berulang karena setiap file dicatat di tabel `schema_migrations`.
+
+Script juga memperingatkan kalau MySQL listen di `0.0.0.0:3306` (seharusnya `127.0.0.1`) — perbaiki lewat `bind-address` di `my.ini`.
+
+Panduan lengkap + keamanan: [`docs/deploy/deploy.md`](docs/deploy/deploy.md#211-script-deploy-server-lokal-windows) · rencana topologi: [`docs/deploy/demo-server-config-plan.md`](docs/deploy/demo-server-config-plan.md).
+
+### Mengarahkan client desktop ke laptop server
+
+Alamat server **tidak lagi hardcode**. Tiap client menyimpan alamatnya sendiri di `app_config.json` dan bisa diubah tanpa rebuild:
+
+1. Buka halaman config tersembunyi: tekan **Ctrl + Shift + Alt + S** di aplikasi desktop, atau ketik `__tcServerConfig()` di DevTools console.
+2. Pilih mode:
+   - **Client** - PC peserta, tidak menjalankan PHP lokal.
+   - **Server** - laptop penyelenggara, PHP listen di `0.0.0.0:8000`.
+   - **Standalone** - PHP lokal hanya untuk laptop itu sendiri (`127.0.0.1`).
+3. Isi alamat server, mis. `http://192.168.2.102:8000`, lalu **Tes koneksi**.
+4. **Simpan & muat ulang**.
+
+Halaman ini tidak punya link di navigasi. Database dan kredensial tetap hanya ada di laptop server.
+
+Build client tetap memakai alamat default dari `frontend/.env`:
+
+```env
+VITE_DEFAULT_SERVER_URL=http://192.168.2.102:8000
+```
+
+Kalau `app_config.json` belum ada, alamat itu yang dipakai. Setelah disimpan, config runtime menang atas nilai build.
+
+> **Catatan:** halaman setup server berbasis PHP (`backend/setup/index.php`) masih rencana; untuk sekarang gunakan `scripts/deploy-server.ps1` di laptop server.
+
+
 ## API Endpoints
 
 Base URL: `http://localhost:8000`

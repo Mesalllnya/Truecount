@@ -5,6 +5,7 @@ import Picture from '/Picture.jpg'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import './LandingPage.css'
 import Icon from '../components/Icon'
+import { apiUrl } from '../lib/appConfig'
 
 /* ── Scroll-reveal hook ─────────────────────────────────── */
 function useReveal(threshold = 0.12) {
@@ -45,7 +46,7 @@ export default function LandingPage() {
   async function handleMasukClick(e) {
     e.preventDefault() // hentikan navigasi bawaan Link ke /masuk
     try {
-      const res = await fetch('http://localhost:8000/health', {
+      const res = await fetch(apiUrl('/health'), {
         method: 'GET',
         signal: AbortSignal.timeout(2000),
       })

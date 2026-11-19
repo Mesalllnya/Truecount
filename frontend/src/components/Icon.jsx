@@ -1,4 +1,5 @@
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
   Award,
@@ -10,6 +11,7 @@ import {
   Eye,
   EyeOff,
   Fingerprint,
+  Globe,
   GraduationCap,
   Info,
   Link,
@@ -19,6 +21,9 @@ import {
   Mail,
   Menu,
   Plus,
+  RefreshCw,
+  Save,
+  Server,
   Settings,
   Shield,
   TriangleAlert,
@@ -26,12 +31,14 @@ import {
   Users,
   Usb,
   Vote,
+  Wifi,
   X,
 } from 'lucide-react'
 
 /* Pemetaan nama ikon aplikasi → komponen lucide (outline, tengah kosong).
    Satu sumber kebenaran agar seluruh halaman konsisten. */
 const ICONS = {
+  activity: Activity,
   alert: TriangleAlert,
   arrow: ArrowRight,
   'arrow-left': ArrowLeft,
@@ -46,6 +53,7 @@ const ICONS = {
   eye: Eye,
   'eye-off': EyeOff,
   fingerprint: Fingerprint,
+  globe: Globe,
   info: Info,
   lock: Lock,
   login: LogIn,
@@ -53,14 +61,18 @@ const ICONS = {
   mail: Mail,
   menu: Menu,
   plus: Plus,
+  refresh: RefreshCw,
   revoke: CircleX,
+  save: Save,
   school: GraduationCap,
+  server: Server,
   settings: Settings,
   shield: Shield,
   user: User,
   users: Users,
   usb: Usb,
   vote: Vote,
+  wifi: Wifi,
   close: X,
   x: X,
 }

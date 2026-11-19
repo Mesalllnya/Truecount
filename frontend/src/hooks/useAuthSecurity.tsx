@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useRef, createContext, useContext, Re
 import { logCamera } from '../utils/cameraLogger';
 
 /** API base URL */
-const API_BASE = 'http://localhost:8000';
+import { apiUrl } from '../lib/appConfig';
 
 /** Auth attempt record */
 export interface AuthAttempt {
@@ -87,7 +87,7 @@ export function FailedAttemptsProvider({ children }: { children: ReactNode }) {
   const reset = useCallback(async (identifier: string, syncServer = true) => {
     if (syncServer) {
       try {
-        await fetch(`${API_BASE}/auth/attempts/reset`, {
+        await fetch(apiUrl('/auth/attempts/reset'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier }),
@@ -138,7 +138,7 @@ export function useSecuritySetup() {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/auth/security-setup`, {
+      const res = await fetch(apiUrl('/auth/security-setup'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -589,7 +589,7 @@ export function useCameraPermission() {
 
     // Wait for video to be ready if not yet (handles stream just assigned to preview element)
     if (video.readyState < 2) {
-      console.log('[Camera] Waiting for video to be ready...');
+      logCamera('INFO', 'Menunggu video siap untuk verifikasi...');
       await new Promise<void>((resolve, reject) => {
         const handler = () => resolve();
         video.addEventListener('loadedmetadata', handler, { once: true });
@@ -619,7 +619,7 @@ export function useCameraPermission() {
       // Pakai analyzer yang sama dengan checkCamera — deteksi frame rata
       // (shutter tertutup), gelap sekali, atau hitam total.
       const verdict = analyzeFrame(video);
-      console.log('[Camera] Verification:', {
+      logCamera('INFO', 'Verifikasi frame sebelum auth', {
         metrics: verdict.metrics,
         reason: verdict.reason,
         active: verdict.ok
@@ -733,7 +733,9 @@ export function useCameraPermission() {
 
       // Convert to base64 JPEG (quality 0.8)
       const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-      console.log('[Camera] Photo captured:', Math.round(dataUrl.length / 1024), 'KB');
+      logCamera('INFO', 'Foto berhasil diambil', {
+        sizeKB: Math.round(dataUrl.length / 1024)
+      });
       return dataUrl;
     } catch (err) {
       console.error('[Camera] Capture failed:', err);

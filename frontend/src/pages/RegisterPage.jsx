@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './AuthPage.css'
 import { SkeletonText, SkeletonCircle } from '../components/ui/Skeleton'
 import Icon from '../components/Icon'
+import { apiUrl } from '../lib/appConfig'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
  *  jangan pernah tampilkan mentah ke user. */
@@ -54,7 +55,7 @@ export default function RegisterPage() {
     ;(async () => {
       try {
         const res  = await fetch(
-          `http://localhost:8000/invites/verify?token=${encodeURIComponent(inviteToken)}`
+          apiUrl(`/invites/verify?token=${encodeURIComponent(inviteToken)}`)
         )
         const data = await readJson(res)
         if (cancelled) return
@@ -114,7 +115,7 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
     try {
-      const res  = await fetch('http://localhost:8000/auth/register', {
+      const res  = await fetch(apiUrl('/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

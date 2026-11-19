@@ -12,4 +12,5 @@ try {
     echo "\nusers: $count rows\n";
 } catch (Exception $e) {
     echo "ERROR: " . $e->getMessage() . "\n";
+    exit(1);
 }

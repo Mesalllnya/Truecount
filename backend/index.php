@@ -14,16 +14,45 @@ date_default_timezone_set('Asia/Jakarta');
 
 // Access log - SEMUA request tercatat, termasuk preflight OPTIONS
 // (harus sebelum response.php yang meng-exit OPTIONS lebih awal)
+// Query sensitif (token undangan, kunci setup) disamarkan agar tidak masuk log.
+$logUri = preg_replace_callback(
+    '/([?&](?:token|k|key|setup_token|invite_token)=)[^&\s]+/i',
+    static fn(array $m): string => $m[1] . '***',
+    $_SERVER['REQUEST_URI'] ?? '-'
+);
+
 tc_log_info(sprintf(
     '%s %s | origin=%s | ip=%s',
     $_SERVER['REQUEST_METHOD'] ?? '-',
-    $_SERVER['REQUEST_URI'] ?? '-',
+    $logUri,
     $_SERVER['HTTP_ORIGIN'] ?? '-',
     $_SERVER['REMOTE_ADDR'] ?? '-'
 ));
 
-require_once __DIR__ . '/helpers/response.php';   // CORS + jsonResponse()
-require_once __DIR__ . '/config/database.php';
+// Helper darurat: kalau config gagal dimuat (mis. .env hilang), tetap kirim
+// header CORS. Tanpa ini browser hanya melaporkan "blocked by CORS policy"
+// dan menutupi error aslinya.
+$emergencyJsonError = static function (string $message): void {
+    if (!headers_sent()) {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Content-Type: application/json; charset=UTF-8');
+        http_response_code(500);
+    }
+    echo json_encode(['error' => $message], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+};
+
+try {
+    require_once __DIR__ . '/helpers/response.php';   // CORS + jsonResponse()
+    require_once __DIR__ . '/config/database.php';
+} catch (Throwable $e) {
+    tc_log_error(
+        'Bootstrap gagal: ' . get_class($e) . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString()
+    );
+    $emergencyJsonError('Konfigurasi server tidak dapat dimuat. Cek file .env backend.');
+}
 
 // Warning / error PHP native juga masuk ke file log
 ini_set('log_errors', '1');
@@ -93,6 +122,9 @@ match (true) {
             'status'   => $dbOk ? 'ok' : 'degraded',
             'app'      => 'TrueCount',
             'database' => $dbOk ? 'connected' : 'disconnected',
+            'server_id'    => SERVER_ID,
+            'server_label' => SERVER_LABEL,
+            'time'     => date('c'),
             'ip'       => $_SERVER['REMOTE_ADDR'] ?? '-',
         ]);
     })(),

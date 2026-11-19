@@ -38,11 +38,9 @@ if ($authPhoto && str_starts_with($authPhoto, 'data:image/')) {
             $base64 = $parts[1];
             $imageData = base64_decode($base64);
             if ($imageData !== false) {
-                // Create upload directory
-                $uploadDir = __DIR__ . '/../../../storage/auth_photos/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
+                // Create upload directory (storage root: <backend>/storage)
+                $uploadDir = storagePath('auth_photos') . '/';
+                ensureStorageDir(rtrim($uploadDir, '/'));
                 
                 // Generate filename: timestamp_random.jpg
                 $filename = 'auth_' . date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.jpg';

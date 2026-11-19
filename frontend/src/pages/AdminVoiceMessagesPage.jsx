@@ -16,9 +16,9 @@ import {
   Clock,
 } from 'lucide-react'
 
+import { apiUrl } from '../lib/appConfig'
 import './AdminVoiceMessagesPage.css'
 
-const API = 'http://localhost:8000'
 const MAX_DURATION = 300
 
 async function readJson(response) {
@@ -109,7 +109,7 @@ export default function AdminVoiceMessagesPage() {
   const fetchAdmins = useCallback(async () => {
     try {
       const response = await fetch(
-        `${API}/voice-messages/admins`,
+        apiUrl('/voice-messages/admins'),
         {
           headers: authHeaders,
         }
@@ -134,7 +134,7 @@ export default function AdminVoiceMessagesPage() {
 
     try {
       const response = await fetch(
-        `${API}/voice-messages/inbox`,
+        apiUrl('/voice-messages/inbox'),
         {
           headers: authHeaders,
         }
@@ -335,7 +335,7 @@ export default function AdminVoiceMessagesPage() {
       formData.append('audio', audioFile)
 
       const response = await fetch(
-        `${API}/voice-messages`,
+        apiUrl('/voice-messages'),
         {
           method: 'POST',
           headers: authHeaders,
@@ -386,7 +386,7 @@ export default function AdminVoiceMessagesPage() {
 
     try {
       const response = await fetch(
-        `${API}/voice-messages/${message.id}/audio`,
+        apiUrl(`/voice-messages/${message.id}/audio`),
         {
           headers: authHeaders,
         }
@@ -421,7 +421,7 @@ export default function AdminVoiceMessagesPage() {
   async function markAsRead(messageId) {
     try {
       const response = await fetch(
-        `${API}/voice-messages/${messageId}/read`,
+        apiUrl(`/voice-messages/${messageId}/read`),
         {
           method: 'POST',
           headers: authHeaders,

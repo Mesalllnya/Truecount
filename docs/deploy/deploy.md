@@ -5,6 +5,12 @@ Dokumen ini mencakup dua skenario:
 - **[Lokal / Development](#1-lokal--development)** - untuk pengerjaan sehari-hari di laptop masing-masing.
 - **[Server / Production](#2-server--production)** - untuk demo akhir atau hosting publik.
 
+> **Rencana demo 1 laptop + client desktop (aktif):** lihat [`demo-server-config-plan.md`](demo-server-config-plan.md) untuk topologi server laptop, konfigurasi alamat server di tiap client, halaman config tersembunyi, dan migrasi app yang sudah terpasang.
+>
+> Untuk demo di laptop sendiri, langkah manual di bawah bisa diringkas dengan [`scripts/deploy-server.ps1`](../scripts/deploy-server.ps1) - lihat [2.11 Script deploy server lokal (Windows)](#211-script-deploy-server-lokal-windows).
+>
+> **Rencana migrasi ke cloud/VPS (ditunda):** lihat [`deploy-to-cloud-plan.md`](deploy-to-cloud-plan.md) untuk keputusan arsitektur, refactor yang dibutuhkan, konfigurasi nginx, backup, dan checklist production.
+
 ---
 
 ## Prasyarat Umum
@@ -300,6 +306,105 @@ sudo chmod -R 755 /var/www/truecount/storage/auth_photos
 # Frontend dist bisa dibaca oleh Nginx
 sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
 ```
+
+### 2.11 Script deploy server lokal (Windows)
+
+Untuk demo **1 laptop sebagai server + N PC peserta sebagai client**, langkah manual di atas bisa diringkas menjadi satu script:
+
+```powershell
+.\scripts\deploy-server.ps1 -Migrate -SeedAdmin -OpenFirewall
+```
+
+Script ini hanya untuk Windows (PowerShell 5.1+) dan memakai `php -S`, bukan Nginx/Apache. Cocok untuk demo tertutup di jaringan lokal.
+
+#### Yang dilakukan script
+
+1. **Preflight** - cek PHP >= 8.1 di PATH, ekstensi `pdo_mysql`, `mbstring`, `openssl`, `gd`, `fileinfo`, dan MySQL/MariaDB berjalan.
+2. **Siapkan `.env`** - kalau belum ada, salin dari `.env.example` lalu buat otomatis `JWT_SECRET`, `ENCRYPTION_KEY_B64`, `CHACHA20_KEY_B64`, `SERVER_ID`, `SETUP_TOKEN`. Kalau `.env` sudah ada, hanya key yang hilang/kosong yang dilengkapi (dengan backup `.env.bak.<timestamp>`).
+3. **Cek port** - kalau port dipakai, script berhenti dan menyarankan `scripts/free-ports.ps1`. Dengan `-Force`, proses pemilik port dihentikan.
+4. **Migrasi** (`-Migrate`) - `php database/migrate.php`, tanpa `--seed` dan tanpa `--fresh`. Migration yang sudah berhasil dicatat di tabel `schema_migrations`, jadi aman dijalankan berulang; database lama yang belum punya catatan akan ditandai otomatis saat objeknya sudah ada.
+5. **Seed admin** (`-SeedAdmin`) - `php scripts/seed_admin.php`, hanya akun admin dan idempoten (`ON DUPLICATE KEY UPDATE`).
+6. **Build frontend** (`-BuildFrontend`) - `npm run build` di `frontend/`.
+7. **Firewall** (`-OpenFirewall`) - rule inbound TCP port API, profil **Private** saja. Butuh PowerShell Administrator.
+8. **Nyalakan server** - `php -S 0.0.0.0:8000 -t backend backend/index.php`, lalu polling `/health` dan menampilkan status database.
+
+#### Parameter
+
+| Parameter | Default | Fungsi |
+|---|---|---|
+| `-Port` | `8000` | Port API |
+| `-BindAddress` | `0.0.0.0` | `127.0.0.1` kalau hanya untuk laptop sendiri |
+| `-Migrate` | off | Jalankan migration |
+| `-SeedAdmin` | off | Seed akun admin saja |
+| `-BuildFrontend` | off | Build frontend produksi |
+| `-OpenFirewall` | off | Rule inbound profil Private |
+| `-SkipChecks` | off | Lewati cek ekstensi & MySQL (tidak disarankan) |
+| `-Force` | off | Izinkan menghentikan proses yang memakai port |
+| `-RecreateEnv` | off | Buat ulang `.env` (konfirmasi `OVERWRITE`) |
+| `-CheckOnly` | off | Preflight + siapkan `.env`, jangan nyalakan server |
+| `-Stop` | off | Hentikan proses yang listen di port tersebut |
+
+#### Output yang ditampilkan
+
+```
+================= TrueCount Demo Server =================
+  Bind     : 0.0.0.0:8000
+  Lokal    : http://localhost:8000/
+  LAN      : http://192.168.1.10:8000/
+  Health   : http://localhost:8000/health
+  Setup    : http://localhost:8000/__tc-setup?k=<SETUP_TOKEN>
+=========================================================
+```
+
+`SETUP_TOKEN` **tidak** dicetak; ambil dari `.env`.
+
+#### Mengarahkan client desktop (Tauri)
+
+Build client sekali dengan alamat default laptop server:
+
+```env
+# frontend/.env
+VITE_DEFAULT_SERVER_URL=http://<ip-laptop>:8000
+```
+
+```powershell
+cd frontend
+npm run desktop:build
+```
+
+Di tiap PC peserta, alamat masih bisa diubah tanpa rebuild:
+
+- Tekan **Ctrl + Shift + Alt + S**, atau jalankan `__tcServerConfig()` di DevTools console.
+- Mode **Client** = tanpa PHP lokal; mode **Server** = PHP laptop listen `0.0.0.0:8000`; mode **Standalone** = `127.0.0.1:8000`.
+- Tekan **Tes koneksi** untuk memastikan `/health` menjawab dan database `connected`.
+- **Simpan & muat ulang** menulis `app_config.json` di folder config aplikasi.
+
+Server `/health` mengembalikan `server_id`, `server_label`, dan `time`, sehingga client bisa memastikan terhubung ke laptop yang benar. Query log seperti `?token=` disamarkan menjadi `***`.
+
+#### Keamanan
+
+- Script tidak pernah membuka port 3306 dan tidak membuat rule firewall untuk profil Public.
+- Script **memperingatkan** kalau MySQL ternyata listen di `0.0.0.0:3306`. Perbaikannya manual: set `bind-address = 127.0.0.1` di `my.ini`, lalu restart MySQL. Cek dari PC lain dengan `Test-NetConnection <ip-laptop> -Port 3306` (harus gagal).
+- Secret tidak dicetak ke console maupun log.
+- `.env` yang sudah ada tidak ditimpa. `-RecreateEnv` membuat kunci enkripsi baru sehingga **data lama tidak bisa dibuka**.
+- `migrate.php --fresh` dan `--seed` tidak pernah dijalankan otomatis.
+
+#### Catatan performa
+
+`php -S` memproses satu request pada satu waktu dan `PHP_CLI_SERVER_WORKERS` tidak berfungsi di Windows. Untuk **lebih dari 8 client aktif**, gunakan Apache (Laragon) atau Nginx + PHP-FPM dengan document root `backend/`.
+
+#### Troubleshooting
+
+| Gejala | Penyebab | Solusi |
+|---|---|---|
+| `php tidak ditemukan di PATH` | PHP belum di PATH | Tambahkan folder PHP ke PATH, buka terminal baru |
+| `Ekstensi PHP belum aktif` | `extension=` dimatikan di `php.ini` | Aktifkan ekstensi, restart terminal |
+| `MySQL/MariaDB tidak berjalan` | Service/Laragon mati | Nyalakan service, atau jalankan Laragon |
+| `Database belum siap` | DB belum dibuat / `DB_*` salah | Jalankan dengan `-Migrate`, cek `.env` |
+| `Port 8000 masih dipakai` | PHP/server lain jalan | `.\scripts\free-ports.ps1` atau `-Force` |
+| `-OpenFirewall butuh Administrator` | Terminal tidak elevated | Buka PowerShell as Administrator |
+| Client tidak bisa connect | Firewall / AP isolation | Cek rule Private, coba hotspot sendiri |
+| Peringatan `MySQL listen di 0.0.0.0:3306` | `bind-address` masih dikomentari | Set `bind-address=127.0.0.1` di `my.ini` lalu restart MySQL. XAMPP: `<folder-xampp>\mysql\bin\my.ini` |
 
 ---
 

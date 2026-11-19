@@ -5,10 +5,8 @@ import { useChangePassword } from '../hooks/useAuth'
 import { useWebAuthnRegister, useWebAuthnList, useWebAuthnRevoke, isPlatformAuthenticatorAvailable } from '../hooks/useAuth'
 import { getRpId, base64urlEncode, base64urlDecode } from '../utils/webauthn'
 import Icon from '../components/Icon'
+import { apiUrl } from '../lib/appConfig'
 import './ProfileSettingsPage.css'
-
-/* ── Constants & Helpers ─────────────────────────────────── */
-const API_BASE = 'http://localhost:8000'
 
 /* ── Helpers ─────────────────────────────────────────────── */
 function formatDate(iso) {
@@ -161,7 +159,7 @@ export default function ProfileSettingsPage() {
     try {
       // 1. Minta challenge dari server
       const token = localStorage.getItem('tc_token')
-      const res = await fetch(`${API_BASE}/auth/webauthn/register/start`, {
+      const res = await fetch(apiUrl('/auth/webauthn/register/start'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -203,7 +201,7 @@ export default function ProfileSettingsPage() {
 
       if (!credential) throw new Error('Kredensial Windows Hello tidak dibuat oleh browser')
       const assertionResponse = credential.response
-      const verifyRes = await fetch(`${API_BASE}/auth/webauthn/register/verify`, {
+      const verifyRes = await fetch(apiUrl('/auth/webauthn/register/verify'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

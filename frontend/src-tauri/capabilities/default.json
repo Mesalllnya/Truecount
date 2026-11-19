@@ -7,7 +7,6 @@
     "core:default",
     "opener:default",
     "fs:default",
-    "event:default",
     {
       "identifier": "fs:scope",
       "allow": [

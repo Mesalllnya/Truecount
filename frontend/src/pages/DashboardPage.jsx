@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { SkeletonRow } from '../components/ui/Skeleton'
 import { CandidatesModal, VotersModal, CandidatePhoto } from '../components/ElectionModals'
+import { apiUrl } from '../lib/appConfig'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
@@ -176,7 +177,7 @@ function InvitesPanel() {
     setListError('')
     try {
       const token = localStorage.getItem('tc_token')
-      const res = await fetch('http://localhost:8000/invites', {
+      const res = await fetch(apiUrl('/invites'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await readJson(res)
@@ -268,7 +269,7 @@ function InvitesPanel() {
 
     try {
       const token = localStorage.getItem('tc_token')
-      const res = await fetch('http://localhost:8000/invites', {
+      const res = await fetch(apiUrl('/invites'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -323,7 +324,7 @@ function InvitesPanel() {
     setRevokingId(invite.id)
     try {
       const token = localStorage.getItem('tc_token')
-      const res = await fetch(`http://localhost:8000/invites/${invite.id}/revoke`, {
+      const res = await fetch(apiUrl(`/invites/${invite.id}/revoke`), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -750,13 +751,12 @@ function UserSecuritySearchPanel() {
   const [searched, setSearched] = useState(false)
 
   const token = localStorage.getItem('tc_token')
-  const API = 'http://localhost:8000'
 
   const loadUsers = useCallback(async (q) => {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API}/users/search?q=${encodeURIComponent(q)}`, {
+      const res = await fetch(apiUrl(`/users/search?q=${encodeURIComponent(q)}`), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await readJson(res)
@@ -770,7 +770,7 @@ function UserSecuritySearchPanel() {
     } finally {
       setLoading(false)
     }
-  }, [token, API])
+  }, [token])
 
   // Cari otomatis (debounce 400ms) saat query berubah
   useEffect(() => {
@@ -871,7 +871,6 @@ function UserSecuritySearchPanel() {
 /* ══════════════════════════════════════════════════════════
    ELECTIONS PANEL - manajemen pemilihan untuk admin
    ══════════════════════════════════════════════════════════ */
-const API = 'http://localhost:8000'
 
 
 function BlockchainAuditPanel() {
@@ -888,7 +887,7 @@ function BlockchainAuditPanel() {
   useEffect(() => {
     async function loadElections() {
       try {
-        const res = await fetch(`${API}/elections`, {
+        const res = await fetch(apiUrl('/elections'), {
           headers: { Authorization: `Bearer ${token}` },
         })
 
@@ -940,7 +939,7 @@ function BlockchainAuditPanel() {
 
     try {
       const url =
-        `${API}/elections/blockchain/${type === 'seal' ? 'seal' : 'verify'}` +
+        apiUrl(`/elections/blockchain/${type === 'seal' ? 'seal' : 'verify'}`) +
         `?id=${encodeURIComponent(selectedElection.id)}`
 
       const res = await fetch(url, {
@@ -1189,7 +1188,7 @@ function ElectionsPanel() {
     setLoading(true)
     setListError('')
     try {
-      const res  = await fetch(`${API}/elections`, {
+      const res  = await fetch(apiUrl('/elections'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await readJson(res)
@@ -1217,7 +1216,7 @@ function ElectionsPanel() {
       end_time:   form.end_time   ? new Date(form.end_time).toISOString()   : '',
     }
     try {
-      const res  = await fetch(`${API}/elections`, {
+      const res  = await fetch(apiUrl('/elections'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -1240,7 +1239,7 @@ function ElectionsPanel() {
     if (!window.confirm(`Ubah status "${election.title}" menjadi ${newStatus}?`)) return
     setUpdatingId(election.id)
     try {
-      const res  = await fetch(`${API}/elections/${election.id}`, {
+      const res  = await fetch(apiUrl(`/elections/${election.id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus }),
@@ -1297,7 +1296,7 @@ function ElectionsPanel() {
     }
 
     try {
-      const res = await fetch(`${API}/elections/${editingElection.id}`, {
+      const res = await fetch(apiUrl(`/elections/${editingElection.id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
@@ -1321,7 +1320,7 @@ function ElectionsPanel() {
   async function handleDelete(election) {
     if (!window.confirm(`Hapus pemilihan "${election.title}"?\nTindakan ini tidak dapat dibatalkan.`)) return
     try {
-      const res  = await fetch(`${API}/elections/${election.id}`, {
+      const res  = await fetch(apiUrl(`/elections/${election.id}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -1639,7 +1638,7 @@ function VoterDashboardView() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API}/elections?with_candidates=1`, {
+      const res = await fetch(apiUrl('/elections?with_candidates=1'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await readJson(res)

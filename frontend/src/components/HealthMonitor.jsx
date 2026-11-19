@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { apiBase, apiUrl } from '../lib/appConfig'
 
-const API = 'http://localhost:8000'
 const POLL_MS = 15000
 
 /**
@@ -18,7 +18,7 @@ export default function HealthMonitor() {
 
     async function check() {
       try {
-        const res  = await fetch(`${API}/health`, { signal: AbortSignal.timeout(4000) })
+        const res  = await fetch(apiUrl('/health'), { signal: AbortSignal.timeout(4000) })
         const data = await res.json()
         if (cancelled) return
 
@@ -47,7 +47,7 @@ export default function HealthMonitor() {
         if (prevRef.current !== 'down') {
           prevRef.current = 'down'
           console.error(
-            '[TrueCount] Health check: server tidak dapat dijangkau di ' + API + ' - pastikan backend PHP berjalan.'
+            '[TrueCount] Health check: server tidak dapat dijangkau di ' + apiBase() + ' - pastikan backend PHP berjalan.'
           )
         }
       }

@@ -5,6 +5,7 @@ import { useWebAuthnLogin, isWebAuthnSupported } from '../hooks/useWebAuthn'
 import { useFailedAttempts, useCameraPermission } from '../hooks/useAuthSecurity.tsx'
 import { useAuth } from '../hooks/useAuthSession'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
+import { apiUrl } from '../lib/appConfig'
 import './AuthPage.css'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
@@ -530,7 +531,7 @@ export default function LoginPage() {
     }
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch('http://localhost:8000/auth/security-status', {
+        const res = await fetch(apiUrl('/auth/security-status'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier }),
@@ -566,7 +567,7 @@ export default function LoginPage() {
 
     const checkServer = async () => {
       try {
-        const res = await fetch('http://localhost:8000/health', {
+        const res = await fetch(apiUrl('/health'), {
           method: 'GET',
           // Gagal cepat jika server mati, tidak menunggu timeout bawaan browser
           signal: AbortSignal.timeout(2000),
@@ -602,7 +603,7 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('http://localhost:8000/auth/login', {
+      const res = await fetch(apiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, auth_photo: photo }),

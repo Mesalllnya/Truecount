@@ -217,10 +217,17 @@ try {
                 $storedName = $storedFile['stored_path'];
 
                 if (preg_match('/^[a-f0-9]{32}\.enc$/', $storedName)) {
+<<<<<<< HEAD
                     $storageDirectory = dirname(__DIR__, 2)
                         . DIRECTORY_SEPARATOR . 'storage'
                         . DIRECTORY_SEPARATOR . 'private'
                         . DIRECTORY_SEPARATOR . 'encrypted-files';
+=======
+                    $storageDirectory = storagePath(
+                        'private',
+                        'encrypted-files'
+                    );
+>>>>>>> ed9d39eeba64b9d54dab0186ce69a6ee40fd5903
 
                     $storedPath = $storageDirectory
                         . DIRECTORY_SEPARATOR . $storedName;

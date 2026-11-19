@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-
-const API = 'http://localhost:8000'
+import { apiUrl } from '../lib/appConfig'
 
 async function readJson(res) {
   try {
@@ -21,7 +20,7 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
     // Foto lama masih menggunakan public path
     if (!candidate.photo_file_id) {
       setPhotoUrl(
-        candidate.photo_path ? `${API}${candidate.photo_path}` : ''
+        candidate.photo_path ? apiUrl(candidate.photo_path) : ''
       );
 
       return () => {
@@ -34,7 +33,7 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
 
     const authToken = token || localStorage.getItem('tc_token');
     fetch(
-      `${API}/elections/${electionId}/candidates/${candidate.id}/photo`,
+      apiUrl(`/elections/${electionId}/candidates/${candidate.id}/photo`),
       {
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -151,7 +150,7 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API}/elections/${election.id}/candidates`, {
+      const res = await fetch(apiUrl(`/elections/${election.id}/candidates`), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await readJson(res)
@@ -197,7 +196,7 @@ async function handleAddCandidate(e) {
   try {
     // 1. Buat kandidat terlebih dahulu
     const res = await fetch(
-      `${API}/elections/${election.id}/candidates`,
+      apiUrl(`/elections/${election.id}/candidates`),
       {
         method: 'POST',
         headers: {
@@ -236,7 +235,7 @@ async function handleAddCandidate(e) {
         formData.append('photo', photoFile)
 
         const photoResponse = await fetch(
-          `${API}/elections/${election.id}/candidates/${candidateId}/photo`,
+          apiUrl(`/elections/${election.id}/candidates/${candidateId}/photo`),
           {
             method: 'POST',
             headers: {
@@ -342,7 +341,7 @@ async function handleUpdateCandidate(e) {
 
     // Update informasi kandidat
     const updateResponse = await fetch(
-      `${API}/elections/${election.id}/candidates/${candidateId}`,
+      apiUrl(`/elections/${election.id}/candidates/${candidateId}`),
       {
         method: 'PUT',
         headers: {
@@ -371,7 +370,7 @@ async function handleUpdateCandidate(e) {
       formData.append('photo', editPhotoFile)
 
       const photoResponse = await fetch(
-        `${API}/elections/${election.id}/candidates/${candidateId}/photo`,
+        apiUrl(`/elections/${election.id}/candidates/${candidateId}/photo`),
         {
           method: 'POST',
           headers: {
@@ -404,7 +403,7 @@ async function handleUpdateCandidate(e) {
   async function handleDeleteCandidate(cid, cname) {
     if (!window.confirm(`Hapus paslon "${cname}"?`)) return
     try {
-      const res = await fetch(`${API}/elections/${election.id}/candidates/${cid}`, {
+      const res = await fetch(apiUrl(`/elections/${election.id}/candidates/${cid}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -731,7 +730,7 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
     setError('')
     try {
       // 1. Ambil voter terdaftar di election ini
-      const res1 = await fetch(`${API}/elections/${election.id}/voters`, {
+      const res1 = await fetch(apiUrl(`/elections/${election.id}/voters`), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data1 = await readJson(res1)
@@ -739,7 +738,7 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
       setElectionVoters(data1.voters ?? [])
 
       // 2. Ambil semua voter aktif di sistem
-      const res2 = await fetch(`${API}/users/voters`, {
+      const res2 = await fetch(apiUrl('/users/voters'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data2 = await readJson(res2)
@@ -821,7 +820,6 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
     setError('')
     setSuccessMsg('')
     try {
-      const userIds = Array.from(selectedAvailableIds)
       const res = await fetch(`${API}/elections/${election.id}/voters`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -837,48 +835,17 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
     } catch (err) {
       setError(err?.message || 'Gagal mendaftarkan pemilih.')
     } finally {
-      setProcessingAdd(false)
+      setAdding(false)
     }
   }
 
-  // ── Hapus Banyak Pemilih Sekaligus (Batch / Checkbox) ──
-  async function handleBatchRemoveVoters() {
-    if (selectedEnrolledIds.size === 0) return
-    const count = selectedEnrolledIds.size
-    if (!window.confirm(`Keluarkan ${count} akun pemilih terpilih dari pemilihan ini?`)) return
-
-    setProcessingRemove(true)
-    setError('')
-    setSuccessMsg('')
-    try {
-      const userIds = Array.from(selectedEnrolledIds)
-      const res = await fetch(`${API}/elections/${election.id}/voters`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ user_ids: userIds }),
-      })
-      const data = await readJson(res)
-      if (!res.ok) throw new Error(data.error || 'Gagal mengeluarkan pemilih terpilih.')
-
-      setSuccessMsg(`Berhasil mengeluarkan ${data.deleted ?? count} pemilih dari pemilihan.`)
-      setSelectedEnrolledIds(new Set())
-      await loadData()
-      onRefreshElection()
-    } catch (err) {
-      setError(err?.message || 'Gagal mengeluarkan pemilih terpilih.')
-    } finally {
-      setProcessingRemove(false)
-    }
-  }
-
-  // Single remove
   async function handleRemoveVoter(userId, username) {
     if (!window.confirm(`Keluarkan ${username} dari pemilihan ini?`)) return
     setRemovingId(userId)
     setError('')
     setSuccessMsg('')
     try {
-      const res = await fetch(`${API}/elections/${election.id}/voters/${userId}`, {
+      const res = await fetch(apiUrl(`/elections/${election.id}/voters/${userId}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })

@@ -231,7 +231,7 @@ frontend/src/components/
   UsbTokenPanel.jsx + .css      - Panel kelola USB token
   AuthGuard.jsx                 - **Route guard: redirect ke /atur-keamanan jika belum setup Windows Hello/Dongle**
   RoleGuard.jsx                 - **Route guard: hanya izinkan role yang diizinkan (admin/dev untuk /dev)**
-  Nav.jsx                       - **Navigation dengan user menu + logout saat authenticated**
+  Nav.jsx                       - **Navigation seragam: baca `user` dari `useAuth()` (prop `user` cuma fallback), tampilkan menu akun (avatar inisial · username · badge role) + dropdown Pengaturan / Log Keamanan Saya (admin saja) / Keluar; drawer mobile via `.nav-menu`**
   ElectionModals.jsx            - **Modal CRUD pemilihan & kandidat di dasbor admin**
   IsometricFlow.tsx           - **Diagram alur 2D: Flow Aplikasi (GET /dev/flow)** — kanvas ber-grid + panah SVG
   IsoNode.tsx                 - **Kartu langkah** pada diagram (ikon peran + label), posisi via CSS variable
@@ -436,7 +436,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 12. Auto-session management:
     - Cek JWT expiry client-side tiap 30 detik → auto-logout jika expired
     - Intercept fetch → 401 → auto-logout + redirect /masuk
-    - Nav bar: tampil user menu + logout button saat authenticated
+    - Nav bar: saat authenticated tampil **menu akun** (avatar inisial + username + badge role) → dropdown Pengaturan, Log Keamanan Saya (`/log-keamanan/{id}`, hanya role admin), Keluar; `user` diambil dari `useAuth()`, bukan dari prop App
 ```
 
 **Tanpa undangan valid, `POST /auth/register` → 403** - pendaftaran publik ditutup.
@@ -871,12 +871,13 @@ Kriptografi: PBKDF2-HMAC-SHA256 (100k iterasi, PIN → key) → AES-256-GCM (pri
   - **AuthGuard** (`components/AuthGuard.jsx`) — route guard redirect ke `/atur-keamanan` jika user belum setup keamanan
   - **SecuritySetupPage** (`pages/SecuritySetupPage.tsx`) — halaman setup keamanan wajib (Windows Hello/Dongle)
   - **LoginPage Updated** — password fallback logic, camera verification, photo capture (fixed: use captured photo directly, not stale state), **camera auto-off saat pindah halaman**, useAuth login()
-  - **Nav Updated** — user menu + logout button saat authenticated
+  - **Nav Updated** — menu akun saat authenticated (avatar inisial, username, badge role, dropdown Pengaturan / Log Keamanan Saya — admin saja / Keluar)
   - **Backend**: `/auth/security-setup`, `/auth/security-status`, `/auth/attempts/log`, `/auth/attempts/reset`, `/auth/attempts/list`, `/auth/attempts/{id}/photo`
   - **Database**: `auth_attempts` table (migration 007 + 009 photo_path)
   - **Camera enforcement**: real-time frame validation via canvas sampling, periodic re-check, Lenovo shutter detection
   - **Password fallback**: hanya muncul setelah 5 gagal (lock 15 menit) atau user belum setup keamanan (onboarding)
   - **Audit logging**: semua attempt di-log ke DB oleh backend secara internal (single source of truth, mencegah duplikasi baris); frontend simpan counter lokal untuk UI lockout/password fallback + photo capture
+- **Menu akun di navbar ✅** (issue #24) — `Nav.jsx` mengambil `user` dari `useAuth()` (prop `user` tetap didukung sebagai fallback) lalu merender `AccountMenu`: avatar inisial + username (ellipsis 140px) + badge role (`admin`→Admin, `dev`→Dev, `voter`→Pemilih) dan dropdown berisi email (non-interaktif), **Pengaturan**, pemisah, **Keluar** (logout lama dipakai ulang — konfirmasi tidak ditambah), plus **Log Keamanan Saya** (`/log-keamanan/{user.id}`) yang **hanya dirender untuk role `admin`** karena `GET /auth/attempts/list` & `GET /users/search` dibungkus `requireAdmin()` — tanpa itu akun voter/dev mendapat 403. Menu tertutup saat klik di luar / Esc / navigasi route (komponen di-`key` per `location.pathname`) / Tab keluar dari blok; memakai `aria-haspopup="menu"`, `aria-expanded`, `role="menu"` + `role="menuitem"`, navigasi panah Home/End, dan focus ring merah. Layout: blok `.nav-menu` (`display: contents` di desktop, jadi drawer `fixed` di ≤767px) memuat `.nav-links` + `.nav-actions` — ini sekaligus memperbaiki overflow horizontal navbar mobile. Dropdown animasi fade/scale dan dinonaktifkan pada `prefers-reduced-motion`. Tidak ada perubahan backend maupun kontrak API.
 - Flow register token memakai ECDSA P-256 signature (raw r||s 64 bytes → backend convert ke DER untuk openssl_verify)
 - PHP 8.4: `openssl_pkey_get_public/private` TIDAK menerima DER binary langsung, harus wrap PEM
 - Challenge disimpan di tabel `usb_challenges` (TTL 5 menit, single-use)

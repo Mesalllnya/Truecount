@@ -65,6 +65,10 @@ npm run dev:full           # PHP :8000 + Vite :5173
 1. Buka aplikasi → klik **Masuk** (ikon di kanan atas)
 2. Masukkan username/email + kata sandi
 3. Klik "Masuk" → diarahkan ke dasbor
+4. Setelah masuk, **menu akun di kanan atas navbar** menampilkan avatar inisial, nama, dan peran Anda. Klik untuk membuka menu akun:
+   - **Pengaturan** — ganti kata sandi, Windows Hello, kelola USB token
+   - **Log Keamanan Saya** — riwayat percobaan login akun Anda sendiri (khusus akun **Admin**; akun lain tidak melihat item ini karena endpoint log dibatasi admin)
+   - **Keluar** — tutup sesi lalu klik **Masuk** lagi untuk ganti akun
 
 > **Status dongle di halaman login:** Indikator "Dongle terpasang / tidak terdeteksi" menunjukkan deteksi USB token secara otomatis. Di **aplikasi desktop**, tombol "Dongle Keamanan" bisa dipilih untuk login pakai USB token (MFA). Di **mode browser**, tombol ini disabled karena auto-detect USB hanya tersedia di Tauri desktop (batasan keamanan browser).
 
@@ -262,6 +266,8 @@ Admin dapat melihat riwayat percobaan login setiap pengguna, lengkap dengan foto
    - **Status** — Berhasil / Gagal
    - **IP Address** — alamat IP pengguna saat login
    - **Keterangan** — pesan hasil login (mis. "Login berhasil" atau "Autentikasi dibatalkan...")
+
+> **Log akun sendiri:** buka **menu akun** di kanan atas navbar → **Log Keamanan Saya** (langsung ke `/log-keamanan/{id}` milik Anda, tanpa lewat dasbor).
 
 > **Catatan:** Foto hanya tersimpan untuk percobaan login yang dilakukan **setelah** fitur kamera aktif. Percobaan lama sebelum fitur ini akan menampilkan placeholder kamera (tanpa gambar).
 

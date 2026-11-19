@@ -538,15 +538,7 @@ fn spawn_php_backend(app: &tauri::AppHandle, config: &AppConfig) -> Result<(), S
 fn resolve_backend_dir(app: &tauri::AppHandle) -> PathBuf {
     let mut candidates: Vec<PathBuf> = Vec::new();
 
-    // 1) Production: folder backend di dalam resource dir (installer)
-    if let Ok(dir) = app
-        .path()
-        .resolve("backend", tauri::path::BaseDirectory::Resource)
-    {
-        candidates.push(dir);
-    }
-
-    // 2) Berbasis lokasi exe (raw exe dari target/release atau target/debug)
+    // 1) Berbasis lokasi exe (raw exe dari target/release atau target/debug)
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
             // release/debug → target → src-tauri → frontend → repo root
@@ -557,10 +549,25 @@ fn resolve_backend_dir(app: &tauri::AppHandle) -> PathBuf {
         }
     }
 
-    // 3) Berbasis working directory
+    // 2) Berbasis working directory
     if let Ok(cwd) = std::env::current_dir() {
         candidates.push(cwd.join("backend"));
         candidates.push(cwd.join("../../backend"));
+    }
+
+    // 3) Folder backend di resource dir (installer / hasil salin Tauri).
+    //    Saat `tauri dev`, resource disalin ke `target/debug/backend` dan bisa
+    //    tertinggal dari kode di repo. Di debug, taruh paling akhir supaya
+    //    backend sumber di repo yang dipakai; di release tetap paling utama.
+    if let Ok(dir) = app
+        .path()
+        .resolve("backend", tauri::path::BaseDirectory::Resource)
+    {
+        if cfg!(debug_assertions) {
+            candidates.push(dir);
+        } else {
+            candidates.insert(0, dir);
+        }
     }
 
     let log_state = app.try_state::<AppLog>();

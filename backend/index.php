@@ -29,8 +29,30 @@ tc_log_info(sprintf(
     $_SERVER['REMOTE_ADDR'] ?? '-'
 ));
 
-require_once __DIR__ . '/helpers/response.php';   // CORS + jsonResponse()
-require_once __DIR__ . '/config/database.php';
+// Helper darurat: kalau config gagal dimuat (mis. .env hilang), tetap kirim
+// header CORS. Tanpa ini browser hanya melaporkan "blocked by CORS policy"
+// dan menutupi error aslinya.
+$emergencyJsonError = static function (string $message): void {
+    if (!headers_sent()) {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Content-Type: application/json; charset=UTF-8');
+        http_response_code(500);
+    }
+    echo json_encode(['error' => $message], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+};
+
+try {
+    require_once __DIR__ . '/helpers/response.php';   // CORS + jsonResponse()
+    require_once __DIR__ . '/config/database.php';
+} catch (Throwable $e) {
+    tc_log_error(
+        'Bootstrap gagal: ' . get_class($e) . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString()
+    );
+    $emergencyJsonError('Konfigurasi server tidak dapat dimuat. Cek file .env backend.');
+}
 
 // Warning / error PHP native juga masuk ke file log
 ini_set('log_errors', '1');

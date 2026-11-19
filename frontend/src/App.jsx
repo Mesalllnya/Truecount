@@ -150,7 +150,8 @@ function AppRoutes() {
   return (
     <>
       <CameraRouteGuard />
-      {!isLoginPage && <Nav links={[...navLinks, devLink].filter(Boolean)} />}
+      <ServerConfigShortcut />
+      {!isLoginPage && !isConfigPage && <Nav links={[...navLinks, adminVoiceLink, devLink].filter(Boolean)} />}
       <Routes>
         <Route path="/"           element={<LandingPage />} />
         <Route path="/__server"   element={<ClientConfigPage />} />

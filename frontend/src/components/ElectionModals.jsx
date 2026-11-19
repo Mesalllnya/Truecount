@@ -820,7 +820,8 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
     setError('')
     setSuccessMsg('')
     try {
-      const res = await fetch(`${API}/elections/${election.id}/voters`, {
+      const userIds = Array.from(selectedAvailableIds)
+      const res = await fetch(apiUrl(`/elections/${election.id}/voters`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ user_ids: userIds }),
@@ -835,10 +836,41 @@ export function VotersModal({ election, onClose, onRefreshElection }) {
     } catch (err) {
       setError(err?.message || 'Gagal mendaftarkan pemilih.')
     } finally {
-      setAdding(false)
+      setProcessingAdd(false)
     }
   }
 
+  // ── Hapus Banyak Pemilih Sekaligus (Batch / Checkbox) ──
+  async function handleBatchRemoveVoters() {
+    if (selectedEnrolledIds.size === 0) return
+    const count = selectedEnrolledIds.size
+    if (!window.confirm(`Keluarkan ${count} akun pemilih terpilih dari pemilihan ini?`)) return
+
+    setProcessingRemove(true)
+    setError('')
+    setSuccessMsg('')
+    try {
+      const userIds = Array.from(selectedEnrolledIds)
+      const res = await fetch(apiUrl(`/elections/${election.id}/voters`), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ user_ids: userIds }),
+      })
+      const data = await readJson(res)
+      if (!res.ok) throw new Error(data.error || 'Gagal mengeluarkan pemilih terpilih.')
+
+      setSuccessMsg(`Berhasil mengeluarkan ${data.deleted ?? count} pemilih dari pemilihan.`)
+      setSelectedEnrolledIds(new Set())
+      await loadData()
+      onRefreshElection()
+    } catch (err) {
+      setError(err?.message || 'Gagal mengeluarkan pemilih terpilih.')
+    } finally {
+      setProcessingRemove(false)
+    }
+  }
+
+  // Single remove
   async function handleRemoveVoter(userId, username) {
     if (!window.confirm(`Keluarkan ${username} dari pemilihan ini?`)) return
     setRemovingId(userId)

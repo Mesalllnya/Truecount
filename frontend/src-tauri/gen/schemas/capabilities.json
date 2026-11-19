@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Capability utama TrueCount - akses file token di drive removable dan kamera untuk verifikasi","local":true,"windows":["main"],"permissions":["core:default","opener:default","fs:default",{"identifier":"fs:scope","allow":[{"path":"$REMOVABLE/**"},{"path":"$REMOVABLE/.truecount_token"}]},"shell:allow-open"]}}

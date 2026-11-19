@@ -338,7 +338,7 @@ Semua route terlindungi (`/dasbor`, `/pilih`, `/pengaturan`, dll.) dipelihara ol
 
 ### Navbar & Menu Akun
 
-Sesudah login, sisi kanan navbar menampilkan **akun yang sedang aktif**: avatar inisial, username, dan badge peran (`Admin` / `Dev` / `Pemilih`). Mengkliknya membuka **menu akun** berisi email, **Pengaturan** (`/pengaturan`), **Keluar**, dan — hanya untuk akun `Admin` — **Log Keamanan Saya** (`/log-keamanan/{id}` milik akun tersebut, karena endpoint log di backend khusus admin). Datanya diambil dari `useAuth()` (`GET /auth/me`) sehingga tidak ada endpoint tambahan; sebelum login navbar tetap hanya menampilkan tombol **Masuk**. Di layar kecil baris akun tampil sebagai bagian dari drawer menu.
+Sesudah login, sisi kanan navbar menampilkan **akun yang sedang aktif**: avatar inisial, username, dan badge peran (`Admin` / `Dev` / `Pemilih`). Mengkliknya membuka **menu akun** berisi email, **Pengaturan** (`/pengaturan`), **Keluar**, dan — hanya untuk akun `Admin` — **Log Keamanan Saya** (`/log-keamanan/{id}` milik akun tersebut, karena endpoint log di backend khusus admin). Datanya diambil dari `useAuth()` (`GET /auth/me`) sehingga tidak ada endpoint tambahan; sebelum login navbar tetap hanya menampilkan tombol **Masuk**. Di layar kecil baris akun tampil sebagai bagian dari drawer menu. **Pengaturan tidak lagi menjadi link menu tengah** — pengaturan profil diakses lewat menu akun ini.
 
 ## Test Otomatis
 

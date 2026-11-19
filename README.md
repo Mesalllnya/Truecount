@@ -58,7 +58,7 @@ Truecount/
 │   ├── public/             # Aset statis (gambar artsy, logo, cursor set)
 │   ├── src/
 │   │   ├── pages/          # LandingPage · AboutPage · LoginPage · RegisterPage · SecuritySetupPage · DashboardPage · VotePage · ResultsPage · ProfileSettingsPage · UsbTokenTestPage · UserSecurityLogPage · EncryptedMessagesPage · AdminVoiceMessagesPage · DevPage
-│   │   ├── components/     # Nav · AuthGuard · RoleGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui) · IsometricFlow · IsometricCrypto
+│   │   ├── components/     # Nav · AuthGuard · RoleGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui) · IsometricFlow (+ IsoNode · IsoShared · isoTheme) · IsometricCrypto (+ CryptoCard)
 │   │   ├── hooks/          # useAuth · useAuthSession · useAuthSecurity · useFaceDetection · useUsbToken · useWebAuthn
 │   │   ├── styles/         # cursor.css (kursor kustom)
 │   │   ├── utils/          # webauthn.ts
@@ -331,7 +331,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | `/pesan-terenkripsi` | Encrypted Messages | Buat & lihat pesan terenkripsi (Sprint 3) |
 | `/pesan-suara` | Admin Voice Messages | Rekam & kirim pesan suara terenkripsi antar-admin |
 | `/log-keamanan/:userId` | Log Keamanan Pengguna | Riwayat percobaan login + foto kamera (audit admin) |
-| `/dev` | Halaman Dev | Visualisasi 3D isometrik flow aplikasi + algoritma kripto (hanya admin & dev) |
+| `/dev` | Halaman Dev | Diagram flow aplikasi (2D, klik blok untuk detail) + grid algoritma kripto (hanya admin & dev) |
 | `*` | Redirect → `/` | Catchall |
 
 Semua route terlindungi (`/dasbor`, `/pilih`, `/pengaturan`, dll.) dipelihara oleh `AuthGuard` yang redirect ke `/atur-keamanan` jika user belum setup Windows Hello atau Dongle. Halaman `/dev` selain itu dilindungi oleh `RoleGuard` yang hanya mengizinkan role `admin` dan `dev`.

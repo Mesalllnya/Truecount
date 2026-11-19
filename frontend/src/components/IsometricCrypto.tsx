@@ -31,6 +31,7 @@ export default function IsometricCrypto() {
   return (
     <section className="iso-section" aria-labelledby="crypto-title">
       <SectionHeader
+        id="crypto-title"
         icon={Lock}
         title="Algoritma Kriptografi"
         description="Algoritma yang diterapkan di TrueCount untuk menjaga kerahasiaan, integritas, dan autentikasi. Klik kartu untuk detail implementasi."

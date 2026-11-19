@@ -30,13 +30,20 @@ interface SectionHeaderProps {
   icon: LucideIcon
   title: string
   description: string
+  /** id heading — dipakai aria-labelledby pada section pembungkus. */
+  id?: string
 }
 
-export const SectionHeader = memo(function SectionHeader({ icon: Icon, title, description }: SectionHeaderProps) {
-  const id = `${title.toLowerCase().replace(/\s+/g, '-')}-title`
+export const SectionHeader = memo(function SectionHeader({
+  icon: Icon,
+  title,
+  description,
+  id,
+}: SectionHeaderProps) {
+  const headingId = id ?? `${title.toLowerCase().replace(/\s+/g, '-')}-title`
   return (
     <>
-      <h2 id={id} className="iso-section-title">
+      <h2 id={headingId} className="iso-section-title">
         <Icon size={26} strokeWidth={1.75} aria-hidden="true" />
         {title}
       </h2>

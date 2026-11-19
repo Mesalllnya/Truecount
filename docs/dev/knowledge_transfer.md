@@ -224,7 +224,7 @@ frontend/src/pages/
   ResultsPage.jsx + .css       - Halaman hasil pemilihan (/hasil/:id): tally suara, verifikasi blockchain, statistik partisipasi
   EncryptedMessagesPage.jsx    - Halaman pesan terenkripsi (/pesan-terenkripsi): buat & lihat pesan terenkripsi (Vigenere, AES-256-GCM, ChaCha20)
   AdminVoiceMessagesPage.jsx + .css - **Halaman pesan suara admin (/pesan-suara): rekam via MediaRecorder, pratinjau, kirim terenkripsi, inbox + playback**
-  DevPage.jsx + DevPage.css    - **Halaman Dev (/dev): visualisasi 3D isometrik flow aplikasi + algoritma kriptografi, hanya Admin + Dev**
+  DevPage.jsx + DevPage.css    - **Halaman Dev (/dev): diagram flow aplikasi + grid algoritma kriptografi, hanya Admin + Dev**
 frontend/src/components/
   HealthMonitor.jsx             - Render null; polling /health di background, error → console (bukan UI)
   Skeleton.jsx + .css           - Komponen loading placeholder
@@ -233,8 +233,12 @@ frontend/src/components/
   RoleGuard.jsx                 - **Route guard: hanya izinkan role yang diizinkan (admin/dev untuk /dev)**
   Nav.jsx                       - **Navigation dengan user menu + logout saat authenticated**
   ElectionModals.jsx            - **Modal CRUD pemilihan & kandidat di dasbor admin**
-  IsometricFlow.jsx             - **Visualisasi 3D isometrik: Flow Aplikasi (GET /dev/flow)**
-  IsometricCrypto.jsx           - **Visualisasi 3D isometrik: Algoritma Kriptografi (GET /dev/crypto)**
+  IsometricFlow.tsx           - **Diagram alur 2D: Flow Aplikasi (GET /dev/flow)** — kanvas ber-grid + panah SVG
+  IsoNode.tsx                 - **Kartu langkah** pada diagram (ikon peran + label), posisi via CSS variable
+  IsoShared.tsx               - Loading / error + retry / section header / legenda (dipakai kedua tab)
+  isoTheme.ts                 - Palet peran, withAlpha(), konstanta layout kanvas
+  IsometricCrypto.tsx         - **Grid algoritma kriptografi (GET /dev/crypto)**
+  CryptoCard.tsx              - Kartu algoritma kripto yang bisa dibuka
 frontend/src/index.css          - Reset global + font family
 frontend/src/main.jsx           - ReactDOM.createRoot + impor `cursor.css` agar kursor kustom TrueCount berlaku di seluruh aplikasi
 frontend/src/styles/cursor.css  - Kumpulan aturan kursor kustom untuk state normal, link, tombol, teks, resize, grab, grabbing, zoom, copy, menu, wait, loading, help, dan nope (PNG 32/64px + fallback bawaan browser)
@@ -285,7 +289,7 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | `/pesan-terenkripsi` | `EncryptedMessagesPage` | Buat & lihat pesan terenkripsi (Sprint 3 ✅, ada auth guard) |
 | `/pesan-suara` | `AdminVoiceMessagesPage` | **Pesan suara terenkripsi antar-admin: rekam, kirim, inbox, playback (khusus admin)** |
 | `/log-keamanan/:id` | `UserSecurityLogPage` | **Riwayat percobaan login + foto kamera (audit admin)** |
-| `/dev` | `DevPage` | **Halaman Dev - visualisasi 3D isometrik flow + kriptografi (hanya admin + dev)** |
+| `/dev` | `DevPage` | **Halaman Dev - diagram flow 2D + grid kriptografi (hanya admin + dev)** |
 | `/login` | Redirect → `/masuk` | Alias lama |
 | `/register` | Redirect → `/daftar` | Alias lama |
 | `/dashboard` | Redirect → `/dasbor` | Alias lama |
@@ -1012,7 +1016,7 @@ Protected Routes (/dasbor, /pilih, /pengaturan, dll):
 
 ### Tujuan
 
-Halaman eksklusif untuk role `admin` dan `dev` di URL `/dev` (alias `/pengembang`). Berisi visualisasi 3D isometrik interaktif yang menjelaskan cara kerja aplikasi TrueCount dari awal hingga akhir, serta algoritma kriptografi yang diterapkan. Cocok digunakan sebagai dokumentasi teknis untuk tim dan materi presentasi (pitch deck) untuk evaluator.
+Halaman eksklusif untuk role `admin` dan `dev` di URL `/dev` (alias `/pengembang`). Berisi diagram alur interaktif 2D yang menjelaskan cara kerja aplikasi TrueCount dari awal hingga akhir, serta grid algoritma kriptografi yang diterapkan. Cocok digunakan sebagai dokumentasi teknis untuk tim dan materi presentasi (pitch deck) untuk evaluator.
 
 ### Akses & Middleware
 
@@ -1033,19 +1037,23 @@ Halaman eksklusif untuk role `admin` dan `dev` di URL `/dev` (alias `/pengembang
 | File | Fungsi |
 |------|--------|
 | `frontend/src/pages/DevPage.jsx` | Halaman utama dev — 2 tab: Flow Aplikasi + Algoritma Kriptografi |
-| `frontend/src/pages/DevPage.css` | Styling CSS 3D isometrik (kubus via CSS Transform, tidak butuh library eksternal) |
+| `frontend/src/pages/DevPage.css` | Styling diagram + tab (posisi node lewat CSS variable, SVG edge, layout stack vertikal di mobile) |
 | `frontend/src/components/RoleGuard.jsx` | Route guard untuk role admin/dev |
-| `frontend/src/components/IsometricFlow.jsx` | Visualisasi 3D isometrik: Flow Aplikasi (6 node: Pengguna → Login → Setup Keamanan → Dasbor → Input Suara → Hasil + Blockchain) |
-| `frontend/src/components/IsometricCrypto.jsx` | Visualisasi 3D isometrik: 8 algoritma kripto (Argon2id, JWT HS256, AES-256-GCM, ChaCha20-Poly1305, Vigenere, Steganografi LSB, Blockchain, ECDSA P-256) |
+| `frontend/src/components/IsometricFlow.tsx` | Diagram alur 2D: Flow Aplikasi (6 node: Pengguna → Login → Setup Keamanan → Dasbor → Input Suara → Hasil + Blockchain), kanvas ber-grid + panah SVG |
+| `frontend/src/components/IsoNode.tsx` | Kartu satu langkah pada diagram (ikon peran + label), posisi & ukuran via custom property `--left/--top/--w/--h` |
+| `frontend/src/components/IsoShared.tsx` | Blok bersama: loading, error + retry, section header, item legenda |
+| `frontend/src/components/isoTheme.ts` | Palet peran, `withAlpha()`, dan konstanta layout kanvas (`FLOW_NODE_W/H`, `FLOW_CELL_X/Y`, `FLOW_PAD`) |
+| `frontend/src/components/IsometricCrypto.tsx` | Grid 8 algoritma kripto (Argon2id, JWT HS256, AES-256-GCM, ChaCha20-Poly1305, Vigenere, Steganografi LSB, Blockchain, ECDSA P-256) |
+| `frontend/src/components/CryptoCard.tsx` | Kartu algoritma kripto yang bisa dibuka (deskripsi + file + key size + mode) |
 
-### Teknologi 3D
+### Teknologi Diagram
 
-CSS 3D Transform + SVG (rekomendasi dari `docs/dev/dev-page-plan.md`): ringan, tidak butuh build step tambahan, cocok untuk diagram alur isometrik, konsisten dengan stack saat ini (belum ada Three.js).
+SVG untuk panah antar node + positioning CSS (custom property) untuk kartu node: ringan, tanpa library eksternal, dan bisa jatuh ke stack vertikal pada layar kecil lewat media query.
 
 ### Catatan Penting
 
 - Halaman dev bersifat **read-only**, tidak boleh mengubah data produksi.
-- Visualisasi 3D tetap ringan agar tidak mengganggu performa halaman lain.
+- Diagram tetap ringan (SVG + CSS, tanpa library 3D) agar tidak mengganggu performa halaman lain.
 - Cocok sebagai materi presentasi (pitch deck) saat sidang proyek akhir.
 
 ---

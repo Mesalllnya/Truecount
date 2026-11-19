@@ -579,4 +579,4 @@ Undangan → Daftar → Login → Setup Keamanan → Lihat Pemilihan → Pilih K
 
 ---
 
-> Dokumentasi ini sejalan dengan [`README.md`](../README.md) dan [`docs/dev/knowledge_transfer.md`](knowledge_transfer.md). Untuk detail endpoint API dan struktur file, lihat keduanya.
+> Dokumentasi ini sejalan dengan [`README.md`](../../README.md) dan [`docs/dev/knowledge_transfer.md`](knowledge_transfer.md). Untuk detail endpoint API dan struktur file, lihat keduanya.

@@ -20,13 +20,14 @@ Truecount/
 ├── backend/                # PHP API
 │   ├── api/
 │   │   ├── auth/           # register · login · logout · me · change-password · webauthn (login/register) · security-setup · security-status · attempts (log/reset/list/photo)
-│   │   ├── election/       # create/list/show/update/delete · candidates (CRUD + photo) · voters (list/register/delete) · results · vote · blockchain (seal/verify)
+│   │   ├── elections/      # create/list/show/update/delete · candidates (CRUD + photo) · voters (list/register/delete) · results · vote · blockchain (seal/verify)
 │   │   ├── invites/        # create/list/verify/revoke
 │   │   ├── mfa/usb/        # register (start/verify) · authenticate (start/verify) · list/revoke/label
 │   │   ├── users/          # voters · search
+│   │   ├── voice-messages/ # admins · create · inbox · read · audio (terenkripsi)
 │   │   └── encrypted-messages/ # create · get
 │   ├── config/             # database.php · app.php · env.php
-│   ├── helpers/            # response.php · jwt.php · logger.php · datetime.php · webauthn.php · election_scheduler.php
+│   ├── helpers/            # response.php · jwt.php · logger.php · datetime.php · webauthn.php · election_scheduler.php · storage.php
 │   ├── middleware/         # auth.php (requireAuth / requireAdmin)
 │   ├── services/crypto/    # AESGCMService · BallotService · BallotTallyService · BlockchainService · ChaCha20Poly1305Service · EncryptedMessageService · FileEncryptionService · SteganographyService · VigenereCipherService
 │   └── index.php           # Entry point + router
@@ -43,7 +44,9 @@ Truecount/
 │   │   ├── 008_sprint2_marker.sql
 │   │   ├── 009_add_photo_path_to_auth_attempts.sql · 009_add_photo_file_id_to_candidates.sql
 │   │   ├── 010_add_crypto_version.sql
-│   │   └── 012_add_dev_role.sql
+│   │   ├── 011_add_encrypted_files_columns.sql
+│   │   ├── 012_add_dev_role.sql
+│   │   └── 013_create_voice_messages.sql
 │   ├── seeds/
 │   │   ├── 001_admin.sql       # Akun admin default
 │   │   ├── 002_dummy_users.sql # pemilih1, pemilih2
@@ -54,13 +57,13 @@ Truecount/
 ├── frontend/               # React + Vite
 │   ├── public/             # Aset statis (gambar artsy, logo, cursor set)
 │   ├── src/
-│   │   ├── pages/          # LandingPage · AboutPage · LoginPage · RegisterPage · SecuritySetupPage · DashboardPage · VotePage · ResultsPage · ProfileSettingsPage · UsbTokenTestPage · UserSecurityLogPage · EncryptedMessagesPage · DevPage
-│   │   ├── components/     # Nav · DashNav · AuthGuard · RoleGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui) · IsometricFlow · IsometricCrypto
+│   │   ├── pages/          # LandingPage · AboutPage · LoginPage · RegisterPage · SecuritySetupPage · DashboardPage · VotePage · ResultsPage · ProfileSettingsPage · UsbTokenTestPage · UserSecurityLogPage · EncryptedMessagesPage · AdminVoiceMessagesPage · DevPage
+│   │   ├── components/     # Nav · AuthGuard · RoleGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui) · IsometricFlow · IsometricCrypto
 │   │   ├── hooks/          # useAuth · useAuthSession · useAuthSecurity · useFaceDetection · useUsbToken · useWebAuthn
 │   │   ├── styles/         # cursor.css (kursor kustom)
 │   │   ├── utils/          # webauthn.ts
-│   │   ├── index.css · main.jsx · App.jsx · App.css
-│   │   └── src-tauri/      # Tauri (desktop wrapper) — main.rs · lib.rs · tauri.conf.json · Cargo.toml
+│   │   └── index.css · main.jsx · App.jsx · App.css
+│   ├── src-tauri/          # Tauri (desktop wrapper) — main.rs · lib.rs · tauri.conf.json · Cargo.toml
 │   ├── package.json
 │   └── vite.config.js
 │
@@ -73,15 +76,16 @@ Truecount/
 │   └── blockchain/                # test-blockchain-tampering · test-blockchain-hardening · test-ballot-integrity · test-seal-invalid-chain.php
 │
 ├── docs/
-│   ├── deploy/           # deploy.md  (Panduan deploy web + desktop)
+│   ├── deploy/           # deploy.md · demo-server-config-plan.md · deploy-to-cloud-plan.md
 │   ├── desktop/          # desktop.md (Panduan konversi ke desktop app)
 │   ├── admin/            # PANDUAN_ADMIN.md (Panduan operasional admin/panitia)
-│   ├── dev/              # knowledge_transfer.md (Konteks proyek untuk AI) · pembagian_jobdesk_secure_e_voting.md (Pembagian tugas tim)
+│   ├── dev/              # knowledge_transfer.md (Konteks proyek untuk AI) · user-flow.md · dev-page-plan.md · pembagian_jobdesk_secure_e_voting.md (Pembagian tugas tim)
 │   └── project/          # (kosong — pembagian_jobdesk pindah ke docs/dev/)
 │
-├── storage/              # Log aplikasi + foto kamera percobaan login (auth_photos/)
+├── storage/              # Data runtime lama (auth_photos) — root aktif sekarang `backend/storage/` (lihat knowledge_transfer.md)
 │
 ├── scripts/
+│   ├── deploy-server.ps1 # Deploy + start server demo (LAN)
 │   ├── free-ports.ps1    # Bebaskan port 5173/5183/8000
 │   └── check_db.php      # Cek kondisi database
 │
@@ -283,6 +287,11 @@ Base URL: `http://localhost:8000`
 | GET | `/elections/blockchain/verify` | JWT | Verifikasi integritas blockchain |
 | GET | `/users/voters` | JWT (admin) | Daftar semua voter aktif di sistem |
 | GET | `/users/search?q=` | JWT (admin) | Cari pengguna (admin) |
+| GET | `/voice-messages/admins` | JWT (admin) | Daftar admin aktif penerima pesan suara |
+| POST | `/voice-messages` | JWT (admin) | Kirim pesan suara (multipart: `audio`, `recipient_id`, `duration_seconds`) |
+| GET | `/voice-messages/inbox` | JWT (admin) | Daftar pesan suara yang diterima |
+| POST | `/voice-messages/:id/read` | JWT (admin) | Tandai pesan suara sudah dibaca |
+| GET | `/voice-messages/:id/audio` | JWT (admin) | Putar audio pesan suara (hanya penerima) |
 | POST | `/encrypted-messages` | JWT | Buat pesan terenkripsi |
 | GET | `/encrypted-messages/:id` | JWT | Ambil pesan terenkripsi |
 | GET | `/dev/flow` | JWT (admin/dev) | Data flow aplikasi (nodes & edges) untuk halaman dev |
@@ -320,6 +329,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | `/pengaturan` | Profile Settings | Change password, Windows Hello, USB token management |
 | `/usb-token-test` | USB Token Test | Deteksi, decrypt, challenge-response |
 | `/pesan-terenkripsi` | Encrypted Messages | Buat & lihat pesan terenkripsi (Sprint 3) |
+| `/pesan-suara` | Admin Voice Messages | Rekam & kirim pesan suara terenkripsi antar-admin |
 | `/log-keamanan/:userId` | Log Keamanan Pengguna | Riwayat percobaan login + foto kamera (audit admin) |
 | `/dev` | Halaman Dev | Visualisasi 3D isometrik flow aplikasi + algoritma kripto (hanya admin & dev) |
 | `*` | Redirect → `/` | Catchall |

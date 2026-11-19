@@ -15,6 +15,7 @@ require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../middleware/auth.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../services/crypto/FileEncryptionService.php';
+require_once __DIR__ . '/../../helpers/storage.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
@@ -217,17 +218,10 @@ try {
                 $storedName = $storedFile['stored_path'];
 
                 if (preg_match('/^[a-f0-9]{32}\.enc$/', $storedName)) {
-<<<<<<< HEAD
-                    $storageDirectory = dirname(__DIR__, 2)
-                        . DIRECTORY_SEPARATOR . 'storage'
-                        . DIRECTORY_SEPARATOR . 'private'
-                        . DIRECTORY_SEPARATOR . 'encrypted-files';
-=======
                     $storageDirectory = storagePath(
                         'private',
                         'encrypted-files'
                     );
->>>>>>> ed9d39eeba64b9d54dab0186ce69a6ee40fd5903
 
                     $storedPath = $storageDirectory
                         . DIRECTORY_SEPARATOR . $storedName;

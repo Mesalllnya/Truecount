@@ -49,7 +49,12 @@ function formatDate(date) {
 }
 
 function getSupportedMimeType() {
-  if (!window.MediaRecorder) return ''
+  if (
+    !window.MediaRecorder ||
+    typeof window.MediaRecorder.isTypeSupported !== 'function'
+  ) {
+    return ''
+  }
 
   const types = [
     'audio/webm;codecs=opus',
@@ -63,6 +68,15 @@ function getSupportedMimeType() {
   )
 }
 
+function getFileExtension(mimeType) {
+  if (mimeType.includes('ogg')) return 'ogg'
+  if (mimeType.includes('mp4')) return 'm4a'
+  if (mimeType.includes('mpeg')) return 'mp3'
+  if (mimeType.includes('wav')) return 'wav'
+
+  return 'webm'
+}
+
 export default function AdminVoiceMessagesPage() {
   const token = localStorage.getItem('tc_token')
 
@@ -72,6 +86,7 @@ export default function AdminVoiceMessagesPage() {
   const startTimeRef = useRef(0)
   const timerRef = useRef(null)
   const audioUrlRef = useRef(null)
+  const previewUrlRef = useRef(null)
 
   const [admins, setAdmins] = useState([])
   const [recipientId, setRecipientId] = useState('')
@@ -81,6 +96,7 @@ export default function AdminVoiceMessagesPage() {
   const [recordedBlob, setRecordedBlob] = useState(null)
   const [recordedDuration, setRecordedDuration] = useState(0)
   const [elapsed, setElapsed] = useState(0)
+  const [previewUrl, setPreviewUrl] = useState('')
 
   const [audioUrl, setAudioUrl] = useState('')
   const [playingMessageId, setPlayingMessageId] = useState(null)
@@ -104,6 +120,15 @@ export default function AdminVoiceMessagesPage() {
 
     setAudioUrl('')
     setPlayingMessageId(null)
+  }, [])
+
+  const clearPreviewUrl = useCallback(() => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+
+    setPreviewUrl('')
   }, [])
 
   const fetchAdmins = useCallback(async () => {
@@ -176,6 +201,10 @@ export default function AdminVoiceMessagesPage() {
       if (audioUrlRef.current) {
         URL.revokeObjectURL(audioUrlRef.current)
       }
+
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+      }
     }
   }, [])
 
@@ -186,6 +215,7 @@ export default function AdminVoiceMessagesPage() {
     setRecordedDuration(0)
 
     clearAudioUrl()
+    clearPreviewUrl()
 
     if (
       !navigator.mediaDevices?.getUserMedia ||
@@ -215,6 +245,8 @@ export default function AdminVoiceMessagesPage() {
         mimeType,
       })
 
+      let failed = false
+
       recorderRef.current = recorder
 
       recorder.ondataavailable = event => {
@@ -223,9 +255,35 @@ export default function AdminVoiceMessagesPage() {
         }
       }
 
+      recorder.onerror = event => {
+        failed = true
+
+        setError(
+          event.error?.message ||
+            'Terjadi kesalahan saat merekam audio.'
+        )
+
+        setRecording(false)
+        setElapsed(0)
+        clearInterval(timerRef.current)
+
+        stream.getTracks().forEach(track => track.stop())
+        streamRef.current = null
+      }
+
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, {
-          type: recorder.mimeType,
+        clearInterval(timerRef.current)
+
+        if (failed) {
+          chunksRef.current = []
+          return
+        }
+
+        const chunks = chunksRef.current
+        chunksRef.current = []
+
+        const blob = new Blob(chunks, {
+          type: recorder.mimeType || mimeType,
         })
 
         const duration = Math.min(
@@ -236,21 +294,34 @@ export default function AdminVoiceMessagesPage() {
           )
         )
 
-        setRecordedBlob(blob)
-        setRecordedDuration(duration)
-
         stream.getTracks().forEach(track => track.stop())
         streamRef.current = null
 
-        clearInterval(timerRef.current)
-
         setRecording(false)
         setElapsed(0)
+
+        if (blob.size === 0) {
+          setRecordedBlob(null)
+          setRecordedDuration(0)
+          setError(
+            'Rekaman kosong. Coba rekam ulang dan pastikan mikrofon aktif.'
+          )
+          return
+        }
+
+        setRecordedBlob(blob)
+        setRecordedDuration(duration)
+
+        clearPreviewUrl()
+
+        const url = URL.createObjectURL(blob)
+        previewUrlRef.current = url
+        setPreviewUrl(url)
       }
 
       startTimeRef.current = Date.now()
 
-        recorder.start()
+      recorder.start(250)
       setRecording(true)
 
       timerRef.current = setInterval(() => {
@@ -291,6 +362,7 @@ export default function AdminVoiceMessagesPage() {
     setElapsed(0)
     setError('')
     setSuccess('')
+    clearPreviewUrl()
   }
 
   async function sendVoiceMessage() {
@@ -311,11 +383,7 @@ export default function AdminVoiceMessagesPage() {
     try {
       const formData = new FormData()
 
-      const extension = recordedBlob.type.includes('ogg')
-        ? 'ogg'
-        : recordedBlob.type.includes('mp4')
-          ? 'm4a'
-          : 'webm'
+      const extension = getFileExtension(recordedBlob.type)
 
       const audioFile = new File(
         [recordedBlob],
@@ -358,6 +426,7 @@ export default function AdminVoiceMessagesPage() {
       setRecordedBlob(null)
       setRecordedDuration(0)
       setRecipientId('')
+      clearPreviewUrl()
 
       await fetchInbox()
     } catch (err) {
@@ -602,12 +671,13 @@ export default function AdminVoiceMessagesPage() {
 
               {recordedBlob && (
                 <>
-                  <audio
-                    className="voice-preview"
-                    controls
-                    src={URL.createObjectURL(recordedBlob)}
-                    key={recordedDuration}
-                  />
+                  {previewUrl && (
+                    <audio
+                      className="voice-preview"
+                      controls
+                      src={previewUrl}
+                    />
+                  )}
 
                   <button
                     className="voice-button voice-button-primary"

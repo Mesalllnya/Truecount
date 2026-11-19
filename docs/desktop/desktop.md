@@ -223,7 +223,7 @@ Output ada di `frontend/src-tauri/target/release/bundle/`:
 }
 ```
 
-Untuk mengubah ukuran default, edit nilai `width`/`height` di [`frontend/src-tauri/tauri.conf.json`](../frontend/src-tauri/tauri.conf.json).
+Untuk mengubah ukuran default, edit nilai `width`/`height` di [`frontend/src-tauri/tauri.conf.json`](../../frontend/src-tauri/tauri.conf.json).
 
 ---
 

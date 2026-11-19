@@ -7,7 +7,7 @@ Dokumen ini mencakup dua skenario:
 
 > **Rencana demo 1 laptop + client desktop (aktif):** lihat [`demo-server-config-plan.md`](demo-server-config-plan.md) untuk topologi server laptop, konfigurasi alamat server di tiap client, halaman config tersembunyi, dan migrasi app yang sudah terpasang.
 >
-> Untuk demo di laptop sendiri, langkah manual di bawah bisa diringkas dengan [`scripts/deploy-server.ps1`](../scripts/deploy-server.ps1) - lihat [2.11 Script deploy server lokal (Windows)](#211-script-deploy-server-lokal-windows).
+> Untuk demo di laptop sendiri, langkah manual di bawah bisa diringkas dengan [`scripts/deploy-server.ps1`](../../scripts/deploy-server.ps1) - lihat [2.11 Script deploy server lokal (Windows)](#211-script-deploy-server-lokal-windows).
 >
 > **Rencana migrasi ke cloud/VPS (ditunda):** lihat [`deploy-to-cloud-plan.md`](deploy-to-cloud-plan.md) untuk keputusan arsitektur, refactor yang dibutuhkan, konfigurasi nginx, backup, dan checklist production.
 

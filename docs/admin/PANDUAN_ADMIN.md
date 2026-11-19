@@ -14,7 +14,9 @@
 5. [Membuat Undangan](#5-membuat-undangan)
 6. [Mengelola Undangan](#6-mengelola-undangan)
 7. [USB Token (MFA)](#7-usb-token-mfa)
-8. [Troubleshooting](#8-troubleshooting)
+8. [Pesan Suara Admin](#8-pesan-suara-admin)
+9. [Troubleshooting](#9-troubleshooting)
+10. [Log Keamanan (Audit Login)](#10-log-keamanan-audit-login)
 
 ---
 
@@ -29,6 +31,7 @@ TrueCount adalah aplikasi **e-voting akademik** dengan fitur keamanan berbasis k
 | USB Token MFA (daftar, kelola, pakai flashdisk sebagai faktor kedua) | ✅ |
 | Pemilihan / voting (Election CRUD, kandidat, suara, hasil) | ✅ Sprint 2 |
 | Enkripsi pesan & file, blockchain | ✅ Sprint 3 |
+| Pesan suara terenkripsi antar-admin (rekam & putar) | ✅ |
 | Keamanan auth (Windows Hello, kamera, failed attempts, log keamanan) | ✅ Sprint 4b |
 
 **Prinsip pendaftaran:** Publik **tidak bisa** daftar sendiri. Calon pengguna hanya bisa membuat akun lewat **tautan undangan** yang dibuat admin.
@@ -188,7 +191,42 @@ Output sukses:
 
 ---
 
-## 8. Troubleshooting
+## 8. Pesan Suara Admin
+
+Fitur **Pesan Suara** (`/pesan-suara`) dipakai admin untuk mengirim rekaman audio terenkripsi ke admin lain. Menu ini hanya muncul di navigasi setelah login sebagai **admin**.
+
+### 8.1. Mengirim Pesan Suara
+
+1. Buka menu **Pesan Suara** di navigasi.
+2. Pilih **Penerima** dari dropdown (hanya admin aktif selain akun sendiri).
+3. Klik **Mulai Rekam** → izinkan akses mikrofon saat browser/aplikasi meminta.
+4. Klik **Hentikan Rekaman** setelah selesai (durasi maksimal **5 menit**).
+5. Putar pratinjau untuk memastikan rekaman sudah benar.
+6. Klik **Kirim Audio**.
+
+Rekaman dienkripsi di server dengan **ChaCha20-Poly1305** sebelum disimpan. File tidak pernah disimpan dalam bentuk audio mentah.
+
+### 8.2. Mendengarkan Pesan Masuk
+
+1. Panel **Inbox Voice Messages** menampilkan pesan dari admin lain.
+2. Klik tombol **Putar** untuk mengunduh dan memutar audio.
+3. Pesan otomatis ditandai **Dibaca** setelah diputar.
+4. Hanya penerima pesan yang dapat mengakses audionya; admin lain akan mendapat `404`.
+
+### 8.3. Batasan
+
+| Batasan | Nilai |
+| --- | --- |
+| Durasi maksimal | 300 detik (5 menit) |
+| Ukuran file maksimal | 20 MB |
+| Format yang diterima | WebM, OGG, MP3, WAV, M4A, AAC, FLAC |
+| Akses audio | Hanya penerima pesan |
+
+> Jika tombol **Mulai Rekam** tidak berfungsi, pastikan mikrofon diizinkan di pengaturan browser/aplikasi dan tidak sedang dipakai aplikasi lain (lihat [Troubleshooting](#9-troubleshooting)).
+
+---
+
+## 9. Troubleshooting
 
 | Masalah | Solusi |
 | --- | --- |
@@ -200,16 +238,19 @@ Output sukses:
 | Tidak bisa daftar akun | Pendaftaran ditutup publik — minta tautan undangan ke admin |
 | Tautan undangan "tidak valid" | Undangan mungkin kedaluwarsa (7 hari) atau sudah dipakai/dibatalkan |
 | Server tidak tersambung | Pastikan backend jalan (`npm run dev:full` atau app desktop otomatis spawn PHP) |
-| Kamera tetap menyala setelah pindah dari halaman login | Stream kamera bocor (race antar pemeriksaan kamera) | Sudah diatasi: kamera **hanya nyala di halaman Masuk**. Semua stream kamera terdaftar di registry global dan dipaksa mati otomatis saat pindah ke halaman lain (landing, dasbor, dll). Kalau masih terjadi, tutup buka ulang aplikasi. |
+| Kamera tetap menyala setelah pindah dari halaman login | Sudah diatasi: kamera **hanya nyala di halaman Masuk**. Semua stream kamera terdaftar di registry global dan dipaksa mati otomatis saat pindah ke halaman lain (landing, dasbor, dll). Kalau masih terjadi, tutup buka ulang aplikasi. |
 | Foto tidak muncul di Log Keamanan | Foto hanya disimpan untuk percobaan login **setelah** perbaikan diterapkan. Percobaan lama tidak memiliki foto (placeholder kamera akan ditampilkan). |
+| Tombol **Mulai Rekam** tidak bereaksi / error mikrofon | Izinkan akses mikrofon untuk situs/aplikasi, pastikan tidak ada aplikasi lain yang memakai mikrofon, lalu muat ulang halaman. Di browser, fitur rekam butuh `https://` atau `localhost`. |
+| Rekaman berhenti sendiri | Durasi mencapai batas 5 menit — kirim rekaman atau rekam ulang bagian yang diperlukan. |
+| Kirim audio gagal / error server | Pastikan migrasi DB sudah dijalankan (`php database/migrate.php`) agar tabel `voice_messages` tersedia, lalu cek backend masih berjalan. |
 
 ---
 
-## 9. Log Keamanan (Audit Login)
+## 10. Log Keamanan (Audit Login)
 
 Admin dapat melihat riwayat percobaan login setiap pengguna, lengkap dengan foto kamera yang diambil saat mencoba masuk.
 
-### 9.1. Cara Melihat Log Keamanan
+### 10.1. Cara Melihat Log Keamanan
 
 1. Login sebagai **admin** → buka **Dasbor**
 2. Di panel pencarian user (bagian bawah dasbor), cari username atau email pengguna

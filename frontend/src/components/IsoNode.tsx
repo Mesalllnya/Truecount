@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { memo, type CSSProperties, type KeyboardEvent } from 'react'
-import { withAlpha, FLOW_NODE_W, FLOW_NODE_H, FLOW_LID_H } from './isoTheme'
+import { withAlpha, FLOW_NODE_W, FLOW_NODE_H } from './isoTheme'
 
 const NODE_ICONS: Record<string, LucideIcon> = {
   user: Users,
@@ -37,8 +37,10 @@ interface IsoNodeProps {
 
 /**
  * Satu blok node pada diagram flow.
- * Anchor (left/top) = pojok kiri-atas kartu depan.
- * Lid isometrik digambar di atas kartu sebagai aksen tipis.
+ *
+ * Posisi & ukuran disalurkan lewat custom property (--left/--top/--w/--h)
+ * supaya CSS tetap bisa mengambil alih layout (mis. stack vertikal di mobile)
+ * tanpa perlu melawan inline style.
  */
 const IsoNode = memo(function IsoNode({ node, color, isActive, left, top, onActivate }: IsoNodeProps) {
   const Icon = NODE_ICONS[node.id] || LayoutDashboard
@@ -50,10 +52,18 @@ const IsoNode = memo(function IsoNode({ node, color, isActive, left, top, onActi
     }
   }
 
+  const style = {
+    '--left': `${left}px`,
+    '--top': `${top}px`,
+    '--w': `${FLOW_NODE_W}px`,
+    '--h': `${FLOW_NODE_H}px`,
+    '--color': color,
+  } as CSSProperties
+
   return (
     <div
-      className={`iso-node ${isActive ? 'iso-node--active' : ''}`}
-      style={{ left, top, width: FLOW_NODE_W, height: FLOW_NODE_H, '--color': color } as CSSProperties}
+      className={`iso-node${isActive ? ' iso-node--active' : ''}`}
+      style={style}
       onClick={onActivate}
       onKeyDown={handleKeyDown}
       role="button"
@@ -63,21 +73,13 @@ const IsoNode = memo(function IsoNode({ node, color, isActive, left, top, onActi
       aria-label={node.label}
     >
       <span
-        className="iso-top"
-        style={{
-          top: -FLOW_LID_H,
-          height: FLOW_LID_H,
-          background: withAlpha(color, 0.16),
-          borderColor: withAlpha(color, 0.3),
-        }}
+        className="iso-node-icon"
+        style={{ color, background: withAlpha(color, 0.12) }}
         aria-hidden="true"
-      />
-      <span className="iso-front">
-        <span className="iso-node-icon" style={{ color, background: withAlpha(color, 0.12) }} aria-hidden="true">
-          <Icon size={20} strokeWidth={2} />
-        </span>
-        <span className="iso-node-label">{node.label}</span>
+      >
+        <Icon size={20} strokeWidth={1.9} />
       </span>
+      <span className="iso-node-label">{node.label}</span>
     </div>
   )
 })

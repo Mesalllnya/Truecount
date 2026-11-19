@@ -1,5 +1,5 @@
 import { GitBranch, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { useDevApi } from '../hooks/useDevApi'
 import IsoNode, { type FlowNodeData } from './IsoNode'
 import { IsoLoading, IsoError, SectionHeader, LegendItem } from './IsoShared'
@@ -10,7 +10,6 @@ import {
   roleColor,
   FLOW_NODE_W,
   FLOW_NODE_H,
-  FLOW_LID_H,
   FLOW_CELL_X,
   FLOW_CELL_Y,
   FLOW_PAD,
@@ -34,7 +33,7 @@ function nodePos(n: FlowNode) {
   const row = -n.y / 2
   return {
     left: FLOW_PAD + col * FLOW_CELL_X,
-    top: FLOW_PAD + FLOW_LID_H + row * FLOW_CELL_Y,
+    top: FLOW_PAD + row * FLOW_CELL_Y,
   }
 }
 
@@ -55,7 +54,7 @@ interface EdgeLine {
 function buildEdges(nodes: FlowNode[]): EdgeLine[] {
   const byId = new Map(nodes.map((n) => [n.id, n]))
   const lines: EdgeLine[] = []
-  const GAP = 10
+  const GAP = 12
 
   for (const src of nodes) {
     const s = nodePos(src)
@@ -107,7 +106,7 @@ export default function IsometricFlow() {
   const maxCol = nodes.reduce((m, n) => Math.max(m, n.x / 2), 0)
   const maxRow = nodes.reduce((m, n) => Math.max(m, -n.y / 2), 0)
   const canvasW = FLOW_PAD * 2 + maxCol * FLOW_CELL_X + FLOW_NODE_W
-  const canvasH = FLOW_PAD * 2 + FLOW_LID_H + maxRow * FLOW_CELL_Y + FLOW_NODE_H
+  const canvasH = FLOW_PAD * 2 + maxRow * FLOW_CELL_Y + FLOW_NODE_H
 
   if (loading) return <IsoLoading message="Memuat visualisasi flow…" />
   if (error) return <IsoError message={error} onRetry={refetch} />
@@ -122,13 +121,18 @@ export default function IsometricFlow() {
   return (
     <section className="iso-section" aria-labelledby="flow-title">
       <SectionHeader
+        id="flow-title"
         icon={GitBranch}
         title="Flow Aplikasi"
         description="Alur lengkap aplikasi TrueCount dari awal hingga akhir. Klik blok untuk melihat detail tiap tahap."
       />
 
-      <div className="iso-canvas-wrap">
-        <div className="iso-canvas" style={{ width: canvasW, height: canvasH }}>
+      <div className="iso-canvas-frame">
+        <div className="iso-canvas-wrap">
+          <div
+            className="iso-canvas"
+            style={{ '--cw': `${canvasW}px`, '--ch': `${canvasH}px` } as CSSProperties}
+          >
           <svg className="iso-edge-layer" width={canvasW} height={canvasH} aria-hidden="true">
             <defs>
               {Object.values(ROLE_COLORS).map((c) => (
@@ -137,7 +141,7 @@ export default function IsometricFlow() {
                   id={`arrow-${c.replace('#', '')}`}
                   markerWidth="9"
                   markerHeight="7"
-                  refX="7"
+                  refX="6.5"
                   refY="3.5"
                   orient="auto"
                 >
@@ -145,19 +149,27 @@ export default function IsometricFlow() {
                 </marker>
               ))}
             </defs>
-            {edges.map((e) => (
-              <line
-                key={e.key}
-                x1={e.x1}
-                y1={e.y1}
-                x2={e.x2}
-                y2={e.y2}
-                stroke={e.color}
-                strokeWidth={2}
-                strokeLinecap="round"
-                markerEnd={`url(#arrow-${e.color.replace('#', '')})`}
-              />
-            ))}
+            {edges.map((e) => {
+              // Saat satu blok dipilih, jalur yang tidak tersambung dengannya
+              // meredup supaya arah alur tetap terbaca.
+              const related =
+                !activeId || e.key.startsWith(`${activeId}->`) || e.key.endsWith(`->${activeId}`)
+              const dim = Boolean(activeId) && !related
+              return (
+                <line
+                  key={e.key}
+                  className={`iso-edge${dim ? ' iso-edge--dim' : ''}`}
+                  x1={e.x1}
+                  y1={e.y1}
+                  x2={e.x2}
+                  y2={e.y2}
+                  stroke={e.color}
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  markerEnd={dim ? undefined : `url(#arrow-${e.color.replace('#', '')})`}
+                />
+              )
+            })}
           </svg>
 
           {nodes.map((n) => {
@@ -174,6 +186,7 @@ export default function IsometricFlow() {
               />
             )
           })}
+          </div>
         </div>
       </div>
 

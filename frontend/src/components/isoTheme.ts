@@ -39,9 +39,8 @@ export function withAlpha(hex: string, alpha: number): string {
 }
 
 /* ── Layout kanvas flow (single source of truth, dipakai JS + inline) ── */
-export const FLOW_NODE_W = 172
+export const FLOW_NODE_W = 176
 export const FLOW_NODE_H = 84
-export const FLOW_LID_H = 14
-export const FLOW_CELL_X = 240
+export const FLOW_CELL_X = 244
 export const FLOW_CELL_Y = 140
 export const FLOW_PAD = 32

@@ -124,12 +124,10 @@ backend/index.php           - Router utama, match() berdasarkan $uri + access lo
 backend/helpers/response.php - jsonResponse() + CORS multi-origin (FRONTEND_ORIGIN + origin Tauri)
 backend/helpers/logger.php   - tc_log() file logger → backend/storage/logs/app.log
 backend/helpers/jwt.php      - generateJwt() + verifyJwt() - HS256 manual
+backend/helpers/storage.php  - storageRoot()/storagePath() - satu root storage (backend/storage atau TC_STORAGE_ROOT)
 backend/config/database.php  - getDB() singleton PDO
 backend/config/app.php       - Konstanta JWT_SECRET, JWT_EXPIRE, ARGON2_*
 backend/config/env.php       - Baca variabel .env (DB_HOST, DB_NAME, JWT_SECRET, ENCRYPTION_KEY_B64, dll.)
-backend/helpers/response.php - jsonResponse() + CORS multi-origin (FRONTEND_ORIGIN + origin Tauri)
-backend/helpers/logger.php   - tc_log() file logger → backend/storage/logs/app.log
-backend/helpers/jwt.php      - generateJwt() + verifyJwt() - HS256 manual
 backend/helpers/datetime.php - Helper tanggal/WIB (Asia/Jakarta)
 backend/helpers/webauthn.php - Helper WebAuthn (attestation/verifikasi)
 backend/helpers/election_scheduler.php - Jadwal pemilihan (start/end time)
@@ -182,6 +180,11 @@ backend/api/elections/blockchain-seal.php  - POST /elections/blockchain/seal - s
 backend/api/elections/blockchain-verify.php - GET /elections/blockchain/verify - verifikasi blockchain
 backend/api/users/voters.php    - GET /users/voters - daftar semua voter aktif (admin)
 backend/api/users/search.php    - GET /users/search?q= - cari pengguna (admin)
+backend/api/voice-messages/admins.php   - GET /voice-messages/admins - daftar admin penerima
+backend/api/voice-messages/create.php   - POST /voice-messages - upload + enkripsi pesan suara
+backend/api/voice-messages/inbox.php    - GET /voice-messages/inbox - pesan suara yang diterima
+backend/api/voice-messages/mark_read.php - POST /voice-messages/:id/read - tandai sudah dibaca
+backend/api/voice-messages/show_audio.php - GET /voice-messages/:id/audio - playback (hanya penerima)
 backend/api/encrypted-messages/create.php  - POST /encrypted-messages - buat pesan terenkripsi
 backend/api/encrypted-messages/get.php     - GET /encrypted-messages/:id - ambil pesan terenkripsi
 backend/services/crypto/AESGCMService.php        - Enkripsi AES-256-GCM (ballot, file)
@@ -220,7 +223,8 @@ frontend/src/pages/
   AboutPage.jsx                - Halaman tentang aplikasi (/tentang): informasi proyek, tim, stack teknologi
   ResultsPage.jsx + .css       - Halaman hasil pemilihan (/hasil/:id): tally suara, verifikasi blockchain, statistik partisipasi
   EncryptedMessagesPage.jsx    - Halaman pesan terenkripsi (/pesan-terenkripsi): buat & lihat pesan terenkripsi (Vigenere, AES-256-GCM, ChaCha20)
-  DevPage.jsx + DevPage.css    - **Halaman Dev (/dev): visualisasi 3D isometrik flow aplikasi + algoritma kriptografi, hanya Admin + Dev**
+  AdminVoiceMessagesPage.jsx + .css - **Halaman pesan suara admin (/pesan-suara): rekam via MediaRecorder, pratinjau, kirim terenkripsi, inbox + playback**
+  DevPage.jsx + DevPage.css    - **Halaman Dev (/dev): diagram flow aplikasi + grid algoritma kriptografi, hanya Admin + Dev**
 frontend/src/components/
   HealthMonitor.jsx             - Render null; polling /health di background, error → console (bukan UI)
   Skeleton.jsx + .css           - Komponen loading placeholder
@@ -228,10 +232,13 @@ frontend/src/components/
   AuthGuard.jsx                 - **Route guard: redirect ke /atur-keamanan jika belum setup Windows Hello/Dongle**
   RoleGuard.jsx                 - **Route guard: hanya izinkan role yang diizinkan (admin/dev untuk /dev)**
   Nav.jsx                       - **Navigation dengan user menu + logout saat authenticated**
-  DashNav.jsx                   - **Nav khusus halaman terlindungi**
   ElectionModals.jsx            - **Modal CRUD pemilihan & kandidat di dasbor admin**
-  IsometricFlow.jsx             - **Visualisasi 3D isometrik: Flow Aplikasi (GET /dev/flow)**
-  IsometricCrypto.jsx           - **Visualisasi 3D isometrik: Algoritma Kriptografi (GET /dev/crypto)**
+  IsometricFlow.tsx           - **Diagram alur 2D: Flow Aplikasi (GET /dev/flow)** — kanvas ber-grid + panah SVG
+  IsoNode.tsx                 - **Kartu langkah** pada diagram (ikon peran + label), posisi via CSS variable
+  IsoShared.tsx               - Loading / error + retry / section header / legenda (dipakai kedua tab)
+  isoTheme.ts                 - Palet peran, withAlpha(), konstanta layout kanvas
+  IsometricCrypto.tsx         - **Grid algoritma kriptografi (GET /dev/crypto)**
+  CryptoCard.tsx              - Kartu algoritma kripto yang bisa dibuka
 frontend/src/index.css          - Reset global + font family
 frontend/src/main.jsx           - ReactDOM.createRoot + impor `cursor.css` agar kursor kustom TrueCount berlaku di seluruh aplikasi
 frontend/src/styles/cursor.css  - Kumpulan aturan kursor kustom untuk state normal, link, tombol, teks, resize, grab, grabbing, zoom, copy, menu, wait, loading, help, dan nope (PNG 32/64px + fallback bawaan browser)
@@ -280,8 +287,9 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | `/pengaturan` | `ProfileSettingsPage` | Pengaturan profil: change password, Windows Hello, USB token |
 | `/usb-token-test` | `UsbTokenTestPage` | Halaman test USB token: deteksi, decrypt, challenge-response (ada auth guard) |
 | `/pesan-terenkripsi` | `EncryptedMessagesPage` | Buat & lihat pesan terenkripsi (Sprint 3 ✅, ada auth guard) |
+| `/pesan-suara` | `AdminVoiceMessagesPage` | **Pesan suara terenkripsi antar-admin: rekam, kirim, inbox, playback (khusus admin)** |
 | `/log-keamanan/:id` | `UserSecurityLogPage` | **Riwayat percobaan login + foto kamera (audit admin)** |
-| `/dev` | `DevPage` | **Halaman Dev - visualisasi 3D isometrik flow + kriptografi (hanya admin + dev)** |
+| `/dev` | `DevPage` | **Halaman Dev - diagram flow 2D + grid kriptografi (hanya admin + dev)** |
 | `/login` | Redirect → `/masuk` | Alias lama |
 | `/register` | Redirect → `/daftar` | Alias lama |
 | `/dashboard` | Redirect → `/dasbor` | Alias lama |
@@ -342,6 +350,11 @@ Base URL: `http://localhost:8000`
 | GET | `/elections/blockchain/verify` | Bearer JWT | - | `200 {valid, blocks}` - verifikasi integritas blockchain |
 | GET | `/users/voters` | Bearer JWT (admin) | - | `200 {voters}` - daftar semua voter aktif di sistem |
 | GET | `/users/search?q=` | Bearer JWT (admin) | - | `200 {users}` - cari pengguna (admin, untuk log keamanan) |
+| GET | `/voice-messages/admins` | Bearer JWT (admin) | - | `200 {admins}` - daftar admin aktif selain akun sendiri |
+| POST | `/voice-messages` | Bearer JWT (admin) | form-data `audio`, `recipient_id`, `duration_seconds` | `201 {message, voice_message}` - audio dienkripsi ChaCha20-Poly1305 |
+| GET | `/voice-messages/inbox` | Bearer JWT (admin) | - | `200 {messages, total}` - pesan suara yang diterima |
+| POST | `/voice-messages/{id}/read` | Bearer JWT (admin) | - | `200 {message}` - tandai pesan sudah dibaca |
+| GET | `/voice-messages/{id}/audio` | Bearer JWT (admin, penerima) | - | `audio/*` - playback audio (`404` jika bukan penerima) |
 | POST | `/encrypted-messages` | Bearer JWT | `{algorithm, ciphertext, iv_nonce?}` | `201 {message}` - buat pesan terenkripsi |
 | GET | `/encrypted-messages/:id` | Bearer JWT | - | `200 {message}` - ambil pesan terenkripsi |
 | GET | `/dev/flow` | Bearer JWT (admin/dev) | - | `200 {flow: [...]}` - data alur aplikasi (nodes & edges) untuk halaman dev |
@@ -366,7 +379,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
  
 ## 7. Database Schema
  
-16 tabel - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql` + `007_auth_attempts.sql` + `008_sprint2_marker.sql` + `009_add_photo_path_to_auth_attempts.sql` + `010_add_crypto_version.sql` + `011_add_encrypted_files_columns.sql` + `012_add_dev_role.sql`:
+16 tabel - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql` + `007_auth_attempts.sql` + `008_sprint2_marker.sql` + `009_add_photo_path_to_auth_attempts.sql` + `010_add_crypto_version.sql` + `011_add_encrypted_files_columns.sql` + `012_add_dev_role.sql` + `013_create_voice_messages.sql`:
 
 | Tabel | Sprint | Keterangan |
 | --- | --- | --- |
@@ -384,6 +397,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | `ballots` | 2 ✅ | **TIDAK ada FK ke users** - privacy by design (encrypted_vote, nonce, integrity_hash) |
 | `encrypted_messages` | 3 ✅ | Modul kriptografi (Vigenere, AES-256-GCM, ChaCha20) |
 | `encrypted_files` | 3 ✅ | File terenkripsi (nonce, auth_tag, file_size, mime_type via migration 011) |
+| `voice_messages` | 3 ✅ | Pesan suara antar-admin - sender_id, recipient_id, file_id (FK encrypted_files), duration_seconds, is_read, read_at (migration 013) |
 | `blocks` | 3 ✅ | Blockchain sederhana (seal & verify hasil pemilihan) |
 
 **Penting:** `ballots` tidak punya FK ke `users` atau `voters` secara sengaja - suara dan identitas pemilih terpisah.
@@ -1002,7 +1016,7 @@ Protected Routes (/dasbor, /pilih, /pengaturan, dll):
 
 ### Tujuan
 
-Halaman eksklusif untuk role `admin` dan `dev` di URL `/dev` (alias `/pengembang`). Berisi visualisasi 3D isometrik interaktif yang menjelaskan cara kerja aplikasi TrueCount dari awal hingga akhir, serta algoritma kriptografi yang diterapkan. Cocok digunakan sebagai dokumentasi teknis untuk tim dan materi presentasi (pitch deck) untuk evaluator.
+Halaman eksklusif untuk role `admin` dan `dev` di URL `/dev` (alias `/pengembang`). Berisi diagram alur interaktif 2D yang menjelaskan cara kerja aplikasi TrueCount dari awal hingga akhir, serta grid algoritma kriptografi yang diterapkan. Cocok digunakan sebagai dokumentasi teknis untuk tim dan materi presentasi (pitch deck) untuk evaluator.
 
 ### Akses & Middleware
 
@@ -1023,19 +1037,23 @@ Halaman eksklusif untuk role `admin` dan `dev` di URL `/dev` (alias `/pengembang
 | File | Fungsi |
 |------|--------|
 | `frontend/src/pages/DevPage.jsx` | Halaman utama dev — 2 tab: Flow Aplikasi + Algoritma Kriptografi |
-| `frontend/src/pages/DevPage.css` | Styling CSS 3D isometrik (kubus via CSS Transform, tidak butuh library eksternal) |
+| `frontend/src/pages/DevPage.css` | Styling diagram + tab (posisi node lewat CSS variable, SVG edge, layout stack vertikal di mobile) |
 | `frontend/src/components/RoleGuard.jsx` | Route guard untuk role admin/dev |
-| `frontend/src/components/IsometricFlow.jsx` | Visualisasi 3D isometrik: Flow Aplikasi (6 node: Pengguna → Login → Setup Keamanan → Dasbor → Input Suara → Hasil + Blockchain) |
-| `frontend/src/components/IsometricCrypto.jsx` | Visualisasi 3D isometrik: 8 algoritma kripto (Argon2id, JWT HS256, AES-256-GCM, ChaCha20-Poly1305, Vigenere, Steganografi LSB, Blockchain, ECDSA P-256) |
+| `frontend/src/components/IsometricFlow.tsx` | Diagram alur 2D: Flow Aplikasi (6 node: Pengguna → Login → Setup Keamanan → Dasbor → Input Suara → Hasil + Blockchain), kanvas ber-grid + panah SVG |
+| `frontend/src/components/IsoNode.tsx` | Kartu satu langkah pada diagram (ikon peran + label), posisi & ukuran via custom property `--left/--top/--w/--h` |
+| `frontend/src/components/IsoShared.tsx` | Blok bersama: loading, error + retry, section header, item legenda |
+| `frontend/src/components/isoTheme.ts` | Palet peran, `withAlpha()`, dan konstanta layout kanvas (`FLOW_NODE_W/H`, `FLOW_CELL_X/Y`, `FLOW_PAD`) |
+| `frontend/src/components/IsometricCrypto.tsx` | Grid 8 algoritma kripto (Argon2id, JWT HS256, AES-256-GCM, ChaCha20-Poly1305, Vigenere, Steganografi LSB, Blockchain, ECDSA P-256) |
+| `frontend/src/components/CryptoCard.tsx` | Kartu algoritma kripto yang bisa dibuka (deskripsi + file + key size + mode) |
 
-### Teknologi 3D
+### Teknologi Diagram
 
-CSS 3D Transform + SVG (rekomendasi dari `docs/dev/dev-page-plan.md`): ringan, tidak butuh build step tambahan, cocok untuk diagram alur isometrik, konsisten dengan stack saat ini (belum ada Three.js).
+SVG untuk panah antar node + positioning CSS (custom property) untuk kartu node: ringan, tanpa library eksternal, dan bisa jatuh ke stack vertikal pada layar kecil lewat media query.
 
 ### Catatan Penting
 
 - Halaman dev bersifat **read-only**, tidak boleh mengubah data produksi.
-- Visualisasi 3D tetap ringan agar tidak mengganggu performa halaman lain.
+- Diagram tetap ringan (SVG + CSS, tanpa library 3D) agar tidak mengganggu performa halaman lain.
 - Cocok sebagai materi presentasi (pitch deck) saat sidang proyek akhir.
 
 ---
@@ -1102,3 +1120,9 @@ Saat menambahkan endpoint baru, selalu update:
     - **Installer:** `tauri.conf.json` resources diubah dari `"../../backend": "backend"` menjadi daftar eksplisit folder kode saja (`index.php`, `api`, `config`, `helpers`, `middleware`, `services`). Folder `storage/` dan `uploads/` tidak lagi di-bundle — mencegah data user bocor ke PC peserta.
     - **Foto kandidat:** `candidates.photo_path` memang selalu NULL (upload baru pakai `photo_file_id` → `encrypted_files`). Kandidat id 5 punya foto terenkripsi yang tersimpan di `backend/storage/private/encrypted-files/`. Kandidat id 3 dan 4 tidak pernah punya foto. 8 file `c_*.jpg` di `backend/uploads/candidates` adalah file yatim dari record lama.
     - **Fix tambahan — kode selalu di-copy:** `prepare_runtime_backend` di Rust sekarang **selalu** memanggil `copy_backend_dir` setiap app start (tidak hanya saat versi berubah). Sebelumnya, kode hanya di-copy saat `first_install || version_changed` — akibatnya perubahan kode dalam versi yang sama (0.2.0 → 0.2.0) tidak pernah ter-copy ke `%APPDATA%`, sehingga foto tetap 404 karena kode lama masih dipakai. Data `storage/` & `uploads/` tetap tidak ditimpa (`preserve_data=true`).
+
+21. **Fix: Upload voice message gagal 500 karena merge conflict** (19 Nov 2026) - `backend/api/voice-messages/create.php` masih menyimpan marker konflik Git (`<<<<<<<`, `=======`, `>>>>>>>`), sehingga PHP mengalami parse error dan `POST /voice-messages` membalas halaman error (bukan JSON) saat tombol **Kirim Audio** ditekan.
+    - **Fix:** konflik diselesaikan memakai `storagePath('private', 'encrypted-files')` (bukan path `dirname(__DIR__, 2)` lama), dan `backend/helpers/storage.php` di-require eksplisit di `create.php`.
+    - **Frontend (`AdminVoiceMessagesPage.jsx`):** object URL pratinjau sekarang dikelola lewat ref + state (tidak lagi `URL.createObjectURL()` di dalam render yang bocor setiap re-render); ada handler `recorder.onerror`, `recorder.start(250)` agar chunk periodik masuk, dan blob kosong ditolak dengan pesan jelas. Object URL pratinjau dicabut saat rekam ulang, hapus, kirim, dan unmount.
+    - **Verifikasi:** `php -l backend/api/voice-messages/create.php` bersih dan `npm run build` sukses.
+    - **Catatan operasional:** perekaman butuh secure context (`https://` atau `localhost`) dan izin mikrofon. Batas durasi 300 detik, ukuran file 20 MB.

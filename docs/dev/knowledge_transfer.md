@@ -1131,9 +1131,14 @@ Saat menambahkan endpoint baru, selalu update:
 
 22. **Issue #36: Enkripsi foto log keamanan** (20 Nov 2026) - Semua foto percobaan login (`auth_attempts.photo_path`) dienkripsi sebelum disimpan agar tidak bisa dibaca langsung dari storage.
     - **Algoritma:** AES-256-GCM via `backend/helpers/auth_photo.php` (pakai `AESGCMService`, kunci `ENCRYPTION_KEY_B64`) — sama dengan implementasi Erlan.
-    - **Path tetap:** file disimpan di lokasi yang sama (`storage/auth_photos/<file>.jpg`), kolom `photo_path` di database **TIDAK berubah** agar referensi data tidak ancur. Nonce + auth tag disimpan di file sampingan `<file>.jpg.meta.json`.
+    - **Path tetap:** file disimpan di lokasi yang sama (`storage/auth_photos/<file>.jpg`), kolom `photo_path` di database **TIDAK berubah** agar referensi data tidak ancur. Nonce (12B) + auth tag (16B) disisipkan di **awal file yang sama** (`[nonce][tag][ciphertext]`), **tanpa file sampingan (.json)**.
     - **Simpan:** 4 endpoint (`login`, `attempts/log`, `webauthn/login/verify`, `mfa/usb/authenticate/verify`) sekarang memanggil `encryptAuthPhoto()` sebelum menyisipkan `photo_path`. Kalau enkripsi gagal, percobaan tetap dicatat tanpa foto (autentikasi tidak terhalang).
-    - **Tampilkan:** `GET /auth/attempts/{id}/photo` (`attempts_photo.php`) mendekripsi terlebih dahulu via `decryptAuthPhoto()` sebelum mengirim gambar. Foto lama (legacy, tanpa metadata) tetap disajikan utuh untuk backward compatibility.
-    - **Migrasi:** 56 foto lama di `backend/storage/auth_photos/` dienkripsi in-place via `scripts/encrypt_auth_photos.php` (nama file tidak berubah).
+    - **Tampilkan:** `GET /auth/attempts/{id}/photo` (`attempts_photo.php`) mendekripsi terlebih dahulu via `decryptAuthPhoto()` sebelum mengirim gambar. Foto lama (legacy, awalan JPEG `FF D8 FF`) tetap disajikan utuh untuk backward compatibility.
+    - **Migrasi:** 56 foto lama di `backend/storage/auth_photos/` dienkripsi in-place via `scripts/reencrypt_auth_photos.php` (nama file tidak berubah; sidecar `.json` dari format awal dihapus setelah konversi ke single-file).
     - **Frontend:** `UserSecurityLogPage` menampilkan pesan error Bahasa Indonesia dengan `role="alert"` saat foto gagal dimuat/didekripsi.
     - **Verifikasi:** `php -l` semua file bersih, `npm run build` sukses, uji round-trip enkripsi/dekripsi pada file asli berhasil.
+
+23. **Perbaikan foto log keamanan yang hilang** (20 Nov 2026) - 16 baris di `auth_attempts` memiliki `photo_path` yang merujuk ke file gambar yang tidak ada di storage (hilang sejak migrasi storage root sebelumnya). Akibatnya halaman Log Keamanan menampilkan error "Foto tidak ditemukan di penyimpanan."
+    - **Script baru:** `scripts/cleanup_missing_auth_photos.php` — mendeteksi `photo_path` yang file-nya tidak ada dan mengosongkannya (NULL) di database sehingga frontend menampilkan placeholder kamera kosong alih-ang error alert.
+    - **Jalankan:** `php scripts/cleanup_missing_auth_photos.php --apply`. Tanpa `--apply` berjalan sebagai dry-run.
+    - **Hasil:** 16 referensi foto hilang dikosongkan, 38 foto tersisa tetap valid dan bisa didekripsi.

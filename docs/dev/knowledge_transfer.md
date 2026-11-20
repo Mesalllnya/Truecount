@@ -1128,3 +1128,12 @@ Saat menambahkan endpoint baru, selalu update:
     - **Frontend (`VoiceMessagesPanel.jsx`, dulu `AdminVoiceMessagesPage.jsx`):** object URL pratinjau sekarang dikelola lewat ref + state (tidak lagi `URL.createObjectURL()` di dalam render yang bocor setiap re-render); ada handler `recorder.onerror`, `recorder.start(250)` agar chunk periodik masuk, dan blob kosong ditolak dengan pesan jelas. Object URL pratinjau dicabut saat rekam ulang, hapus, kirim, dan unmount.
     - **Verifikasi:** `php -l backend/api/voice-messages/create.php` bersih dan `npm run build` sukses.
     - **Catatan operasional:** perekaman butuh secure context (`https://` atau `localhost`) dan izin mikrofon. Batas durasi 300 detik, ukuran file 20 MB.
+
+22. **Issue #36: Enkripsi foto log keamanan** (20 Nov 2026) - Semua foto percobaan login (`auth_attempts.photo_path`) dienkripsi sebelum disimpan agar tidak bisa dibaca langsung dari storage.
+    - **Algoritma:** AES-256-GCM via `backend/helpers/auth_photo.php` (pakai `AESGCMService`, kunci `ENCRYPTION_KEY_B64`) — sama dengan implementasi Erlan.
+    - **Path tetap:** file disimpan di lokasi yang sama (`storage/auth_photos/<file>.jpg`), kolom `photo_path` di database **TIDAK berubah** agar referensi data tidak ancur. Nonce (12B) + auth tag (16B) disisipkan di **awal file yang sama** (`[nonce][tag][ciphertext]`), **tanpa file sampingan (.json)** dan tanpa perubahan kolom database.
+    - **Simpan:** 4 endpoint (`login`, `attempts/log`, `webauthn/login/verify`, `mfa/usb/authenticate/verify`) sekarang memanggil `encryptAuthPhoto()` sebelum menyisipkan `photo_path`. Kalau enkripsi gagal, percobaan tetap dicatat tanpa foto (autentikasi tidak terhalang).
+    - **Tampilkan:** `GET /auth/attempts/{id}/photo` (`attempts_photo.php`) mendekripsi terlebih dahulu via `decryptAuthPhoto()` sebelum mengirim gambar. Foto lama (legacy, awalan JPEG `FF D8 FF`) tetap disajikan utuh untuk backward compatibility.
+    - **Migrasi:** 56 foto lama di `backend/storage/auth_photos/` dienkripsi in-place via `scripts/reencrypt_auth_photos.php` (nama file tidak berubah; sidecar `.meta.json` dari format awal dihapus setelah konversi ke single-file).
+    - **Frontend:** `UserSecurityLogPage` menampilkan pesan error Bahasa Indonesia dengan `role="alert"` saat foto gagal dimuat/didekripsi.
+    - **Verifikasi:** `php -l` semua file bersih, `npm run build` sukses, uji round-trip enkripsi/dekripsi pada file asli berhasil.

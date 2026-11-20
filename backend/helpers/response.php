@@ -25,7 +25,16 @@ $isLocalOrigin = (bool) preg_match(
     '#^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$#i',
     $origin
 );
-$allowOrigin = (in_array($origin, $allowedOrigins, true) || $isLocalOrigin)
+
+// Origin dari perangkat di jaringan lokal (IP privat, mis. http://192.168.2.102:5173)
+// juga diizinkan - client demo membuka frontend lewat IP LAN laptop server,
+// dan tanpa ini browser menolak respons API (CORS) walau request-nya sampai.
+$isPrivateOrigin = (bool) preg_match(
+    '#^https?://(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$#i',
+    $origin
+);
+
+$allowOrigin = (in_array($origin, $allowedOrigins, true) || $isLocalOrigin || $isPrivateOrigin)
     ? $origin
     : FRONTEND_ORIGIN;
 

@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuthSession'
 import { Code2, Workflow, ShieldCheck, ArrowLeft } from 'lucide-react'
 import IsometricFlow from '../components/IsometricFlow'
 import IsometricCrypto from '../components/IsometricCrypto'
@@ -19,7 +18,6 @@ const SECTIONS = [
 
 export default function DevPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [activeSection, setActiveSection] = useState('flow')
   const tabRefs = useRef({ flow: null, crypto: null })
 
@@ -55,7 +53,6 @@ export default function DevPage() {
               </p>
             </div>
           </div>
-          <span className="dev-role-badge">{user?.role}</span>
         </header>
 
         <div className="dev-tabs" role="tablist" aria-label="Pilih section dev">
@@ -102,8 +99,7 @@ export default function DevPage() {
         <footer className="dev-footer">
           <p>
             <strong>Catatan:</strong> Halaman ini bersifat read-only dan hanya berisi
-            informasi teknis internal. Semua akses dicatat untuk audit. Role Anda:{' '}
-            <strong>{user?.role}</strong>.
+            informasi teknis internal. Semua akses dicatat untuk audit.
           </p>
           <button type="button" onClick={() => navigate('/dasbor')} className="dev-btn-back">
             <ArrowLeft size={18} strokeWidth={1.75} aria-hidden="true" />

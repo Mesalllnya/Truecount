@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { SkeletonRow } from '../components/ui/Skeleton'
 import { CandidatesModal, VotersModal, CandidatePhoto } from '../components/ElectionModals'
 import { apiUrl } from '../lib/appConfig'
+import { useAuth } from '../hooks/useAuthSession'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
@@ -1879,23 +1880,7 @@ function VoterDashboardView() {
 export default function DashboardPage() {
   const navigate   = useNavigate()
   const [showEgg, setShowEgg] = useState(false)
-
-  // Ambil username + role dari token yang tersimpan
-  const getUser = useCallback(() => {
-    try {
-      const token   = localStorage.getItem('tc_token')
-      if (!token) return null
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      return {
-        username: payload.username ?? null,
-        role:     payload.role     ?? null,
-      }
-    } catch {
-      return null
-    }
-  }, [])
-
-  const [user]  = useState(getUser)
+  const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
   // Auth guard - tanpa token langsung ke halaman login

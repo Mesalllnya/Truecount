@@ -134,7 +134,7 @@
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 0.65rem;
   flex-shrink: 0;
 }
 

@@ -119,7 +119,9 @@ function AppRoutes() {
 
   const navLinks = isProtected ? PROTECTED_LINKS : PUBLIC_LINKS
 
-  const devLink = isDevOrAdmin
+  /* Link Dev hanya di halaman terlindungi (setelah login di dalam app) —
+     di landing/halaman publik tidak ditampilkan meski akun sudah login. */
+  const devLink = isDevOrAdmin && isProtected
     ? { href: '/dev', label: 'Dev', icon: <Code2 {...navIcon} /> }
     : null
 

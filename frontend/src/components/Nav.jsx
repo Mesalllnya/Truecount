@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { useAuth } from '../hooks/useAuthSession'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
-import { ChevronDown, ClipboardList, LogIn, LogOut, Menu, Settings, X } from 'lucide-react'
+import { ChevronDown, ClipboardList, LayoutDashboard, LogIn, LogOut, Menu, Settings, X } from 'lucide-react'
 import './Nav.css'
 
 /* ── Scroll-reveal hook ─────────────────────────────────── */
@@ -220,6 +220,11 @@ export default function Nav({
     setMenuOpen(false)
   }
 
+  /* Tombol cepat ke halaman user (dasbor): hanya di halaman publik yang
+     nav-nya belum memuat link /dasbor (mis. landing page setelah login). */
+  const showDashboardShortcut =
+    isAuthenticated && !!user && !navLinks.some((l) => l.href === '/dasbor')
+
   return (
     <header className={`nav ${isScrolled ? 'nav--scrolled' : ''} ${className}`} role="banner">
       {brand}
@@ -241,8 +246,16 @@ export default function Nav({
 
         <div className="nav-actions">
           {isAuthenticated && user ? (
-            /* key per route: menu akun ikut tertutup saat navigasi */
-            <AccountMenu key={location.pathname} user={user} onLogout={handleLogoutClick} />
+            <>
+              {showDashboardShortcut && (
+                <Link to="/dasbor" className="nav-masuk nav-dasbor" onClick={() => setMenuOpen(false)}>
+                  <LayoutDashboard size={17} strokeWidth={1.5} />
+                  <span>Dasbor</span>
+                </Link>
+              )}
+              {/* key per route: menu akun ikut tertutup saat navigasi */}
+              <AccountMenu key={location.pathname} user={user} onLogout={handleLogoutClick} />
+            </>
           ) : (
             <Link to="/masuk" className="nav-masuk" onClick={() => setMenuOpen(false)}>
               <LogIn size={17} strokeWidth={1.5} className="door-icon" />

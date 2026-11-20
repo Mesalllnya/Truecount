@@ -372,9 +372,12 @@ function InvitesPanel() {
   return (
     <section className="admin-panel" aria-label="Undangan pendaftaran">
       <div className="admin-head">
-        <div className="admin-title">
-          <h1>Undangan</h1>
-          <p>Pendaftaran ditutup untuk publik - buat undangan untuk calon pengguna.</p>
+        <div className="admin-title admin-title--icon">
+          <span className="admin-title-icon" aria-hidden="true"><Send size={22} strokeWidth={1.75} /></span>
+          <div>
+            <h1>Undangan</h1>
+            <p>Pendaftaran ditutup untuk publik - buat undangan untuk calon pengguna.</p>
+          </div>
         </div>
         <button
           className="admin-create-btn"
@@ -798,9 +801,12 @@ function UserSecuritySearchPanel() {
   return (
     <section className="admin-panel" aria-label="Pencarian pengguna">
       <div className="admin-head">
-        <div className="admin-title">
-          <h1>Log Keamanan Pengguna</h1>
-          <p>Cari pengguna untuk melihat riwayat percobaan login beserta foto kamera pada setiap percobaan.</p>
+        <div className="admin-title admin-title--icon">
+          <span className="admin-title-icon" aria-hidden="true"><Lock size={22} strokeWidth={1.75} /></span>
+          <div>
+            <h1>Log Keamanan Pengguna</h1>
+            <p>Cari pengguna untuk melihat riwayat percobaan login beserta foto kamera pada setiap percobaan.</p>
+          </div>
         </div>
       </div>
 
@@ -985,11 +991,12 @@ function BlockchainAuditPanel() {
       aria-label="Blockchain audit"
     >
       <div className="admin-head">
-        <div>
-          <h2 className="admin-title">Blockchain Audit</h2>
-          <p className="admin-footnote">
-            Sealing dan verifikasi integritas blockchain election.
-          </p>
+        <div className="admin-title admin-title--icon">
+          <span className="admin-title-icon" aria-hidden="true"><Shield size={22} strokeWidth={1.75} /></span>
+          <div>
+            <h2>Blockchain Audit</h2>
+            <p>Sealing dan verifikasi integritas blockchain election.</p>
+          </div>
         </div>
       </div>
 
@@ -1351,9 +1358,12 @@ function ElectionsPanel() {
   return (
     <section className="admin-panel" aria-label="Manajemen pemilihan">
       <div className="admin-head">
-        <div className="admin-title">
-          <h1>Pemilihan</h1>
-          <p>Buat dan kelola sesi pemilihan, kandidat, serta peserta pemilih.</p>
+        <div className="admin-title admin-title--icon">
+          <span className="admin-title-icon" aria-hidden="true"><BarChart3 size={22} strokeWidth={1.75} /></span>
+          <div>
+            <h1>Pemilihan</h1>
+            <p>Buat dan kelola sesi pemilihan, kandidat, serta peserta pemilih.</p>
+          </div>
         </div>
         <button
           className="admin-create-btn"

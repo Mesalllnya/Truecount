@@ -6,7 +6,7 @@
    ═════════════════════════════════════════════════════════════════ */
 
 :root {
-  --nav-h:       68px;
+  --nav-h:       80px;
   --red:         #F13C35;
   --red-dark:    #c72e27;
   --red-soft:    rgba(241, 60, 53, 0.10);
@@ -92,7 +92,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 500;
   color: var(--gray-500);
   text-decoration: none;
@@ -178,8 +178,8 @@
 .nav-account-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 5px 8px 5px 5px;
+  gap: 0.7rem;
+  padding: 9px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--white);

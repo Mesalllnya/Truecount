@@ -1142,3 +1142,10 @@ Saat menambahkan endpoint baru, selalu update:
     - **Script baru:** `scripts/cleanup_missing_auth_photos.php` — mendeteksi `photo_path` yang file-nya tidak ada dan mengosongkannya (NULL) di database sehingga frontend menampilkan placeholder kamera kosong alih-ang error alert.
     - **Jalankan:** `php scripts/cleanup_missing_auth_photos.php --apply`. Tanpa `--apply` berjalan sebagai dry-run.
     - **Hasil:** 16 referensi foto hilang dikosongkan, 38 foto tersisa tetap valid dan bisa didekripsi.
+
+24. **Log percobaan gagal Windows Hello di sisi perangkat (cancel / PIN salah)** (20 Nov 2026) - Saat user menekan Batal atau salah PIN Windows Hello sampai ditolak OS, `navigator.credentials.get()` reject **di perangkat** sehingga `/auth/webauthn/login/verify` tidak pernah terpanggil — backend tidak mencatat baris log & **foto kamera tidak tersimpan** padahal sudah di-capture sebelum prompt.
+    - **Fix:** `LoginPage.jsx` menambah helper `logDeviceSideFailure()` yang memanggil `POST /auth/attempts/log` (dengan `auth_photo` + `user_agent`) **hanya** dari path `catch` alur WebAuthn (kegagalan tahap perangkat).
+    - **Anti-duplikasi:** kegagalan tahap **verify** (signature salah dsb.) tetap dicatat oleh backend internal `webauthn_login_verify.php` beserta foto — frontend TIDAK mengirim ulang untuk path `result === null`, sehingga tidak ada duplikasi baris (lihat catatan poin 319). Endpoint `webauthn_login_start.php` memang tidak pernah mencatat attempt (sama seperti sebelumnya).
+    - **Counter lockout:** `increment()` lokal sudah berjalan untuk semua path kegagalan (cancel/PIN termasuk) → setelah 5 gagal opsi Kata Sandi muncul (`showPasswordFallback`), jadi user tidak perlu terjebak menunggu Windows Hello ter-lock OS.
+    - **Batasan OS:** percobaan PIN berulang di dialog Windows dikelola OS (biasanya 3x lalu minta password akun) — aplikasi web **tidak bisa melihat** penolakan PIN per-sesi; hitungan gagal aplikasi terjadi saat dialog Windows menolak/menutup (reject → NotAllowedError).
+    - **Verifikasi:** `npm run build` sukses.

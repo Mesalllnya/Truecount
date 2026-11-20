@@ -297,7 +297,7 @@ Base URL: `http://localhost:8000`
 | GET | `/dev/flow` | JWT (admin/dev) | Data flow aplikasi (nodes & edges) untuk halaman dev |
 | GET | `/dev/crypto` | JWT (admin/dev) | Data algoritma kriptografi untuk halaman dev |
 
-Pendaftaran publik **ditutup** - akun hanya bisa dibuat lewat tautan undangan yang dibuat admin (`/daftar?undangan=<token>`).
+Pendaftaran publik **ditutup** - akun hanya bisa dibuat lewat tautan undangan yang dibuat admin (`/daftar?undangan=<token>`). Halaman `/daftar` juga menerima **link undangan ATAU kode undangan yang ditempel/diketik manual** (penting untuk alur desktop, di mana link undangan tidak bisa diklik langsung) - URL diseragamkan otomatis menjadi `/daftar?undangan=<token>`.
 
 ### Error Format
 
@@ -320,8 +320,8 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 |------|---------|------------|
 | `/` | Landing Page | Halaman utama |
 | `/tentang` | About Page | Tentang aplikasi (proyek, tim, stack) |
-| `/masuk` | Login | Login (`/login` alias → redirect) |
-| `/daftar` | Register | Pendaftaran invite-only, wajib `?undangan=<token>` (`/register` alias → redirect) |
+| `/masuk` | Login | Login + tombol "Daftar dengan undangan" (`/login` alias → redirect) |
+| `/daftar` | Register | Pendaftaran invite-only, via `?undangan=<token>` atau tempel link/kode undangan manual di halaman (`/register` alias → redirect) |
 | `/atur-keamanan` | Security Setup | Setup keamanan wajib (Windows Hello/Dongle) sebelum akses dashboard |
 | `/dasbor` | Dashboard | Admin: tab Pemilihan · Undangan · Blockchain Audit · Log Keamanan (query `?tab=`). Pemilih: VoterDashboardView (`/dashboard` alias → redirect) |
 | `/pilih` | Halaman Pemilihan | Kandidat, tombol besar berwarna (Sprint 2) |

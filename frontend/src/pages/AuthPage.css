@@ -927,6 +927,121 @@
 
 .invite-chip-text { letter-spacing: 0.01em; }
 
+/* ── Input link/kode undangan (state missing, alur desktop) ─ */
+.invite-input-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.invite-input-row input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 10px;
+}
+
+/* Satu bahasa radius untuk seluruh form undangan (10px) */
+.invite-form .btn-submit {
+  border-radius: 10px;
+}
+
+.invite-paste-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.72rem 1.05rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: inherit;
+  letter-spacing: 0.01em;
+  color: var(--black);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, color 150ms, transform 100ms;
+}
+
+.invite-paste-btn:hover:not(:disabled) {
+  background: var(--off-white);
+  border-color: var(--black);
+}
+
+.invite-paste-btn:active:not(:disabled) { transform: scale(0.98); }
+
+.invite-paste-btn:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+.invite-paste-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* State error input undangan */
+.field input.invite-input-error {
+  border-color: var(--error);
+}
+
+.field input.invite-input-error:focus {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+}
+
+/* ── CTA undangan di halaman masuk (pintu alur desktop) ───── */
+.auth-invite-cta {
+  margin-top: 1.5rem;
+}
+
+.auth-invite-cta .btn-submit {
+  margin-top: 0;
+}
+
+.auth-invite-cta .auth-footer-text {
+  margin-top: 0.85rem;
+}
+
+/* ── Tautan "kode undangan lain" (state undangan tidak valid) ─ */
+.invite-retry-link {
+  margin-top: 0.9rem;
+  padding: 0.35rem 0.6rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 150ms, background 150ms;
+}
+
+.invite-retry-link:hover { color: var(--black); background: var(--off-white); }
+
+.invite-retry-link:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+/* Mobile: input & tombol tempel tetap nyaman di layar kecil */
+@media (max-width: 420px) {
+  .invite-input-row { flex-wrap: wrap; }
+  .invite-input-row input { flex-basis: 100%; }
+  .invite-paste-btn { flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invite-paste-btn,
+  .invite-retry-link {
+    transition: none;
+  }
+  .invite-paste-btn:active:not(:disabled) {
+    transform: none;
+  }
+}
+
 /* ── Toast notifikasi kamera (login page) ─────────────────── */
 .auth-toast {
   display: flex;

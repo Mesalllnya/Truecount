@@ -250,7 +250,7 @@
   animation: landing-heroIn 700ms 320ms var(--ease-out) both;
 }
 
-@media (max-width: 380px) {
+@media (max-width: 480px) {
   .landing .hero-cta { flex-direction: column; }
   .landing .hero-cta > * { width: 100%; justify-content: center; }
 }

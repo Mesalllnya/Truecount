@@ -139,16 +139,20 @@ function AppRoutes() {
     ? { href: '/dev', label: 'Dev', icon: <Code2 {...navIcon} /> }
     : null
 
-  const isLoginPage =
+  /* Halaman auth (masuk/daftar) memakai chrome sendiri (auth-brand:
+     tombol kembali + logo) — jangan tumpuk dengan navbar global. */
+  const isAuthPage =
     location.pathname.startsWith('/masuk') ||
-    location.pathname.startsWith('/login')
+    location.pathname.startsWith('/login') ||
+    location.pathname.startsWith('/daftar') ||
+    location.pathname.startsWith('/register')
   const isConfigPage = location.pathname.startsWith('/__server')
 
   return (
     <>
       <CameraRouteGuard />
       <ServerConfigShortcut />
-      {!isLoginPage && !isConfigPage && <Nav links={[...visibleLinks, devLink].filter(Boolean)} />}
+      {!isAuthPage && !isConfigPage && <Nav links={[...visibleLinks, devLink].filter(Boolean)} />}
       <Routes>
         <Route path="/"           element={<LandingPage />} />
         <Route path="/__server"   element={<ClientConfigPage />} />

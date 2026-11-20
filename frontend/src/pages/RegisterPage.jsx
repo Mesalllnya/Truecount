@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './AuthPage.css'
 import { SkeletonText, SkeletonCircle } from '../components/ui/Skeleton'
 import Icon from '../components/Icon'
 import { apiUrl } from '../lib/appConfig'
+import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
  *  jangan pernah tampilkan mentah ke user. */
@@ -15,6 +16,30 @@ async function readJson(res) {
     console.error('[TrueCount] Respons server bukan JSON:', text.slice(0, 400))
     throw new Error('Server sedang mengalami gangguan. Silakan coba lagi sebentar.')
   }
+}
+
+/** Ekstrak token undangan dari input user - bisa link lengkap
+ *  (`…/daftar?undangan=<token>`), potongan query, atau kode/token mentah.
+ *  Return string token (trimmed), atau '' kalau tidak ada isinya. */
+function extractInviteToken(input) {
+  const trimmed = (input ?? '').trim()
+  if (!trimmed) return ''
+
+  const marker = 'undangan='
+  const idx = trimmed.toLowerCase().indexOf(marker)
+  if (idx === -1) return trimmed // kode/token mentah → pakai seluruh input
+
+  // Ada param undangan → ambil nilai setelahnya sampai `&`/`#`/spasi berikutnya
+  const value = trimmed.slice(idx + marker.length)
+  const cut = value.search(/[&#\s]/)
+  return (cut === -1 ? value : value.slice(0, cut)).trim()
+}
+
+/** Token undangan = kode hex tanpa karakter URL/spasi. Kalau hasil ekstraksi
+ *  masih mengandung karakter tersebut, input-nya bukan link/kode undangan.
+ *  Validasi sesungguhnya tetap di backend (GET /invites/verify). */
+function isPlausibleInviteToken(token) {
+  return !/[\s:/?#&=]/.test(token)
 }
 
 /* ── Ikon kunci - SVG stroke konsisten ───────────────────── */
@@ -32,13 +57,19 @@ const ROLE_LABEL = { voter: 'Pemilih', admin: 'Admin' }
 
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const inviteToken = (searchParams.get('undangan') ?? '').trim()
 
   // verifikasi | valid | invalid | missing
   const [inviteState, setInviteState] = useState('verifying')
   const [inviteError, setInviteError] = useState('')
   const [invite, setInvite]       = useState(null)
+
+  // Input manual link/kode undangan (state missing, alur desktop)
+  const [inviteInput, setInviteInput]           = useState('')
+  const [inviteInputError, setInviteInputError] = useState('')
+  const [submittingInvite, setSubmittingInvite] = useState(false)
+  const inviteInputRef = useRef(null)
 
   const [form, setForm]   = useState({ username: '', email: '', password: '', confirm: '' })
   const [error, setError] = useState('')
@@ -49,6 +80,7 @@ export default function RegisterPage() {
   useEffect(() => {
     if (!inviteToken) {
       setInviteState('missing')
+      setSubmittingInvite(false)
       return
     }
     let cancelled = false
@@ -100,6 +132,64 @@ export default function RegisterPage() {
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
     setError('')
+  }
+
+  // ── Input manual link/kode undangan ──────────────────────
+  function handleInviteInputChange(e) {
+    setInviteInput(e.target.value)
+    setInviteInputError('')
+  }
+
+  async function handleInvitePaste() {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (!text) return
+      setInviteInput(text)
+      setInviteInputError('')
+    } catch {
+      // Clipboard tidak tersedia / permission ditolak → diam-diam fokus
+      // ke input supaya user bisa tempel manual (Ctrl+V)
+      inviteInputRef.current?.focus()
+    }
+  }
+
+  function handleInviteSubmit(e) {
+    e.preventDefault()
+    if (submittingInvite) return // tolak submit ganda saat verifikasi berjalan
+
+    const raw = inviteInput
+    const token = extractInviteToken(raw)
+
+    if (!token) {
+      setInviteInputError(
+        raw.toLowerCase().includes('undangan=')
+          ? 'Link undangan tidak lengkap — kode undangan tidak ditemukan di dalamnya.'
+          : 'Masukkan link atau kode undangan Anda terlebih dahulu.'
+      )
+      return
+    }
+    if (!isPlausibleInviteToken(token)) {
+      setInviteInputError(
+        'Link atau kode undangan tidak dikenali. Tempel link undangan lengkap (…/daftar?undangan=…) atau masukkan kode undangan.'
+      )
+      return
+    }
+
+    setInviteInputError('')
+    setSubmittingInvite(true)
+    // Seragamkan URL ke /daftar?undangan=<token> (replace) → biarkan efek
+    // verifikasi existing yang memanggil GET /invites/verify
+    setInviteState('verifying')
+    setInviteError('')
+    setSearchParams({ undangan: token }, { replace: true })
+  }
+
+  function handleResetInvite() {
+    setInviteInput('')
+    setInviteInputError('')
+    setSubmittingInvite(false)
+    setInviteState('missing')
+    setSearchParams({}, { replace: true })
   }
 
   async function handleSubmit(e) {
@@ -155,7 +245,9 @@ export default function RegisterPage() {
     return (
       <div className="auth-shell">
         <div className="auth-brand">
-          <Link to="/" className="brand-link">TrueCount</Link>
+          <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
+            <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
+          </Link>
         </div>
         <div className="auth-state">
           <div className="skeleton-pane">
@@ -169,7 +261,7 @@ export default function RegisterPage() {
     )
   }
 
-  // ── State: tidak ada undangan (halaman dibuka langsung) ──
+  // ── State: tidak ada undangan → form input link/kode ─────
   if (inviteState === 'missing') {
     return (
       <div className="auth-shell">
@@ -179,18 +271,75 @@ export default function RegisterPage() {
               <path d="M10 3.5 5.5 8 10 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <Link to="/" className="brand-link">TrueCount</Link>
+          <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
+            <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
+          </Link>
         </div>
-        <div className="auth-state">
-          <div className="auth-state-icon" aria-hidden="true"><LockIcon /></div>
-          <h1>Pendaftaran hanya melalui undangan</h1>
-          <p>
-            Untuk menjaga integritas pemilihan, akun TrueCount dibuat lewat
-            tautan undangan yang dikirim admin. Kalau Anda belum menerimanya,
-            hubungi administrator pemilihan Anda.
+
+        <div className="auth-card">
+          <div className="auth-header">
+            <h1>Punya undangan?</h1>
+            <p>Tempel link undangan atau masukkan kode undangan Anda untuk mulai mendaftar.</p>
+          </div>
+
+          <form className="invite-form" onSubmit={handleInviteSubmit} noValidate>
+            <div className="field">
+              <label htmlFor="invite-code">Link atau kode undangan</label>
+              <div className="invite-input-row">
+                <input
+                  id="invite-code"
+                  name="invite-code"
+                  type="text"
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  placeholder="Tempel link atau kode undangan"
+                  className={inviteInputError ? 'invite-input-error' : undefined}
+                  value={inviteInput}
+                  onChange={handleInviteInputChange}
+                  disabled={submittingInvite}
+                  aria-invalid={inviteInputError ? 'true' : undefined}
+                  aria-describedby={inviteInputError ? 'invite-code-error' : undefined}
+                  ref={inviteInputRef}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="invite-paste-btn"
+                  onClick={handleInvitePaste}
+                  disabled={submittingInvite}
+                  title="Tempel dari papan klip"
+                >
+                  <Icon name="clipboard" size={15} />
+                  Tempel
+                </button>
+              </div>
+            </div>
+
+            {inviteInputError && (
+              <p id="invite-code-error" className="field-error" role="alert">{inviteInputError}</p>
+            )}
+
+            <button
+              type="submit"
+              className="btn-submit"
+              disabled={submittingInvite || !inviteInput.trim()}
+            >
+              {submittingInvite
+                ? <span className="btn-loading"><span className="spinner" />Memeriksa…</span>
+                : 'Lanjutkan'}
+            </button>
+          </form>
+
+          <p className="auth-footer-text">
+            Pendaftaran hanya melalui undangan — belum punya?{' '}
+            <span className="auth-footer-note">Hubungi administrator pemilihan Anda.</span>
+            <br />
+            Sudah punya akun? <Link to="/masuk">Masuk di sini</Link>
           </p>
-          <Link to="/masuk" className="btn-submit auth-state-cta">Masuk dengan akun yang ada</Link>
         </div>
+
         <div className="auth-mosaic" aria-hidden="true" />
       </div>
     )
@@ -206,13 +355,18 @@ export default function RegisterPage() {
               <path d="M10 3.5 5.5 8 10 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <Link to="/" className="brand-link">TrueCount</Link>
+          <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
+            <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
+          </Link>
         </div>
         <div className="auth-state">
           <div className="auth-state-icon auth-state-icon--error" aria-hidden="true"><LockIcon /></div>
           <h1>Undangan tidak berlaku</h1>
           <p>{inviteError}</p>
           <Link to="/masuk" className="btn-submit auth-state-cta">Masuk dengan akun yang ada</Link>
+          <button type="button" className="invite-retry-link" onClick={handleResetInvite}>
+            Masukkan kode undangan lain
+          </button>
         </div>
         <div className="auth-mosaic" aria-hidden="true" />
       </div>
@@ -228,7 +382,9 @@ export default function RegisterPage() {
             <path d="M10 3.5 5.5 8 10 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <Link to="/" className="brand-link">TrueCount</Link>
+        <Link to="/" className="nav-brand" aria-label="TrueCount - Beranda">
+          <img src={navLogoLight} alt="TrueCount" className="nav-logo" />
+        </Link>
       </div>
 
       <div className="auth-card">

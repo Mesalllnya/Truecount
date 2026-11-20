@@ -104,6 +104,12 @@ Pendaftaran publik ditutup — semua akun baru masuk lewat undangan.
 http://localhost:5173/daftar?undangan=<token>
 ```
 
+> **Kirim juga kode undangan untuk pengguna desktop.** Aplikasi desktop (Tauri) tidak bisa membuka
+> link undangan langsung dari email/chat. Selain tautan di atas, admin boleh mengirim **kode undangan**
+> saja (token 48 karakter setelah `undangan=`). Pengguna tinggal klik tombol **"Daftar dengan undangan"**
+> (di beranda atau halaman **Masuk**) → menempelkan link ATAU kode tersebut di kolom **"Link atau kode undangan"**,
+> lalu klik **"Lanjutkan"**.
+
 **Aturan undangan:**
 - Berlaku **7 hari** (bisa diubah di `.env` → `INVITE_EXPIRE_DAYS`)
 - **Sekali pakai** — setelah dipakai mendaftar, status jadi "Diterima"
@@ -241,6 +247,7 @@ Rekaman dienkripsi di server dengan **ChaCha20-Poly1305** sebelum disimpan. File
 | **Tombol "Buat Token" tolak** | Flashdisk sudah punya token, belum centang konfirmasi → centang "Saya paham, timpa token lama" lalu coba lagi |
 | Tidak bisa daftar akun | Pendaftaran ditutup publik — minta tautan undangan ke admin |
 | Tautan undangan "tidak valid" | Undangan mungkin kedaluwarsa (7 hari) atau sudah dipakai/dibatalkan |
+| Tidak bisa membuka link undangan di aplikasi desktop | Di halaman **Masuk**, klik tombol **"Daftar dengan undangan"**, tempel link/kode undangan di kolom **"Link atau kode undangan"**, lalu klik **"Lanjutkan"** |
 | Server tidak tersambung | Pastikan backend jalan (`npm run dev:full` atau app desktop otomatis spawn PHP) |
 | Kamera tetap menyala setelah pindah dari halaman login | Sudah diatasi: kamera **hanya nyala di halaman Masuk**. Semua stream kamera terdaftar di registry global dan dipaksa mati otomatis saat pindah ke halaman lain (landing, dasbor, dll). Kalau masih terjadi, tutup buka ulang aplikasi. |
 | Foto tidak muncul di Log Keamanan | Foto hanya disimpan untuk percobaan login **setelah** perbaikan diterapkan. Percobaan lama tidak memiliki foto (placeholder kamera akan ditampilkan). |

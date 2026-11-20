@@ -6,6 +6,7 @@ import { useFailedAttempts, useCameraPermission } from '../hooks/useAuthSecurity
 import { useAuth } from '../hooks/useAuthSession'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
 import { apiUrl } from '../lib/appConfig'
+import Icon from '../components/Icon'
 import './AuthPage.css'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
@@ -1234,10 +1235,16 @@ export default function LoginPage() {
           </div>
         )}
 
-        <p className="auth-footer-text">
-          Butuh akun?{' '}
-          <span className="auth-footer-note">Minta tautan undangan dari Panitia</span>
-        </p>
+        <div className="auth-invite-cta">
+          <Link to="/daftar" className="btn-submit btn-submit--secondary">
+            <Icon name="clipboard" size={16} />
+            Daftar dengan undangan
+          </Link>
+          <p className="auth-footer-text">
+            Butuh akun?{' '}
+            <span className="auth-footer-note">Minta tautan undangan dari Panitia</span>
+          </p>
+        </div>
       </div>
 
       <div className="auth-mosaic" aria-hidden="true" />

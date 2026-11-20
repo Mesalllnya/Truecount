@@ -348,14 +348,86 @@
   padding: 1.5rem 2rem 5rem;
 }
 
+/* ── Tab bar admin ─────────────────────────────────────── */
+.dash-tabs {
+  display: flex;
+  gap: 0.25rem;
+  max-width: 980px;
+  margin: 0 auto 1.75rem;
+  padding: 0.5rem;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: sticky;
+  top: calc(var(--nav-h, 60px) + 0.5rem);
+  z-index: 50;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.dash-tabs::-webkit-scrollbar { display: none; }
+
+.dash-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.1rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms var(--ease, cubic-bezier(0.22,1,0.36,1)),
+    color 160ms var(--ease, cubic-bezier(0.22,1,0.36,1));
+}
+.dash-tab:hover {
+  background: var(--cream);
+  color: var(--black);
+}
+.dash-tab--active,
+.dash-tab--active:hover {
+  background: var(--red);
+  color: var(--white);
+  box-shadow: 0 2px 8px rgba(241, 60, 53, 0.28);
+}
+.dash-tab--active svg {
+  color: var(--white);
+}
+.dash-tab:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-tab { transition: none; }
+}
+
+@media (max-width: 768px) {
+  .dash-main--admin { padding: 1rem 1rem 4rem; }
+  .dash-tabs {
+    margin-bottom: 1.25rem;
+    top: calc(var(--nav-h, 60px) + 0.25rem);
+  }
+  .dash-tab {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.82rem;
+  }
+}
+
+/* ── Panel aktif tab ───────────────────────────────────── */
+.dash-tabs + [role="tabpanel"]:not([hidden]) .admin-panel {
+  margin-top: 0;
+}
+
 .admin-panel {
   max-width: 980px;
   margin: 0 auto;
 }
 
-.admin-panel + .admin-panel {
-  margin-top: 2.25rem;
-}
+/* .admin-panel + .admin-panel sudah tidak relevan — panel kini dipisah per tab */
 
 .admin-head {
   display: flex;
@@ -366,12 +438,32 @@
   margin-bottom: 1.75rem;
 }
 
-.admin-title h1 {
+.admin-title h1,
+.admin-title h2 {
   font-size: 1.75rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--black);
   margin-bottom: 0.2rem;
+}
+
+/* Ikon kotak di judul panel tab (pola DevPage/Voice: kotak merah muda) */
+.admin-title--icon {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.admin-title-icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--red-pale, #fde8e7);
+  color: var(--red);
 }
 
 .admin-title p {
@@ -584,7 +676,7 @@
   .invite-row {
     grid-template-columns: 1.2fr 0.7fr 0.8fr 0.7fr 1fr 1fr 0.9fr;
     gap: 0.5rem;
-    padding: 0.9rem 0.5rem;
+    padding: 0.9rem 1.2rem;
     align-items: center;
   }
   .invite-row .invite-cell {

@@ -96,21 +96,6 @@
   font-size: 0.95rem;
 }
 
-.dev-role-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.45rem 0.95rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--white);
-  color: var(--gray-700);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
 /* ── Tab navigasi (segmented control) ── */
 .dev-tabs {
   display: inline-flex;

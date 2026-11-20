@@ -197,11 +197,11 @@ Output sukses:
 
 ## 8. Pesan Suara Admin
 
-Fitur **Pesan Suara** (`/pesan-suara`) dipakai admin untuk mengirim rekaman audio terenkripsi ke admin lain. Menu ini hanya muncul di navigasi setelah login sebagai **admin**.
+Fitur **Pesan Suara** kini menjadi tab di halaman **Pesan Terenkripsi** (`/pesan-terenkripsi?tab=suara`) dan dipakai admin untuk mengirim rekaman audio terenkripsi ke admin lain. Tab ini hanya muncul setelah login sebagai **admin**; URL lama `/pesan-suara` otomatis diarahkan ke tab tersebut.
 
 ### 8.1. Mengirim Pesan Suara
 
-1. Buka menu **Pesan Suara** di navigasi.
+1. Buka menu **Pesan Terenkripsi** di navigasi, lalu pilih tab **Pesan Suara**.
 2. Pilih **Penerima** dari dropdown (hanya admin aktif selain akun sendiri).
 3. Klik **Mulai Rekam** → izinkan akses mikrofon saat browser/aplikasi meminta.
 4. Klik **Hentikan Rekaman** setelah selesai (durasi maksimal **5 menit**).

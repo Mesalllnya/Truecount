@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Mic,
@@ -17,7 +16,8 @@ import {
 } from 'lucide-react'
 
 import { apiUrl } from '../lib/appConfig'
-import './AdminVoiceMessagesPage.css'
+import { useAuth } from '../hooks/useAuthSession'
+import './VoiceMessagesPanel.css'
 
 const MAX_DURATION = 300
 
@@ -77,8 +77,8 @@ function getFileExtension(mimeType) {
   return 'webm'
 }
 
-export default function AdminVoiceMessagesPage() {
-  const token = localStorage.getItem('tc_token')
+export default function VoiceMessagesPanel() {
+  const { token } = useAuth()
 
   const recorderRef = useRef(null)
   const streamRef = useRef(null)
@@ -108,10 +108,6 @@ export default function AdminVoiceMessagesPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  const authHeaders = {
-    Authorization: `Bearer ${token}`,
-  }
-
   const clearAudioUrl = useCallback(() => {
     if (audioUrlRef.current) {
       URL.revokeObjectURL(audioUrlRef.current)
@@ -136,7 +132,9 @@ export default function AdminVoiceMessagesPage() {
       const response = await fetch(
         apiUrl('/voice-messages/admins'),
         {
-          headers: authHeaders,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       )
 
@@ -161,7 +159,9 @@ export default function AdminVoiceMessagesPage() {
       const response = await fetch(
         apiUrl('/voice-messages/inbox'),
         {
-          headers: authHeaders,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       )
 
@@ -182,6 +182,7 @@ export default function AdminVoiceMessagesPage() {
   }, [token])
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- state loading/error diset saat fetch dimulai
     fetchAdmins()
     fetchInbox()
   }, [fetchAdmins, fetchInbox])
@@ -406,7 +407,9 @@ export default function AdminVoiceMessagesPage() {
         apiUrl('/voice-messages'),
         {
           method: 'POST',
-          headers: authHeaders,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           body: formData,
         }
       )
@@ -457,7 +460,9 @@ export default function AdminVoiceMessagesPage() {
       const response = await fetch(
         apiUrl(`/voice-messages/${message.id}/audio`),
         {
-          headers: authHeaders,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       )
 
@@ -493,7 +498,9 @@ export default function AdminVoiceMessagesPage() {
         apiUrl(`/voice-messages/${messageId}/read`),
         {
           method: 'POST',
-          headers: authHeaders,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       )
 
@@ -520,52 +527,45 @@ export default function AdminVoiceMessagesPage() {
     }
   }
 
-  if (!token) {
-    return (
-      <main className="voice-page">
-        <p>
-          Sesi login tidak ditemukan. Silakan login kembali.
-        </p>
-      </main>
-    )
-  }
-
   return (
-    <main className="voice-page">
-      <header className="voice-header">
+    <div className="voice-panel">
+      <div className="voice-panel-intro">
         <div>
-          <span className="voice-eyebrow">
-            TRUECOUNT SECURITY
-          </span>
-
-          <h1>Admin Voice Messages</h1>
-
+          <h2>Pesan Suara Admin</h2>
           <p>
-            Komunikasi suara terenkripsi antaradministrator.
+            Rekam dan kirim pesan suara terenkripsi ke administrator lain.
           </p>
         </div>
 
-        <div className="voice-security-badge">
-          <ShieldCheck size={18} />
+        <span className="voice-security-badge">
+          <ShieldCheck size={16} />
           <span>Encrypted Audio</span>
-        </div>
-      </header>
+        </span>
+      </div>
 
       {error && (
-        <div className="voice-alert voice-alert-error">
+        <div className="voice-alert voice-alert-error" role="alert">
           {error}
 
-          <button onClick={() => setError('')}>
+          <button
+            type="button"
+            onClick={() => setError('')}
+            aria-label="Tutup pesan kesalahan"
+          >
             ×
           </button>
         </div>
       )}
 
       {success && (
-        <div className="voice-alert voice-alert-success">
+        <div className="voice-alert voice-alert-success" role="status">
           {success}
 
-          <button onClick={() => setSuccess('')}>
+          <button
+            type="button"
+            onClick={() => setSuccess('')}
+            aria-label="Tutup pesan berhasil"
+          >
             ×
           </button>
         </div>
@@ -578,7 +578,7 @@ export default function AdminVoiceMessagesPage() {
           </div>
 
           <div>
-            <h2>Kirim Voice Message</h2>
+            <h3>Kirim Voice Message</h3>
             <p>
               Rekam pesan dan kirim ke administrator lain.
             </p>
@@ -650,6 +650,7 @@ export default function AdminVoiceMessagesPage() {
             <div className="voice-recorder-actions">
               {!recording && !recordedBlob && (
                 <button
+                  type="button"
                   className="voice-button voice-button-primary"
                   onClick={startRecording}
                   disabled={!admins.length}
@@ -661,6 +662,7 @@ export default function AdminVoiceMessagesPage() {
 
               {recording && (
                 <button
+                  type="button"
                   className="voice-button voice-button-danger"
                   onClick={stopRecording}
                 >
@@ -680,6 +682,7 @@ export default function AdminVoiceMessagesPage() {
                   )}
 
                   <button
+                    type="button"
                     className="voice-button voice-button-primary"
                     onClick={sendVoiceMessage}
                     disabled={loading || !recipientId}
@@ -692,6 +695,7 @@ export default function AdminVoiceMessagesPage() {
                   </button>
 
                   <button
+                    type="button"
                     className="voice-button voice-button-muted"
                     onClick={deleteRecording}
                     disabled={loading}
@@ -718,17 +722,19 @@ export default function AdminVoiceMessagesPage() {
           </div>
 
           <div>
-            <h2>Inbox Voice Messages</h2>
+            <h3>Inbox Voice Messages</h3>
             <p>
               Pesan suara yang dikirim oleh administrator lain.
             </p>
           </div>
 
           <button
+            type="button"
             className="voice-refresh"
             onClick={fetchInbox}
             disabled={loadingInbox}
             title="Refresh inbox"
+            aria-label="Muat ulang inbox"
           >
             <RefreshCw
               size={18}
@@ -823,12 +829,14 @@ export default function AdminVoiceMessagesPage() {
                 </div>
 
                 <button
+                  type="button"
                   className="voice-play-button"
                   onClick={() => playMessage(message)}
                   disabled={
                     loadingAudioId === message.id
                   }
                   title="Putar pesan"
+                  aria-label={`Putar pesan dari ${message.sender_username}`}
                 >
                   {loadingAudioId === message.id ? (
                     <RefreshCw
@@ -854,6 +862,6 @@ export default function AdminVoiceMessagesPage() {
           Akses playback hanya diberikan kepada administrator penerima.
         </span>
       </footer>
-    </main>
+    </div>
   )
 }

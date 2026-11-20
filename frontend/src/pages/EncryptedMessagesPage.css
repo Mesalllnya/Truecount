@@ -28,6 +28,68 @@
   line-height: 1.6;
 }
 
+/* ── Tabs: Pesan Teks / Pesan Suara ─────────────────────── */
+
+.encrypted-tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.3rem;
+  margin-bottom: 1.75rem;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--white, #fff);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.encrypted-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.encrypted-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.55rem 1.1rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 160ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    color 160ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.encrypted-tab:hover {
+  background: #f4f4f1;
+  color: var(--black);
+}
+
+.encrypted-tab[aria-selected='true'] {
+  background: var(--black);
+  color: var(--white, #fff);
+}
+
+.encrypted-tab[aria-selected='true'] svg {
+  color: var(--red);
+}
+
+.encrypted-tab:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.encrypted-loading {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .encrypted-card {
   background: var(--white, #fff);
   border: 1px solid var(--border);
@@ -161,18 +223,19 @@
     padding: 1.25rem;
   }
 
-  .dash-nav {
-    height: auto;
-    min-height: var(--nav-h);
-    flex-wrap: wrap;
+  .encrypted-tabs {
+    display: flex;
+    width: 100%;
   }
 
-  .dash-nav-links {
-    overflow-x: auto;
-    max-width: 100%;
+  .encrypted-tab {
+    flex: 1;
+    padding: 0.55rem 0.75rem;
   }
+}
 
-  .dash-nav-item {
-    padding: 0 0.7rem;
+@media (prefers-reduced-motion: reduce) {
+  .encrypted-tab {
+    transition: none;
   }
 }

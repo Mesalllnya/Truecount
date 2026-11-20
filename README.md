@@ -57,7 +57,7 @@ Truecount/
 ├── frontend/               # React + Vite
 │   ├── public/             # Aset statis (gambar artsy, logo, cursor set)
 │   ├── src/
-│   │   ├── pages/          # LandingPage · AboutPage · LoginPage · RegisterPage · SecuritySetupPage · DashboardPage · VotePage · ResultsPage · ProfileSettingsPage · UsbTokenTestPage · UserSecurityLogPage · EncryptedMessagesPage · AdminVoiceMessagesPage · DevPage
+│   │   ├── pages/          # LandingPage · AboutPage · LoginPage · RegisterPage · SecuritySetupPage · DashboardPage · VotePage · ResultsPage · ProfileSettingsPage · UsbTokenTestPage · UserSecurityLogPage · EncryptedMessagesPage · DevPage
 │   │   ├── components/     # Nav (menu akun: avatar inisial · username · badge role · dropdown Pengaturan/Log Keamanan Saya/Keluar) · AuthGuard · RoleGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui) · IsometricFlow (+ IsoNode · IsoShared · isoTheme) · IsometricCrypto (+ CryptoCard)
 │   │   ├── hooks/          # useAuth · useAuthSession · useAuthSecurity · useFaceDetection · useUsbToken · useWebAuthn
 │   │   ├── styles/         # cursor.css (kursor kustom)
@@ -328,13 +328,15 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | `/hasil/:id` | Hasil Pemilihan | Tally suara + verifikasi blockchain (Sprint 2) |
 | `/pengaturan` | Profile Settings | Change password, Windows Hello, USB token management |
 | `/usb-token-test` | USB Token Test | Deteksi, decrypt, challenge-response |
-| `/pesan-terenkripsi` | Encrypted Messages | Buat & lihat pesan terenkripsi (Sprint 3) |
-| `/pesan-suara` | Admin Voice Messages | Rekam & kirim pesan suara terenkripsi antar-admin |
+| `/pesan-terenkripsi` | Pesan Terenkripsi | Halaman bertab: **Pesan Teks** (enkripsi/dekripsi) dan **Pesan Suara** (khusus admin); tab aktif bisa dibuka via `?tab=teks` / `?tab=suara` |
+| `/pesan-suara` | Alias → tab suara | Redirect ke `/pesan-terenkripsi?tab=suara` |
 | `/log-keamanan/:userId` | Log Keamanan Pengguna | Riwayat percobaan login + foto kamera (audit admin) |
 | `/dev` | Halaman Dev | Diagram flow aplikasi (2D, klik blok untuk detail) + grid algoritma kripto (hanya admin & dev) |
 | `*` | Redirect → `/` | Catchall |
 
 Semua route terlindungi (`/dasbor`, `/pilih`, `/pengaturan`, dll.) dipelihara oleh `AuthGuard` yang redirect ke `/atur-keamanan` jika user belum setup Windows Hello atau Dongle. Halaman `/dev` selain itu dilindungi oleh `RoleGuard` yang hanya mengizinkan role `admin` dan `dev`.
+
+Navigasi tengah setelah login berisi **Dasbor**, **Pemilihan**, dan satu entri **Pesan Terenkripsi** (ikon bubble chat). Halaman ini memuat dua tab: **Pesan Teks** untuk semua pengguna dan **Pesan Suara** yang hanya tampil untuk role `admin`. URL lama `/pesan-suara` otomatis diarahkan ke tab suara, dan tab dapat dibuka langsung lewat `?tab=teks` atau `?tab=suara`. Berpindah tab tidak memuat ulang halaman sehingga isian pesan atau rekaman yang belum dikirim tetap tersimpan.
 
 ### Navbar & Menu Akun
 

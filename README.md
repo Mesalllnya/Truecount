@@ -101,6 +101,8 @@ Truecount/
 cp .env.example .env        # isi DB_PASS, JWT_SECRET
 ```
 
+> **Tips:** pastikan `DB_HOST=127.0.0.1` (bukan `localhost`) — di Windows `localhost` menambah delay **±2 detik** per koneksi MySQL sehingga aplikasi terus-menerus dinyatakan "tidak dapat terhubung".
+
 ### 2. Database
 
 ```bash
@@ -217,9 +219,15 @@ Alamat server **tidak lagi hardcode**. Tiap client menyimpan alamatnya sendiri d
    - **Server** - laptop penyelenggara, PHP listen di `0.0.0.0:8000`.
    - **Standalone** - PHP lokal hanya untuk laptop itu sendiri (`127.0.0.1`).
 3. Isi alamat server, mis. `http://192.168.2.102:8000`, lalu **Tes koneksi**.
-4. **Simpan & muat ulang**.
+4. **Simpan & sambungkan** — config disimpan lalu koneksi langsung dicoba ulang dari halaman itu (3× percobaan), tanpa dilempar ke halaman beranda.
 
 Halaman ini tidak punya link di navigasi. Database dan kredensial tetap hanya ada di laptop server.
+
+> **Catatan demo penting:**
+>
+> - **Kamera:** di aplikasi desktop kamera jalan **tanpa HTTPS** (webview = secure context). Akses via **browser** membutuhkan HTTPS — lihat `npm run dev:https` di [`docs/deploy/deploy.md`](docs/deploy/deploy.md) bagian 1.5.
+> - **Jaringan:** client (PC/HP) hanya bisa menjangkau server kalau (1) firewall port 8000 terbuka (`-OpenFirewall`) dan (2) semua perangkat berada di **Wi-Fi yang sama persis** — berhati-hatilah dengan SSID kembar (mis. "Nabe Kusuma" vs "Nabe Kusuma Wi-Fi").
+> - **Foto** (paslon & log keamanan) disimpan di laptop server dan dilayani lewat API — client tidak memerlukan file lokal apa pun, tapi server harus sedang berjalan.
 
 Build client tetap memakai alamat default dari `frontend/.env`:
 

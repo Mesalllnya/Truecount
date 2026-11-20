@@ -109,6 +109,24 @@
   background: #f5f4ef;
 }
 
+/* Pesan error saat foto gagal dimuat / didekripsi */
+.log-photo-error {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 58px;
+  border: 1px dashed var(--red-dark);
+  border-radius: 8px;
+  color: var(--red-dark);
+  background: #fdeceb;
+  font-size: 0.72rem;
+  text-align: center;
+  padding: 0 6px;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
 .log-photo-loading {
   display: inline-block;
   width: 84px;

@@ -46,8 +46,7 @@ if ($authPhoto && str_starts_with($authPhoto, 'data:image/')) {
             $imageData = base64_decode($base64);
             if ($imageData !== false) {
                 try {
-                    $saved = encryptAuthPhoto($imageData, storagePath('auth_photos'));
-                    $photoPath = $saved['photoPath'];
+                    $photoPath = encryptAuthPhoto($imageData, storagePath('auth_photos'));
                 } catch (Throwable $e) {
                     error_log('[USB Auth] Enkripsi foto gagal: ' . $e->getMessage());
                 }

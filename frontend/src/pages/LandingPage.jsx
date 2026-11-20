@@ -84,6 +84,10 @@ export default function LandingPage() {
               <Icon name="login" size={20} />
               Masuk sekarang <Icon name="arrow" size={16} />
             </Link>
+            <Link to="/daftar" className="btn-ghost btn-lg">
+              <Icon name="clipboard" size={20} />
+              Daftar dengan undangan
+            </Link>
             <a href="#cara-kerja" className="btn-ghost btn-lg">Pelajari caranya</a>
           </div>
 

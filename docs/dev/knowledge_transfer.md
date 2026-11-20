@@ -210,10 +210,10 @@ frontend/src/hooks/
   useAuthSession.tsx      - **Hook session management: AuthProvider, useAuth, useApi (auto 401 handling, token expiry)**
   useFaceDetection.ts     - **Hook deteksi wajah/kamera: verifikasi frame tidak gelap/shutter tertutup (canvas sampling)**
 frontend/src/pages/
-  LandingPage.jsx + .css        - Hero dengan raise_hand.jpg + nav link tengah, tombol Masuk (ikon) di kanan
-  LoginPage.jsx                 - Form login (card center), fetch ke /auth/login + status dongle (DETEKSI USB ASLI via scanForTokens, polling 2 detik) + banner sukses registrasi + **password fallback setelah 5 gagal + kamera wajib untuk Windows Hello + camera auto-off saat pindah halaman**
+  LandingPage.jsx + .css        - Hero dengan raise_hand.jpg + nav link tengah, tombol Masuk (ikon) di kanan, CTA hero: Masuk sekarang · Daftar dengan undangan (→ /daftar, pintu alur undangan desktop) · Pelajari caranya
+  LoginPage.jsx                 - Form login (card center), fetch ke /auth/login + status dongle (DETEKSI USB ASLI via scanForTokens, polling 2 detik) + banner sukses registrasi + **password fallback setelah 5 gagal + kamera wajib untuk Windows Hello + camera auto-off saat pindah halaman** + tombol "Daftar dengan undangan" (→ /daftar) sebagai pintu alur undangan desktop
   UserSecurityLogPage.jsx + .css - **Halaman Log Keamanan Pengguna (/log-keamanan/:id): riwayat percobaan login beserta foto kamera, hanya bisa diakses admin via pencarian user di dasbor**
-  RegisterPage.jsx              - Form register INVITE-ONLY: verifikasi ?undangan=<token> via GET /invites/verify, state "pendaftaran ditutup" tanpa token
+  RegisterPage.jsx              - Form register INVITE-ONLY: verifikasi ?undangan=<token> via GET /invites/verify; tanpa token tampil form input link/kode undangan manual (extractInviteToken → replace URL ke ?undangan=<token>) untuk alur desktop
   SecuritySetupPage.tsx         - **Halaman setup keamanan wajib (/atur-keamanan): user pilih Windows Hello atau Dongle sebelum akses dashboard**
   AuthPage.css                  - Shared CSS untuk Login + Register + SecuritySetup + state panel undangan
   DashboardPage.jsx + .css      - Dasbor + easter egg 5-klik + auth guard; admin lihat tab (Pemilihan, Undangan, Blockchain Audit, Log Keamanan) via `?tab=` query
@@ -232,7 +232,7 @@ frontend/src/components/
   UsbTokenPanel.jsx + .css      - Panel kelola USB token
   AuthGuard.jsx                 - **Route guard: redirect ke /atur-keamanan jika belum setup Windows Hello/Dongle**
   RoleGuard.jsx                 - **Route guard: hanya izinkan role yang diizinkan (admin/dev untuk /dev)**
-  Nav.jsx                       - **Navigation seragam: baca `user` dari `useAuth()` (prop `user` cuma fallback), tampilkan menu akun (avatar inisial · username · badge role) + dropdown Pengaturan / Log Keamanan Saya (admin saja) / Keluar; drawer mobile via `.nav-menu`**
+  Nav.jsx                       - **Navigation seragam: baca `user` dari `useAuth()` (prop `user` cuma fallback), tampilkan menu akun (avatar inisial · username · badge role) + dropdown Pengaturan / Log Keamanan Saya (admin saja) / Keluar; drawer mobile via `.nav-menu`; TIDAK tampil di halaman auth (`/masuk`, `/daftar`) yang memakai chrome sendiri (back-btn + logo)**
   ElectionModals.jsx            - **Modal CRUD pemilihan & kandidat di dasbor admin**
   IsometricFlow.tsx           - **Diagram alur 2D: Flow Aplikasi (GET /dev/flow)** — kanvas ber-grid + panah SVG
   IsoNode.tsx                 - **Kartu langkah** pada diagram (ikon peran + label), posisi via CSS variable
@@ -279,8 +279,8 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | --- | --- | --- |
 | `/` | `LandingPage` | Halaman utama |
 | `/tentang` | `AboutPage` | Halaman tentang aplikasi (proyek, tim, stack) |
-| `/masuk` | `LoginPage` | Login |
-| `/daftar` | `RegisterPage` | Pendaftaran - invite-only, wajib query `?undangan=<token>`; tanpa token tampil state "hanya melalui undangan" |
+| `/masuk` | `LoginPage` | Login + tombol "Daftar dengan undangan" (→ `/daftar`) untuk alur desktop |
+| `/daftar` | `RegisterPage` | Pendaftaran - invite-only, via query `?undangan=<token>` ATAU tempel link/kode undangan manual di halaman (ekstrak token → replace URL); state "hanya melalui undangan" + form input |
 | `/atur-keamanan` | `SecuritySetupPage` | **Setup keamanan wajib (Windows Hello/Dongle) — redirect dari AuthGuard** |
 | `/dasbor` | `DashboardPage` | Dasbor (easter egg 5-klik, tab admin: Pemilihan/Undangan/Blockchain Audit/Log Keamanan via `?tab=`, ada auth guard) |
 | `/pilih` | `VotePage` | Halaman pemilihan - kandidat, tombol besar berwarna (Sprint 2 ✅, ada auth guard) |
@@ -409,7 +409,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 
 ```
 1. Admin POST /invites → buat undangan (token random, expiry 7 hari, role + email opsional)
-2. Calon pengguna buka /daftar?undangan=<token> → frontend cek GET /invites/verify
+2. Calon pengguna buka /daftar?undangan=<token> (atau tempel link/kode undangan di halaman /daftar → URL diseragamkan jadi ?undangan=<token>) → frontend cek GET /invites/verify
 3. User POST /auth/register dengan invite_token → undangan divalidasi
    (pending + belum kedaluwarsa) → password di-hash Argon2id → simpan ke DB
    → undangan ditandai accepted (UPDATE bersyarat, atomik)
@@ -484,7 +484,7 @@ Berikut alur lengkap penggunaan aplikasi dari awal hingga akhir, menurut peran p
 ### B. Alur Pemilih (Voter)
 
 ```
-1. Menerima tautan undangan dari admin: /daftar?undangan=<token>
+1. Menerima tautan/kode undangan dari admin → buka /daftar?undangan=<token>, atau tempel link/kode undangan di kolom "Link atau kode undangan" pada /daftar (alur desktop)
 2. Cek validitas undangan: GET /invites/verify?token=...
 3. Daftar akun: POST /auth/register (dengan invite_token) → password di-hash Argon2id
 4. Login: /masuk (Windows Hello default jika tersedia, else Dongle, else Kata Sandi)
@@ -829,7 +829,7 @@ Kriptografi: PBKDF2-HMAC-SHA256 (100k iterasi, PIN → key) → AES-256-GCM (pri
 - Struktur proyek (backend + frontend monorepo)
 - Database schema (10 tabel di migration 001) + migration runner (`database/migrate.php`)
 - Auth API: register, login, logout, me, change-password
-- **Pendaftaran via undangan (invite-only) ✅** - publik ditutup, admin buat undangan via `/invites`, halaman `/daftar` hanya terbuka lewat tautan `?undangan=<token>`, dasbor admin punya panel referal (stats: menunggu/diterima/kedaluwarsa/dibatalkan + form buat undangan + salin tautan)
+- **Pendaftaran via undangan (invite-only) ✅** - publik ditutup, admin buat undangan via `/invites`, halaman `/daftar` terbuka lewat tautan `?undangan=<token>` ATAU tempel link/kode undangan manual di halaman (alur desktop), dasbor admin punya panel referal (stats: menunggu/diterima/kedaluwarsa/dibatalkan + form buat undangan + salin tautan)
 - Landing Page (artsy, raise_hand.jpg, Jakarta Sans, #F13C35) - tombol Daftar dihapus, hanya Masuk (dengan ikon) di kanan nav
 - Login + Register pages (split layout, animasi)
 - Dashboard (easter egg 5-klik + panel undangan admin)

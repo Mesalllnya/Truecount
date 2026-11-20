@@ -216,7 +216,7 @@ frontend/src/pages/
   RegisterPage.jsx              - Form register INVITE-ONLY: verifikasi ?undangan=<token> via GET /invites/verify, state "pendaftaran ditutup" tanpa token
   SecuritySetupPage.tsx         - **Halaman setup keamanan wajib (/atur-keamanan): user pilih Windows Hello atau Dongle sebelum akses dashboard**
   AuthPage.css                  - Shared CSS untuk Login + Register + SecuritySetup + state panel undangan
-  DashboardPage.jsx + .css      - Dasbor + easter egg 5-klik + auth guard; admin lihat panel undangan (stats + tabel status + form buat undangan + salin tautan)
+  DashboardPage.jsx + .css      - Dasbor + easter egg 5-klik + auth guard; admin lihat tab (Pemilihan, Undangan, Blockchain Audit, Log Keamanan) via `?tab=` query
   VotePage.jsx + .css          - Halaman pemilihan (/pilih): kandidat demo, tombol besar berwarna + ikon SVG + auth guard
   ProfileSettingsPage.jsx + .css - Halaman pengaturan (/pengaturan): change password, Windows Hello, USB token management
   UsbTokenTestPage.jsx + .css  - Halaman test USB token (/usb-token-test): deteksi, decrypt, challenge-response
@@ -282,7 +282,7 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | `/masuk` | `LoginPage` | Login |
 | `/daftar` | `RegisterPage` | Pendaftaran - invite-only, wajib query `?undangan=<token>`; tanpa token tampil state "hanya melalui undangan" |
 | `/atur-keamanan` | `SecuritySetupPage` | **Setup keamanan wajib (Windows Hello/Dongle) — redirect dari AuthGuard** |
-| `/dasbor` | `DashboardPage` | Dasbor (easter egg 5-klik, panel undangan admin, ada auth guard) |
+| `/dasbor` | `DashboardPage` | Dasbor (easter egg 5-klik, tab admin: Pemilihan/Undangan/Blockchain Audit/Log Keamanan via `?tab=`, ada auth guard) |
 | `/pilih` | `VotePage` | Halaman pemilihan - kandidat, tombol besar berwarna (Sprint 2 ✅, ada auth guard) |
 | `/hasil/:id` | `ResultsPage` | Hasil pemilihan + verifikasi blockchain (Sprint 2 ✅, ada auth guard) |
 | `/pengaturan` | `ProfileSettingsPage` | Pengaturan profil: change password, Windows Hello, USB token |

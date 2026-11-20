@@ -323,7 +323,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | `/masuk` | Login | Login (`/login` alias → redirect) |
 | `/daftar` | Register | Pendaftaran invite-only, wajib `?undangan=<token>` (`/register` alias → redirect) |
 | `/atur-keamanan` | Security Setup | Setup keamanan wajib (Windows Hello/Dongle) sebelum akses dashboard |
-| `/dasbor` | Dashboard | Panel undangan admin + easter egg (`/dashboard` alias → redirect) |
+| `/dasbor` | Dashboard | Admin: tab Pemilihan · Undangan · Blockchain Audit · Log Keamanan (query `?tab=`). Pemilih: VoterDashboardView (`/dashboard` alias → redirect) |
 | `/pilih` | Halaman Pemilihan | Kandidat, tombol besar berwarna (Sprint 2) |
 | `/hasil/:id` | Hasil Pemilihan | Tally suara + verifikasi blockchain (Sprint 2) |
 | `/pengaturan` | Profile Settings | Change password, Windows Hello, USB token management |

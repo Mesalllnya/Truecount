@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { SkeletonRow } from '../components/ui/Skeleton'
 import { CandidatesModal, VotersModal, CandidatePhoto } from '../components/ElectionModals'
 import { apiUrl } from '../lib/appConfig'
@@ -7,6 +7,15 @@ import { useAuth } from '../hooks/useAuthSession'
 import './DashboardPage.css'
 
 /* ── Icon components ─────────────────────────────────────── */
+import { BarChart3, Send, Shield, Lock } from 'lucide-react'
+
+const TAB_ICONS = {
+  pemilihan: BarChart3,
+  undangan: Send,
+  audit: Shield,
+  keamanan: Lock,
+}
+
 function BallotIcon() {
   return (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1877,11 +1886,34 @@ function VoterDashboardView() {
   )
 }
 
+const ADMIN_TABS = [
+  { id: 'pemilihan', label: 'Pemilihan' },
+  { id: 'undangan',  label: 'Undangan' },
+  { id: 'audit',     label: 'Blockchain Audit' },
+  { id: 'keamanan',  label: 'Log Keamanan' },
+]
+
 export default function DashboardPage() {
   const navigate   = useNavigate()
   const [showEgg, setShowEgg] = useState(false)
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Tab aktif dari URL (?tab=...) — fallback ke 'pemilihan'
+  const rawTab = searchParams.get('tab')
+  const activeTab = ADMIN_TABS.some(t => t.id === rawTab) ? rawTab : 'pemilihan'
+
+  // Track tab yang pernah dibuka agar tetap ter-mount (state/filter tidak hilang)
+  const [openedTabs, setOpenedTabs] = useState(() => new Set([activeTab]))
+  useEffect(() => {
+    setOpenedTabs(prev => {
+      if (prev.has(activeTab)) return prev
+      const next = new Set(prev)
+      next.add(activeTab)
+      return next
+    })
+  }, [activeTab])
 
   // Auth guard - tanpa token langsung ke halaman login
   // (letakkan SETELAH semua hooks agar urutan hooks tetap konsisten)
@@ -1892,6 +1924,29 @@ export default function DashboardPage() {
   function handleLogout() {
     localStorage.removeItem('tc_token')
     navigate('/masuk')
+  }
+
+  function selectTab(tabId) {
+    setSearchParams({ tab: tabId }, { replace: true })
+  }
+
+  function handleTabKeyDown(e, currentId) {
+    const idx = ADMIN_TABS.findIndex(t => t.id === currentId)
+    let next = null
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      next = ADMIN_TABS[(idx + 1) % ADMIN_TABS.length].id
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      next = ADMIN_TABS[(idx - 1 + ADMIN_TABS.length) % ADMIN_TABS.length].id
+    } else if (e.key === 'Home') {
+      next = ADMIN_TABS[0].id
+    } else if (e.key === 'End') {
+      next = ADMIN_TABS[ADMIN_TABS.length - 1].id
+    }
+    if (next) {
+      e.preventDefault()
+      selectTab(next)
+      document.getElementById(`dash-tab-${next}`)?.focus()
+    }
   }
 
   return (
@@ -1907,10 +1962,64 @@ export default function DashboardPage() {
 
       {isAdmin ? (
         <main className="dash-main dash-main--admin">
-          <ElectionsPanel />
-          <BlockchainAuditPanel />
-          <InvitesPanel />
-          <UserSecuritySearchPanel />
+          {/* Tab bar */}
+          <div className="dash-tabs" role="tablist" aria-label="Panel dasbor admin">
+            {ADMIN_TABS.map(({ id, label }) => {
+              const Icon = TAB_ICONS[id]
+              const isActive = activeTab === id
+              return (
+                <button
+                  key={id}
+                  id={`dash-tab-${id}`}
+                  type="button"
+                  role="tab"
+                  className={`dash-tab ${isActive ? 'dash-tab--active' : ''}`}
+                  aria-selected={isActive}
+                  aria-controls={`dash-panel-${id}`}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => selectTab(id)}
+                  onKeyDown={(e) => handleTabKeyDown(e, id)}
+                >
+                  <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Panel aktif — hanya tab yang pernah dibuka yang di-mount */}
+          <div
+            id="dash-panel-pemilihan"
+            role="tabpanel"
+            aria-labelledby="dash-tab-pemilihan"
+            hidden={activeTab !== 'pemilihan'}
+          >
+            {openedTabs.has('pemilihan') && <ElectionsPanel />}
+          </div>
+          <div
+            id="dash-panel-undangan"
+            role="tabpanel"
+            aria-labelledby="dash-tab-undangan"
+            hidden={activeTab !== 'undangan'}
+          >
+            {openedTabs.has('undangan') && <InvitesPanel />}
+          </div>
+          <div
+            id="dash-panel-audit"
+            role="tabpanel"
+            aria-labelledby="dash-tab-audit"
+            hidden={activeTab !== 'audit'}
+          >
+            {openedTabs.has('audit') && <BlockchainAuditPanel />}
+          </div>
+          <div
+            id="dash-panel-keamanan"
+            role="tabpanel"
+            aria-labelledby="dash-tab-keamanan"
+            hidden={activeTab !== 'keamanan'}
+          >
+            {openedTabs.has('keamanan') && <UserSecuritySearchPanel />}
+          </div>
         </main>
       ) : (
         <VoterDashboardView />

@@ -113,7 +113,7 @@ http://localhost:5173/daftar?undangan=<token>
 
 ## 6. Mengelola Undangan
 
-Di panel **Undangan** dasbor admin tersedia:
+Di tab **Undangan** dasbor admin tersedia:
 
 | Aksi | Cara |
 | --- | --- |
@@ -257,7 +257,7 @@ Admin dapat melihat riwayat percobaan login setiap pengguna, lengkap dengan foto
 ### 10.1. Cara Melihat Log Keamanan
 
 1. Login sebagai **admin** → buka **Dasbor**
-2. Di panel pencarian user (bagian bawah dasbor), cari username atau email pengguna
+2. Di tab **Log Keamanan** dasbor admin, cari username atau email pengguna
 3. Klik baris pengguna → akan dibuka halaman **"Log Keamanan Pengguna"**
 4. Halaman menampilkan tabel riwayat:
    - **Foto** — tangkapan kamera saat percobaan login (klik untuk memperbesar)

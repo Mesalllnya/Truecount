@@ -23,7 +23,7 @@ import AdminVoiceMessagesPage from './pages/AdminVoiceMessagesPage'
 import ClientConfigPage from './pages/ClientConfigPage'
 import { FailedAttemptsProvider, stopAllCameraStreams } from './hooks/useAuthSecurity'
 import { AuthProvider } from './hooks/useAuthSession'
-import { Home, Info, LayoutDashboard, Vote, Mail, Settings, Code2, Mic } from 'lucide-react'
+import { Home, Info, LayoutDashboard, Vote, Mail, Code2, Mic } from 'lucide-react'
 
 /* Ikon navbar (lucide, outline: tengah kosong) — ukuran & ketebalan seragam */
 const navIcon = { size: 18, strokeWidth: 1.5 }
@@ -109,11 +109,12 @@ const PUBLIC_LINKS = [
   { href: '/tentang', label: 'Tentang', icon: <Info {...navIcon} /> },
 ]
 
+/* Menu tengah setelah login. "Pengaturan" sengaja TIDAK ada di sini —
+   aksesnya lewat menu akun (profile) di kanan navbar. */
 const PROTECTED_LINKS = [
   { href: '/dasbor', label: 'Dasbor', icon: <LayoutDashboard {...navIcon} /> },
   { href: '/pilih', label: 'Pemilihan', icon: <Vote {...navIcon} /> },
   { href: '/pesan-terenkripsi', label: 'Pesan Terenkripsi', icon: <Mail {...navIcon} /> },
-  { href: '/pengaturan', label: 'Pengaturan', icon: <Settings {...navIcon} /> },
 ]
 
 function AppRoutes() {

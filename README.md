@@ -58,7 +58,7 @@ Truecount/
 │   ├── public/             # Aset statis (gambar artsy, logo, cursor set)
 │   ├── src/
 │   │   ├── pages/          # LandingPage · AboutPage · LoginPage · RegisterPage · SecuritySetupPage · DashboardPage · VotePage · ResultsPage · ProfileSettingsPage · UsbTokenTestPage · UserSecurityLogPage · EncryptedMessagesPage · AdminVoiceMessagesPage · DevPage
-│   │   ├── components/     # Nav · AuthGuard · RoleGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui) · IsometricFlow (+ IsoNode · IsoShared · isoTheme) · IsometricCrypto (+ CryptoCard)
+│   │   ├── components/     # Nav (menu akun: avatar inisial · username · badge role · dropdown Pengaturan/Log Keamanan Saya/Keluar) · AuthGuard · RoleGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui) · IsometricFlow (+ IsoNode · IsoShared · isoTheme) · IsometricCrypto (+ CryptoCard)
 │   │   ├── hooks/          # useAuth · useAuthSession · useAuthSecurity · useFaceDetection · useUsbToken · useWebAuthn
 │   │   ├── styles/         # cursor.css (kursor kustom)
 │   │   ├── utils/          # webauthn.ts
@@ -335,6 +335,10 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | `*` | Redirect → `/` | Catchall |
 
 Semua route terlindungi (`/dasbor`, `/pilih`, `/pengaturan`, dll.) dipelihara oleh `AuthGuard` yang redirect ke `/atur-keamanan` jika user belum setup Windows Hello atau Dongle. Halaman `/dev` selain itu dilindungi oleh `RoleGuard` yang hanya mengizinkan role `admin` dan `dev`.
+
+### Navbar & Menu Akun
+
+Sesudah login, sisi kanan navbar menampilkan **akun yang sedang aktif**: avatar inisial, username, dan badge peran (`Admin` / `Dev` / `Pemilih`). Mengkliknya membuka **menu akun** berisi email, **Pengaturan** (`/pengaturan`), **Keluar**, dan — hanya untuk akun `Admin` — **Log Keamanan Saya** (`/log-keamanan/{id}` milik akun tersebut, karena endpoint log di backend khusus admin). Datanya diambil dari `useAuth()` (`GET /auth/me`) sehingga tidak ada endpoint tambahan; sebelum login navbar tetap hanya menampilkan tombol **Masuk**. Di layar kecil baris akun tampil sebagai bagian dari drawer menu. **Pengaturan tidak lagi menjadi link menu tengah** — pengaturan profil diakses lewat menu akun ini.
 
 ## Test Otomatis
 

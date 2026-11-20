@@ -6,7 +6,7 @@
    ═════════════════════════════════════════════════════════════════ */
 
 :root {
-  --nav-h:       68px;
+  --nav-h:       80px;
   --red:         #F13C35;
   --red-dark:    #c72e27;
   --red-soft:    rgba(241, 60, 53, 0.10);
@@ -67,6 +67,11 @@
 
 .nav--scrolled .nav-logo { height: 55px; }
 
+/* Pembungkus link + aksi: `display: contents` agar di desktop kedua
+   anaknya ikut flex header (link tetap di tengah, aksi di kanan),
+   lalu di mobile kotaknya sendiri menjadi isi drawer. */
+.nav-menu { display: contents; }
+
 /* ── Nav links (tengah, desktop) ──────────────────────────── */
 .nav-links {
   position: absolute;
@@ -87,7 +92,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 500;
   color: var(--gray-500);
   text-decoration: none;
@@ -167,41 +172,180 @@
   transform: rotate(-55deg);
 }
 
-/* ── User menu (saat terautentikasi) ──────────────────────── */
-.nav-user-menu {
+/* ── Akun aktif (avatar + nama + role + dropdown) ─────────── */
+.nav-account { position: relative; }
+
+.nav-account-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem 0.5rem 0;
+  gap: 0.7rem;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition:
+    border-color 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out);
 }
 
-.nav-user-name {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--black);
+.nav-account-btn:hover {
+  border-color: #d3d3ce;
+  box-shadow: 0 3px 12px rgba(13, 13, 13, 0.08);
+}
+
+.nav-account-btn--open {
+  border-color: var(--black);
+  box-shadow: 0 3px 12px rgba(13, 13, 13, 0.12);
+}
+
+/* Avatar inisial: lingkaran hitam + huruf krem (kontras ~18:1) */
+.nav-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--black);
+  color: var(--cream);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.nav-account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.nav-account-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--black);
+  line-height: 1.2;
 }
 
-.nav-logout {
-  display: inline-flex;
+/* Badge role: micro-label kapital, radius senada chip (bukan pil) */
+.nav-account-role {
+  align-self: flex-start;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  background: var(--gray-100);
+  color: var(--gray-500);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.nav-account-role--accent {
+  background: var(--red-soft);
+  color: var(--red-dark);
+}
+
+.nav-account-chevron {
+  flex-shrink: 0;
+  color: var(--gray-500);
+  transition: transform 200ms var(--ease-out), color 160ms var(--ease-out);
+}
+
+.nav-account-btn:hover .nav-account-chevron { color: var(--black); }
+.nav-account-btn--open .nav-account-chevron { transform: rotate(180deg); }
+
+.nav-account-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 5;
+  min-width: 248px;
+  max-width: min(320px, calc(100vw - 2rem));
+  padding: 0.4rem;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px -12px rgba(13, 13, 13, 0.22), 0 4px 12px -4px rgba(13, 13, 13, 0.10);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top right;
+  transition:
+    opacity 160ms var(--ease-out),
+    transform 200ms var(--ease-out),
+    visibility 0s linear 200ms;
+}
+
+.nav-account-dropdown[data-open='true'] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+.nav-account-email {
+  margin: 0;
+  padding: 0.45rem 0.7rem 0.55rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-account-item {
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--red);
-  border: 1px solid var(--red);
+  gap: 0.6rem;
+  width: 100%;
+  margin-top: 0.15rem;
+  padding: 0.55rem 0.7rem;
+  border: none;
   border-radius: 8px;
   background: transparent;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--black);
+  text-align: left;
+  text-decoration: none;
   cursor: pointer;
-  transition: all 200ms var(--ease-out);
-  white-space: nowrap;
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
 }
 
-.nav-logout:hover {
-  background: var(--red);
-  color: var(--white);
-  border-color: var(--red);
+.nav-account-item svg { flex-shrink: 0; color: var(--gray-500); }
+
+.nav-account-item:hover { background: var(--gray-100); }
+.nav-account-item:hover svg { color: var(--black); }
+
+.nav-account-sep {
+  height: 1px;
+  margin: 0.4rem 0.45rem;
+  background: var(--border);
+}
+
+.nav-account-item--exit { color: var(--red-dark); }
+.nav-account-item--exit svg { color: var(--red-dark); }
+.nav-account-item--exit:hover { background: var(--red-soft); }
+.nav-account-item--exit:hover svg { color: var(--red-dark); }
+
+/* Fokus keyboard terlihat & bertema (bukan outline bawaan browser) */
+.nav a:focus-visible,
+.nav button:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
 }
 
 /* ── Hamburger ────────────────────────────────────────────── */
@@ -226,7 +370,7 @@
 
 /* Mobile drawer */
 @media (max-width: 767px) {
-  .nav-links {
+  .nav-menu {
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -236,13 +380,34 @@
     border-bottom: 1px solid var(--border);
     padding: 1.75rem 2rem 2rem;
     gap: 1.75rem;
+    max-height: calc(100dvh - var(--nav-h));
+    overflow-y: auto;
     transform: translateY(-110%);
     opacity: 0;
-    transition: transform 300ms var(--ease-out), opacity 200ms;
+    visibility: hidden;
+    transition:
+      transform 300ms var(--ease-out),
+      opacity 200ms,
+      visibility 0s linear 300ms;
     z-index: 199;
   }
 
-  .nav-links--open { transform: translateY(0); opacity: 1; }
+  .nav-menu--open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .nav-links {
+    display: flex;
+    position: static;
+    transform: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.75rem;
+    text-align: left;
+  }
 
   .nav-link { padding: 0.75rem 1rem; font-size: 1.15rem; }
   .nav-link--active { background: var(--gray-100); border-bottom: none; }
@@ -252,12 +417,45 @@
     flex-direction: column;
     width: 100%;
     gap: 0.5rem;
-    margin-top: 1rem;
+    margin-top: 0;
     padding-top: 1rem;
     border-top: 1px solid var(--border);
   }
 
   .nav-masuk { width: 100%; justify-content: center; }
-  .nav-user-menu { flex-direction: row; justify-content: space-between; width: 100%; padding: 0.75rem 0 0; border-top: 1px solid var(--border); margin-top: 0.75rem; }
-  .nav-logout { width: 100%; justify-content: center; }
+
+  /* Baris akun: satu baris penuh di drawer, dropdown jadi daftar statis */
+  .nav-account { width: 100%; }
+  .nav-account-btn { width: 100%; padding: 0.5rem 0.6rem 0.5rem 0.5rem; }
+  .nav-account-name { max-width: none; }
+
+  .nav-account-dropdown {
+    position: static;
+    display: none;
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    margin-top: 0.35rem;
+    padding: 0.35rem;
+    border-radius: 12px;
+    box-shadow: none;
+    transform: none;
+    transition: opacity 160ms var(--ease-out), visibility 0s linear 160ms;
+  }
+
+  /* Di drawer, daftar menu statis: sembunyikan dari layout saat tertutup
+     (posisi statis tidak bisa "keluar aliran" seperti versi desktop) */
+  .nav-account-dropdown[data-open='true'] { display: block; }
+}
+
+/* Hormati preferensi gerak berkurang */
+@media (prefers-reduced-motion: reduce) {
+  .nav-account-dropdown,
+  .nav-account-chevron,
+  .nav-menu,
+  .nav-link,
+  .door-icon {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
 }

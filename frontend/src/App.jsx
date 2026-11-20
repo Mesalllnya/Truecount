@@ -88,6 +88,14 @@ function CameraRouteGuard() {
   return null
 }
 
+/** Voting (/pilih) hanya untuk user (voter/dev) — admin tidak punya hak suara,
+ *  jadi halaman ini tidak ada untuk admin: dialihkan ke dasbor. */
+function VoterOnly({ children }) {
+  const { user, isLoading } = useAuth()
+  if (isLoading) return null
+  return user?.role === 'admin' ? <Navigate to="/dasbor" replace /> : children
+}
+
 const PUBLIC_LINKS = [
   { href: '/', label: 'Beranda', icon: <Home {...navIcon} /> },
   { href: '/tentang', label: 'Tentang', icon: <Info {...navIcon} /> },
@@ -119,6 +127,12 @@ function AppRoutes() {
 
   const navLinks = isProtected ? PROTECTED_LINKS : PUBLIC_LINKS
 
+  /* "Pemilihan" (voting) hanya untuk user/voter — admin tidak punya hak suara,
+     jadi tombolnya tidak tampil di navbar admin. */
+  const visibleLinks = navLinks.filter((link) =>
+    link.href !== '/pilih' || user?.role !== 'admin'
+  )
+
   /* Link Dev hanya di halaman terlindungi (setelah login di dalam app) —
      di landing/halaman publik tidak ditampilkan meski akun sudah login. */
   const devLink = isDevOrAdmin && isProtected
@@ -134,7 +148,7 @@ function AppRoutes() {
     <>
       <CameraRouteGuard />
       <ServerConfigShortcut />
-      {!isLoginPage && !isConfigPage && <Nav links={[...navLinks, devLink].filter(Boolean)} />}
+      {!isLoginPage && !isConfigPage && <Nav links={[...visibleLinks, devLink].filter(Boolean)} />}
       <Routes>
         <Route path="/"           element={<LandingPage />} />
         <Route path="/__server"   element={<ClientConfigPage />} />
@@ -155,7 +169,15 @@ function AppRoutes() {
           />
           <Route path="/dasbor"     element={<DashboardPage />} />
           <Route path="/dashboard"  element={<Navigate to="/dasbor" replace />} />
-          <Route path="/pilih"           element={<VotePage />} />
+          {/* Pemilihan (voting) hanya untuk user — admin tidak punya hak suara */}
+          <Route
+            path="/pilih"
+            element={
+              <VoterOnly>
+                <VotePage />
+              </VoterOnly>
+            }
+          />
           <Route path="/hasil/:id"       element={<ResultsPage />} />
           <Route path="/pengaturan"      element={<ProfileSettingsPage />} />
           <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />

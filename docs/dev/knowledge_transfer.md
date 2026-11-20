@@ -222,8 +222,9 @@ frontend/src/pages/
   UsbTokenTestPage.jsx + .css  - Halaman test USB token (/usb-token-test): deteksi, decrypt, challenge-response
   AboutPage.jsx                - Halaman tentang aplikasi (/tentang): informasi proyek, tim, stack teknologi
   ResultsPage.jsx + .css       - Halaman hasil pemilihan (/hasil/:id): tally suara, verifikasi blockchain, statistik partisipasi
-  EncryptedMessagesPage.jsx    - Halaman pesan terenkripsi (/pesan-terenkripsi): buat & lihat pesan terenkripsi (Vigenere, AES-256-GCM, ChaCha20)
-  AdminVoiceMessagesPage.jsx + .css - **Halaman pesan suara admin (/pesan-suara): rekam via MediaRecorder, pratinjau, kirim terenkripsi, inbox + playback**
+  EncryptedMessagesPage.jsx    - Halaman pesan terenkripsi (/pesan-terenkripsi): halaman bertab **Pesan Teks** (enkripsi/dekripsi) + **Pesan Suara** (admin), sinkron dengan `?tab=teks|suara`
+  TextMessagesPanel.jsx        - Panel tab Pesan Teks: enkripsi AES-256-GCM/ChaCha20-Poly1305 & dekripsi via ID pesan
+  VoiceMessagesPanel.jsx + .css - Panel tab Pesan Suara (admin): rekam via MediaRecorder, pratinjau, kirim terenkripsi, inbox + playback
   DevPage.jsx + DevPage.css    - **Halaman Dev (/dev): diagram flow aplikasi + grid algoritma kriptografi, hanya Admin + Dev**
 frontend/src/components/
   HealthMonitor.jsx             - Render null; polling /health di background, error → console (bukan UI)
@@ -286,8 +287,8 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | `/hasil/:id` | `ResultsPage` | Hasil pemilihan + verifikasi blockchain (Sprint 2 ✅, ada auth guard) |
 | `/pengaturan` | `ProfileSettingsPage` | Pengaturan profil: change password, Windows Hello, USB token |
 | `/usb-token-test` | `UsbTokenTestPage` | Halaman test USB token: deteksi, decrypt, challenge-response (ada auth guard) |
-| `/pesan-terenkripsi` | `EncryptedMessagesPage` | Buat & lihat pesan terenkripsi (Sprint 3 ✅, ada auth guard) |
-| `/pesan-suara` | `AdminVoiceMessagesPage` | **Pesan suara terenkripsi antar-admin: rekam, kirim, inbox, playback (khusus admin)** |
+| `/pesan-terenkripsi` | `EncryptedMessagesPage` | Halaman bertab **Pesan Teks** & **Pesan Suara** (admin), state tab via `?tab=teks|suara` (Sprint 3 ✅, ada auth guard) |
+| `/pesan-suara` | Redirect → `/pesan-terenkripsi?tab=suara` | Alias lama halaman pesan suara |
 | `/log-keamanan/:id` | `UserSecurityLogPage` | **Riwayat percobaan login + foto kamera (audit admin)** |
 | `/dev` | `DevPage` | **Halaman Dev - diagram flow 2D + grid kriptografi (hanya admin + dev)** |
 | `/login` | Redirect → `/masuk` | Alias lama |
@@ -849,7 +850,7 @@ Kriptografi: PBKDF2-HMAC-SHA256 (100k iterasi, PIN → key) → AES-256-GCM (pri
 - Enkripsi pesan: Vigenere, AES-256-GCM, ChaCha20-Poly1305
 - Enkripsi file upload (ChaCha20-Poly1305 dengan nonce, auth_tag, file_size, mime_type)
 - Simple Blockchain (logging aktivitas pemilihan)
-- Frontend: `EncryptedMessagesPage` (`/pesan-terenkripsi`)
+- Frontend: `EncryptedMessagesPage` (`/pesan-terenkripsi`) dengan tab Pesan Teks + Pesan Suara
 - Tabel: `encrypted_messages`, `encrypted_files`, `blocks`
 - Endpoint: `POST/GET /encrypted-messages`, `POST/GET /elections/blockchain/seal|verify`
 
@@ -1124,6 +1125,6 @@ Saat menambahkan endpoint baru, selalu update:
 
 21. **Fix: Upload voice message gagal 500 karena merge conflict** (19 Nov 2026) - `backend/api/voice-messages/create.php` masih menyimpan marker konflik Git (`<<<<<<<`, `=======`, `>>>>>>>`), sehingga PHP mengalami parse error dan `POST /voice-messages` membalas halaman error (bukan JSON) saat tombol **Kirim Audio** ditekan.
     - **Fix:** konflik diselesaikan memakai `storagePath('private', 'encrypted-files')` (bukan path `dirname(__DIR__, 2)` lama), dan `backend/helpers/storage.php` di-require eksplisit di `create.php`.
-    - **Frontend (`AdminVoiceMessagesPage.jsx`):** object URL pratinjau sekarang dikelola lewat ref + state (tidak lagi `URL.createObjectURL()` di dalam render yang bocor setiap re-render); ada handler `recorder.onerror`, `recorder.start(250)` agar chunk periodik masuk, dan blob kosong ditolak dengan pesan jelas. Object URL pratinjau dicabut saat rekam ulang, hapus, kirim, dan unmount.
+    - **Frontend (`VoiceMessagesPanel.jsx`, dulu `AdminVoiceMessagesPage.jsx`):** object URL pratinjau sekarang dikelola lewat ref + state (tidak lagi `URL.createObjectURL()` di dalam render yang bocor setiap re-render); ada handler `recorder.onerror`, `recorder.start(250)` agar chunk periodik masuk, dan blob kosong ditolak dengan pesan jelas. Object URL pratinjau dicabut saat rekam ulang, hapus, kirim, dan unmount.
     - **Verifikasi:** `php -l backend/api/voice-messages/create.php` bersih dan `npm run build` sukses.
     - **Catatan operasional:** perekaman butuh secure context (`https://` atau `localhost`) dan izin mikrofon. Batas durasi 300 detik, ukuran file 20 MB.

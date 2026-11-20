@@ -19,11 +19,10 @@ import DevPage from './pages/DevPage'
 import RoleGuard from './components/RoleGuard'
 import AuthGuard from './components/AuthGuard'
 import { useAuth } from './hooks/useAuthSession'
-import AdminVoiceMessagesPage from './pages/AdminVoiceMessagesPage'
 import ClientConfigPage from './pages/ClientConfigPage'
 import { FailedAttemptsProvider, stopAllCameraStreams } from './hooks/useAuthSecurity'
 import { AuthProvider } from './hooks/useAuthSession'
-import { Home, Info, LayoutDashboard, Vote, Mail, Code2, Mic } from 'lucide-react'
+import { Home, Info, LayoutDashboard, Vote, MessageCircle, Code2 } from 'lucide-react'
 
 /* Ikon navbar (lucide, outline: tengah kosong) — ukuran & ketebalan seragam */
 const navIcon = { size: 18, strokeWidth: 1.5 }
@@ -89,21 +88,6 @@ function CameraRouteGuard() {
   return null
 }
 
-/** Protected routes wrapper */
-function ProtectedRoutes() {
-  return (
-    <Routes>
-      <Route path="/dasbor"     element={<DashboardPage />} />
-      <Route path="/dashboard"  element={<Navigate to="/dasbor" replace />} />
-      <Route path="/pilih"           element={<VotePage />} />
-      <Route path="/hasil/:id"       element={<ResultsPage />} />
-      <Route path="/pengaturan"      element={<ProfileSettingsPage />} />
-      <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
-      <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
-    </Routes>
-  )
-}
-
 const PUBLIC_LINKS = [
   { href: '/', label: 'Beranda', icon: <Home {...navIcon} /> },
   { href: '/tentang', label: 'Tentang', icon: <Info {...navIcon} /> },
@@ -114,7 +98,7 @@ const PUBLIC_LINKS = [
 const PROTECTED_LINKS = [
   { href: '/dasbor', label: 'Dasbor', icon: <LayoutDashboard {...navIcon} /> },
   { href: '/pilih', label: 'Pemilihan', icon: <Vote {...navIcon} /> },
-  { href: '/pesan-terenkripsi', label: 'Pesan Terenkripsi', icon: <Mail {...navIcon} /> },
+  { href: '/pesan-terenkripsi', label: 'Pesan Terenkripsi', icon: <MessageCircle {...navIcon} /> },
 ]
 
 function AppRoutes() {
@@ -139,10 +123,6 @@ function AppRoutes() {
     ? { href: '/dev', label: 'Dev', icon: <Code2 {...navIcon} /> }
     : null
 
-  const adminVoiceLink = user?.role === 'admin'
-    ? { href: '/pesan-suara', label: 'Pesan Suara', icon: <Mic {...navIcon} /> }
-    : null
-
   const isLoginPage =
     location.pathname.startsWith('/masuk') ||
     location.pathname.startsWith('/login')
@@ -152,7 +132,7 @@ function AppRoutes() {
     <>
       <CameraRouteGuard />
       <ServerConfigShortcut />
-      {!isLoginPage && !isConfigPage && <Nav links={[...navLinks, adminVoiceLink, devLink].filter(Boolean)} />}
+      {!isLoginPage && !isConfigPage && <Nav links={[...navLinks, devLink].filter(Boolean)} />}
       <Routes>
         <Route path="/"           element={<LandingPage />} />
         <Route path="/__server"   element={<ClientConfigPage />} />
@@ -166,6 +146,11 @@ function AppRoutes() {
         
         {/* Protected routes - require Windows Hello or Dongle setup */}
         <Route element={<AuthGuard />}>
+          {/* Alias lama halaman pesan suara → tab Pesan Suara */}
+          <Route
+            path="/pesan-suara"
+            element={<Navigate to="/pesan-terenkripsi?tab=suara" replace />}
+          />
           <Route path="/dasbor"     element={<DashboardPage />} />
           <Route path="/dashboard"  element={<Navigate to="/dasbor" replace />} />
           <Route path="/pilih"           element={<VotePage />} />
@@ -178,13 +163,9 @@ function AppRoutes() {
           <Route element={<RoleGuard allowedRoles={['admin', 'dev']} />}>
             <Route path="/dev" element={<DevPage />} />
           </Route>
-          <Route element={<RoleGuard allowedRoles={['admin']} />}>
-            <Route path="/pesan-suara" element={<AdminVoiceMessagesPage />} />
-          </Route>
         </Route>
         
         <Route path="*"                element={<Navigate to="/" replace />} />
-        <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
       </Routes>
     </>
   )

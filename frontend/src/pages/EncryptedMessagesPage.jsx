@@ -1,220 +1,141 @@
-import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { apiUrl } from '../lib/appConfig'
+import { useEffect } from 'react'
+import { Navigate, useSearchParams } from 'react-router-dom'
+import { MessageSquareText, Mic } from 'lucide-react'
+import { useAuth } from '../hooks/useAuthSession'
+import TextMessagesPanel from '../components/TextMessagesPanel'
+import VoiceMessagesPanel from '../components/VoiceMessagesPanel'
 import './EncryptedMessagesPage.css'
 
-async function readJson(response) {
-  const text = await response.text()
-  try {
-    return text ? JSON.parse(text) : {}
-  } catch {
-    throw new Error('Respons server tidak valid.')
-  }
+const TAB_ICON = {
+  teks: MessageSquareText,
+  suara: Mic,
 }
 
 export default function EncryptedMessagesPage() {
-  const navigate = useNavigate()
-  const token = localStorage.getItem('tc_token')
+  const { user, token, isLoading } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [message, setMessage] = useState('')
-  const [algorithm, setAlgorithm] = useState('aes256gcm')
-  const [messageId, setMessageId] = useState('')
-  const [decryptId, setDecryptId] = useState('')
-  const [plaintext, setPlaintext] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const isAdmin = user?.role === 'admin'
+  const tabs = isAdmin
+    ? [
+        { id: 'teks', label: 'Pesan Teks' },
+        { id: 'suara', label: 'Pesan Suara' },
+      ]
+    : [{ id: 'teks', label: 'Pesan Teks' }]
+
+  const requestedTab = searchParams.get('tab')
+  const activeTab = tabs.some(tab => tab.id === requestedTab)
+    ? requestedTab
+    : 'teks'
+
+  /* Samakan URL bila ?tab berisi nilai yang tidak dikenal / tidak diizinkan.
+     Tunggu pemuatan sesi agar ?tab=suara tidak langsung ditimpa saat reload. */
+  useEffect(() => {
+    if (isLoading) return
+
+    if (requestedTab !== null && requestedTab !== activeTab) {
+      setSearchParams({ tab: activeTab }, { replace: true })
+    }
+  }, [isLoading, requestedTab, activeTab, setSearchParams])
+
+  function selectTab(tabId) {
+    setSearchParams({ tab: tabId }, { replace: true })
+  }
+
+  function handleTabKeyDown(event) {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab)
+    let nextIndex = null
+
+    if (event.key === 'ArrowRight') {
+      nextIndex = (currentIndex + 1) % tabs.length
+    } else if (event.key === 'ArrowLeft') {
+      nextIndex = (currentIndex - 1 + tabs.length) % tabs.length
+    } else if (event.key === 'Home') {
+      nextIndex = 0
+    } else if (event.key === 'End') {
+      nextIndex = tabs.length - 1
+    }
+
+    if (nextIndex === null) return
+
+    event.preventDefault()
+    selectTab(tabs[nextIndex].id)
+    document.getElementById(`tab-${tabs[nextIndex].id}`)?.focus()
+  }
+
+  if (isLoading) {
+    return (
+      <div className="dash-shell">
+        <main className="encrypted-page">
+          <p className="encrypted-loading">Memuat sesi…</p>
+        </main>
+      </div>
+    )
+  }
 
   if (!token) return <Navigate to="/masuk" replace />
-
-  async function handleEncrypt(e) {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-    setPlaintext('')
-
-    if (!message.trim()) {
-      setError('Pesan tidak boleh kosong.')
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      const response = await fetch(apiUrl('/encrypted-messages'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          message,
-          algorithm,
-        }),
-      })
-
-      const data = await readJson(response)
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Gagal mengenkripsi pesan.')
-      }
-
-      const id = data.data?.id
-      if (!id) throw new Error('ID pesan tidak ditemukan pada respons.')
-
-      setMessageId(String(id))
-      setDecryptId(String(id))
-      setSuccess(`Pesan berhasil dienkripsi menggunakan ${algorithm === 'aes256gcm' ? 'AES-256-GCM' : 'ChaCha20-Poly1305'}.`)
-      setMessage('')
-    } catch (err) {
-      setError(err.message || 'Terjadi kesalahan.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleDecrypt(e) {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-    setPlaintext('')
-
-    const id = Number(decryptId)
-    if (!Number.isInteger(id) || id <= 0) {
-      setError('Masukkan ID pesan yang valid.')
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      const response = await fetch(
-        apiUrl(`/encrypted-messages/${encodeURIComponent(id)}`),
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
-
-      const data = await readJson(response)
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Gagal mendekripsi pesan.')
-      }
-
-      setPlaintext(data.data?.plaintext ?? '')
-      setSuccess('Pesan berhasil didekripsi.')
-    } catch (err) {
-      setError(err.message || 'Terjadi kesalahan.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="dash-shell">
       <main className="encrypted-page">
         <header className="encrypted-heading">
           <span className="encrypted-eyebrow">TRUECOUNT SECURITY</span>
-          <h1>Encrypted Messages</h1>
+          <h1>Pesan Terenkripsi</h1>
           <p>
-            Kirim dan simpan pesan menggunakan enkripsi authenticated
-            encryption.
+            {isAdmin
+              ? 'Kirim pesan teks terenkripsi, atau rekam dan terima pesan suara antaradministrator.'
+              : 'Kirim dan simpan pesan menggunakan enkripsi authenticated encryption.'}
           </p>
         </header>
 
-        {error && <div className="encrypted-alert error" role="alert">{error}</div>}
-        {success && <div className="encrypted-alert success" role="status">{success}</div>}
+        <div
+          className="encrypted-tabs"
+          role="tablist"
+          aria-label="Jenis pesan terenkripsi"
+          onKeyDown={handleTabKeyDown}
+        >
+          {tabs.map(tab => {
+            const Icon = TAB_ICON[tab.id]
+            const isActive = activeTab === tab.id
 
-        <section className="encrypted-card">
-          <div className="encrypted-card-heading">
-            <h2>Enkripsi Pesan</h2>
-            <p>Pesan akan dienkripsi sebelum disimpan ke database.</p>
-          </div>
-
-          <form onSubmit={handleEncrypt}>
-            <label htmlFor="message-algorithm">Algoritma enkripsi</label>
-            <select
-              id="message-algorithm"
-              value={algorithm}
-              onChange={e => setAlgorithm(e.target.value)}
-              disabled={loading}
-            >
-              <option value="aes256gcm">AES-256-GCM</option>
-              <option value="chacha20">ChaCha20-Poly1305</option>
-            </select>
-
-            <label htmlFor="message-content">Isi pesan</label>
-            <textarea
-              id="message-content"
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              placeholder="Tulis pesan rahasia di sini..."
-              rows={5}
-              required
-              disabled={loading}
-            />
-
-            <button className="encrypted-button" type="submit" disabled={loading}>
-              {loading ? 'Memproses...' : 'Enkripsi & Simpan'}
-            </button>
-          </form>
-
-          {messageId && (
-            <div className="encrypted-result">
-              <strong>Pesan berhasil disimpan!</strong>
-              <p>ID pesan: <code>{messageId}</code></p>
+            return (
               <button
+                key={tab.id}
+                id={`tab-${tab.id}`}
                 type="button"
-                className="encrypted-secondary-button"
-                onClick={() => {
-                  setDecryptId(messageId)
-                  setPlaintext('')
-                }}
+                role="tab"
+                className="encrypted-tab"
+                aria-selected={isActive}
+                aria-controls={`panel-${tab.id}`}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => selectTab(tab.id)}
               >
-                Gunakan ID untuk dekripsi
+                <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+                {tab.label}
               </button>
-            </div>
-          )}
-        </section>
+            )
+          })}
+        </div>
 
-        <section className="encrypted-card">
-          <div className="encrypted-card-heading">
-            <h2>Dekripsi Pesan</h2>
-            <p>Masukkan ID pesan untuk mengambil dan membuka pesan milik akun ini.</p>
+        <div
+          id="panel-teks"
+          role="tabpanel"
+          aria-labelledby="tab-teks"
+          hidden={activeTab !== 'teks'}
+        >
+          <TextMessagesPanel />
+        </div>
+
+        {isAdmin && (
+          <div
+            id="panel-suara"
+            role="tabpanel"
+            aria-labelledby="tab-suara"
+            hidden={activeTab !== 'suara'}
+          >
+            <VoiceMessagesPanel />
           </div>
-
-          <form onSubmit={handleDecrypt}>
-            <label htmlFor="decrypt-id">ID pesan</label>
-            <input
-              id="decrypt-id"
-              type="number"
-              min="1"
-              value={decryptId}
-              onChange={e => setDecryptId(e.target.value)}
-              placeholder="Contoh: 12"
-              required
-              disabled={loading}
-            />
-
-            <button className="encrypted-button" type="submit" disabled={loading}>
-              {loading ? 'Memproses...' : 'Dekripsi Pesan'}
-            </button>
-          </form>
-
-          {plaintext !== '' && (
-            <div className="encrypted-plaintext">
-              <strong>Plaintext hasil dekripsi</strong>
-              <p>{plaintext}</p>
-            </div>
-          )}
-        </section>
-
-        <p className="encrypted-note">
-          Pesan hanya dapat diakses oleh akun pemiliknya. Simpan ID pesan
-          untuk membukanya kembali.
-        </p>
+        )}
       </main>
     </div>
   )

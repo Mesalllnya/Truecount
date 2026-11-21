@@ -130,6 +130,11 @@ karena PHP hanya listen loopback.
 | macOS | `~/Library/Application Support/com.truecount.app/app_config.json` |
 | Linux | `~/.config/com.truecount.app/app_config.json` |
 
+> **Catatan:** nama folder `com.truecount.app` dipertahankan secara eksplisit
+> (`pin_data_dir()` di `lib.rs`) agar instalasi lama tidak kehilangan data —
+> identifier bundle sendiri kini `com.truecount.desktop` (Tauri melarang
+> identifier berakhiran `.app`).
+
 ```json
 {
   "mode": "client",

@@ -80,6 +80,13 @@ export default defineConfig(({ command }) => ({
     // Jangan minify pada dev - mempercepat iterasi
     // Terser adalah default Vite 8+, lebih stabil untuk syntax modern
     minify: command === 'build' ? 'terser' : false,
+    // Matikan laporan PLUGIN_TIMINGS rolldown (waktu callback plugin) -
+    // terser memang berat tapi disengaja, laporan ini hanya noise di log build.
+    rollupOptions: {
+      checks: {
+        bundlerTimings: false,
+      },
+    },
     // Tingkatkan batas chunk warning ke 1.5 MB
     chunkSizeWarningLimit: 1500,
     sourcemap: command !== 'build',

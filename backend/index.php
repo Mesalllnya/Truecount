@@ -448,6 +448,22 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    // GET /users/profile?id=... - profil pengguna (user sendiri atau admin)
+    $uri === '/users/profile' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/users/profile.php';
+    })(),
+    $uri === '/users/profile' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
+    // POST /users/request-change - ajukan perubahan data ke admin
+    $uri === '/users/request-change' && $method === 'POST' => (function () {
+        require_once __DIR__ . '/api/users/request_change.php';
+    })(),
+    $uri === '/users/request-change' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
     // GET /auth/attempts/{id}/photo - foto kamera percobaan login (admin)
     preg_match('#^/auth/attempts/(\d+)/photo$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
         $_SERVER['REQUEST_URI'] = '/auth/attempts/' . $m[1] . '/photo';

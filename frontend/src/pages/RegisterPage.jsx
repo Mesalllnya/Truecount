@@ -5,6 +5,7 @@ import { SkeletonText, SkeletonCircle } from '../components/ui/Skeleton'
 import Icon from '../components/Icon'
 import { apiUrl } from '../lib/appConfig'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
+import IdPhotoCapture from '../components/IdPhotoCapture'
 
 /** Baca response server sebagai JSON - kalau bukan JSON (error HTML PHP dsb),
  *  jangan pernah tampilkan mentah ke user. */
@@ -76,6 +77,16 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   // Password field visible by default; confirm field masked by default
   const [showConfirm, setShowConfirm] = useState(false)
+
+  // ID Photo capture step (after invite verified, before account form)
+  // State: 'idle' | 'capturing' | 'captured' | 'skipped'
+  const [idPhotoStep, setIdPhotoStep] = useState('idle')
+  const [idPhotoData, setIdPhotoData] = useState({ dataUrl: null, type: 'ktp' }) // type: 'ktp' | 'sim'
+  const [idPhotoError, setIdPhotoError] = useState('')
+
+  // Determine if ID photo is required based on invite role
+  // Admin invites also need KTP (per issue #32: "Admin juga perlu foto KTP")
+  const isIdPhotoRequired = invite?.role === 'admin' || invite?.role === 'voter'
 
   // ── Verifikasi undangan saat halaman dibuka ──────────────
   useEffect(() => {
@@ -203,6 +214,21 @@ export default function RegisterPage() {
       setError('Kata sandi minimal 8 karakter.')
       return
     }
+    // Validate password complexity (matches backend)
+    if (!/[0-9]/.test(form.password)) {
+      setError('Kata sandi wajib mengandung minimal 1 angka.')
+      return
+    }
+    if (!/[^a-zA-Z0-9]/.test(form.password)) {
+      setError('Kata sandi wajib mengandung minimal 1 karakter khusus (mis. !@#$%^&*).')
+      return
+    }
+    // ID photo is optional for voters, required for admin (validated on backend)
+    // But we should at least warn if missing for admin
+    if (invite?.role === 'admin' && !idPhotoData.dataUrl) {
+      setError('Foto KTP wajib untuk akun admin.')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -210,10 +236,12 @@ export default function RegisterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username:     form.username,
-          email:        form.email,
-          password:     form.password,
-          invite_token: inviteToken,
+          username:      form.username,
+          email:         form.email,
+          password:      form.password,
+          invite_token:  inviteToken,
+          id_photo:      idPhotoData.dataUrl,
+          id_photo_type: idPhotoData.type,
         }),
       })
       const data = await readJson(res)
@@ -374,7 +402,202 @@ export default function RegisterPage() {
     )
   }
 
-  // ── State: undangan valid → form pendaftaran ─────────────
+  // ── State: undangan valid → step 1: foto ID (jika diperlukan), step 2: form akun ─────────────
+  const renderAccountForm = () => (
+    <>
+      {/* ID Photo Preview + Back Button */}
+      {idPhotoData.dataUrl && (
+        <div className="id-photo-preview-card">
+          <div className="id-photo-preview-thumb">
+            <img src={idPhotoData.dataUrl} alt={`Foto ${idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'}`} />
+            <span className="id-photo-preview-badge">{idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'} ✓</span>
+          </div>
+          <button
+            type="button"
+            className="btn-submit--secondary btn-small"
+            onClick={() => {
+              setIdPhotoStep('capturing')
+              setIdPhotoData(prev => ({ ...prev, dataUrl: null }))
+            }}
+          >
+            <Icon name="arrow-left" size={16} />
+            Ubah Foto ID
+          </button>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} noValidate>
+      <div className="field">
+        <label htmlFor="username">Username</label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          autoComplete="username"
+          placeholder="johndoe"
+          value={form.username}
+          onChange={handleChange}
+          required
+        />
+      </div>
+
+      <div className="field">
+        <label htmlFor="email">Email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          placeholder="anda@contoh.com"
+          value={form.email}
+          onChange={handleChange}
+          disabled={Boolean(invite?.email)}
+          title={invite?.email ? 'Email mengikuti undangan' : undefined}
+          required
+        />
+      </div>
+
+      <div className="field">
+        <label htmlFor="password">Kata sandi</label>
+        <input
+          id="password"
+          name="password"
+          type="text"
+          autoComplete="new-password"
+          placeholder="Min. 8 karakter"
+          value={form.password}
+          onChange={handleChange}
+          required
+        />
+      </div>
+
+      <div className="field">
+        <label htmlFor="confirm">Konfirmasi kata sandi</label>
+        <div className="password-input-wrapper">
+          <input
+            id="confirm"
+            name="confirm"
+            type={showConfirm ? 'text' : 'password'}
+            autoComplete="new-password"
+            placeholder="••••••••"
+            value={form.confirm}
+            onChange={handleChange}
+            required
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            onClick={() => setShowConfirm(v => !v)}
+            aria-label={showConfirm ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+          >
+            {showConfirm ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
+          </button>
+        </div>
+      </div>
+
+      {error && <p className="field-error" role="alert">{error}</p>}
+
+      <button type="submit" className="btn-submit" disabled={loading}>
+        {loading
+          ? <span className="btn-loading"><span className="spinner" />Memproses…</span>
+          : 'Buat akun'}
+      </button>
+      </form>
+    </>
+  )
+
+  const renderIdPhotoStep = () => {
+    const label = idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'
+    return (
+      <div className="id-photo-step-page">
+        <div className="id-photo-step-header">
+          <h2>Verifikasi Identitas</h2>
+          <p>Ambil foto {label} Anda untuk melengkapi pendaftaran.</p>
+        </div>
+
+        {/* Type toggle - always visible when not captured */}
+        {idPhotoStep !== 'captured' && (
+          <div className="id-photo-type-toggle" role="group" aria-label="Pilih jenis identitas">
+            <button
+              type="button"
+              className={`type-btn ${idPhotoData.type === 'ktp' ? 'active' : ''}`}
+              onClick={() => {
+                setIdPhotoData(prev => ({ ...prev, type: 'ktp', dataUrl: null }))
+                setIdPhotoStep('capturing')
+                setIdPhotoError('')
+              }}
+            >
+              KTP
+            </button>
+            <button
+              type="button"
+              className={`type-btn ${idPhotoData.type === 'sim' ? 'active' : ''}`}
+              onClick={() => {
+                setIdPhotoData(prev => ({ ...prev, type: 'sim', dataUrl: null }))
+                setIdPhotoStep('capturing')
+                setIdPhotoError('')
+              }}
+            >
+              SIM
+            </button>
+          </div>
+        )}
+
+        <IdPhotoCapture
+          key={idPhotoData.type}  // Force remount when type changes
+          type={idPhotoData.type}
+          required={isIdPhotoRequired}
+          onCapture={(dataUrl) => {
+            setIdPhotoData(prev => ({ ...prev, dataUrl }))
+            setIdPhotoStep('captured')
+            setIdPhotoError('')
+          }}
+          onCancel={() => {
+            // Reset to type selection state
+            setIdPhotoData(prev => ({ ...prev, dataUrl: null }))
+            setIdPhotoStep('idle')
+            setIdPhotoError('')
+          }}
+        />
+
+        {isIdPhotoRequired && idPhotoStep !== 'captured' && (
+          <p className="id-photo-required-note" role="status">
+            <Icon name="info" size={16} aria-hidden="true" />
+            Foto {label} wajib diambil untuk melanjutkan.
+          </p>
+        )}
+
+        {idPhotoError && <p className="field-error" role="alert">{idPhotoError}</p>}
+
+        {idPhotoStep === 'captured' && (
+          <div className="id-photo-step-actions">
+            <button
+              type="button"
+              className="btn-submit"
+              onClick={() => setIdPhotoStep('account')}
+              disabled={loading}
+            >
+              Lanjutkan ke Detail Akun
+            </button>
+          </div>
+        )}
+
+        {!isIdPhotoRequired && idPhotoStep !== 'captured' && (
+          <div className="id-photo-step-actions">
+            <button
+              type="button"
+              className="btn-submit--secondary"
+              onClick={() => setIdPhotoStep('account')}
+              disabled={loading}
+            >
+              Lewati Foto ID
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="auth-shell">
       <div className="auth-brand">
@@ -403,83 +626,20 @@ export default function RegisterPage() {
           </span>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="field">
-            <label htmlFor="username">Username</label>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              autoComplete="username"
-              placeholder="johndoe"
-              value={form.username}
-              onChange={handleChange}
-              required
-            />
-          </div>
+        {/* ── Progress indicator ── */}
+        <div className="register-progress" role="status" aria-label="Langkah pendaftaran">
+          <span className={`progress-step ${idPhotoStep === 'capturing' || idPhotoStep === 'captured' ? 'active' : idPhotoStep === 'account' || idPhotoStep === 'skipped' ? 'completed' : ''}`}>
+            <span className="step-number">{idPhotoStep === 'account' || idPhotoStep === 'skipped' ? '✓' : '1'}</span>
+            <span className="step-label">Foto ID</span>
+          </span>
+          <span className="progress-separator" />
+          <span className={`progress-step ${idPhotoStep === 'account' ? 'active' : ''}`}>
+            <span className="step-number">2</span>
+            <span className="step-label">Detail Akun</span>
+          </span>
+        </div>
 
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="anda@contoh.com"
-              value={form.email}
-              onChange={handleChange}
-              disabled={Boolean(invite?.email)}
-              title={invite?.email ? 'Email mengikuti undangan' : undefined}
-              required
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="password">Kata sandi</label>
-            <input
-              id="password"
-              name="password"
-              type="text"
-              autoComplete="new-password"
-              placeholder="Min. 8 karakter"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="confirm">Konfirmasi kata sandi</label>
-            <div className="password-input-wrapper">
-              <input
-                id="confirm"
-                name="confirm"
-                type={showConfirm ? 'text' : 'password'}
-                autoComplete="new-password"
-                placeholder="••••••••"
-                value={form.confirm}
-                onChange={handleChange}
-                required
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowConfirm(v => !v)}
-                aria-label={showConfirm ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
-              >
-                {showConfirm ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
-              </button>
-            </div>
-          </div>
-
-          {error && <p className="field-error" role="alert">{error}</p>}
-
-          <button type="submit" className="btn-submit" disabled={loading}>
-            {loading
-              ? <span className="btn-loading"><span className="spinner" />Memproses…</span>
-              : 'Buat akun'}
-          </button>
-        </form>
+        {idPhotoStep !== 'account' ? renderIdPhotoStep() : renderAccountForm()}
 
         <p className="auth-footer-text">
           Sudah punya akun?{' '}

@@ -1,244 +1,117 @@
-# TrueCount - Secure E-Voting System
+<p align="center">
+  <img src="frontend/public/logo/TrueCount_navLogo_lightmode.svg#gh-light-mode-only" width="200" />
+  <img src="frontend/public/logo/TrueCount_navLogo_darkmode.svg#gh-dark-mode-only" width="200" />
+</p>
 
-Aplikasi web **dan desktop** pemungutan suara yang aman untuk keperluan akademik.
+# TrueCount
 
-## Tech Stack
+Secure e-voting system untuk pemilihan akademik. Tersedia sebagai aplikasi web dan desktop (Tauri) dengan backend PHP native.
 
-| Layer      | Teknologi                                    |
-|------------|----------------------------------------------|
-| Frontend   | React 19 + Vite 8                            |
-| Desktop    | Tauri v2 (Rust) - opsional, wrap React       |
-| Backend    | PHP 8.1+ (Native, no framework)              |
-| Database   | MySQL 8 / MariaDB 10.6                       |
-| Auth       | JWT HS256 + Argon2id                         |
-| Font       | Plus Jakarta Sans                            |
+- [x] Enkripsi ujung-ke-ujung (AES-256-GCM, ChaCha20-Poly1305)
+- [x] Autentikasi multi-faktor (WebAuthn / Windows Hello, token USB)
+- [x] Audit blockchain untuk integritas suara
+- [x] Kamera aman untuk verifikasi identitas saat login
+- [x] Mode server / standalone untuk demo jaringan lokal
+- [x] Backend PHP 8.1+ native, tanpa framework
+
+## Dokumentasi
+
+| Dokumen | Isi |
+|---------|-----|
+| [`docs/deploy/deploy.md`](docs/deploy/deploy.md) | Setup lokal, server, Nginx, HTTPS, checklist |
+| [`docs/desktop/desktop.md`](docs/desktop/desktop.md) | Konversi ke .exe / .dmg / .deb via Tauri |
+| [`docs/admin/PANDUAN_ADMIN.md`](docs/admin/PANDUAN_ADMIN.md) | Panduan operasional admin dan panitia |
+| [`docs/dev/knowledge_transfer.md`](docs/dev/knowledge_transfer.md) | Konteks lengkap untuk AI dan onboarding |
+
+## Cara Kerja
+
+TrueCount adalah kombinasi dari beberapa komponen open source dan teknologi kriptografi modern.
+
+- **PostgreSQL / MySQL** — penyimpanan data terstruktur dengan integritas transaksional.
+- **PHP (native)** — backend API tanpa framework, routing melalui `backend/index.php`.
+- **React 19 + Vite 8** — frontend web yang di-wrap oleh Tauri untuk aplikasi desktop.
+- **Tauri v2 (Rust)** — wrapper desktop yang menyediakan webview native dan spawn backend PHP otomatis.
+- **WebAuthn / Windows Hello** — autentikasi biometrik berbasis kunci publik.
+- **AES-256-GCM + ChaCha20-Poly1305** — enkripsi suara dan pesan di sisi klien sebelum dikirim ke server.
+- **Blockchain audit** — setiap peristiwa pemilihan dicatat dan dirantai untuk deteksi manipulasi.
+
+## Quick Start
+
+### Web
+
+```bash
+# 1. Salin dan sesuaikan environment
+cp .env.example .env
+# Isi DB_PASS dan JWT_SECRET. Pastikan DB_HOST=127.0.0.1 (bukan localhost).
+
+# 2. Jalankan migrasi database
+php database/migrate.php --seed
+
+# 3. Jalankan backend dan frontend
+cd frontend
+npm install
+npm run dev:full   # PHP :8000 + Vite :5173 sekaligus
+```
+
+### Desktop (Tauri)
+
+Prasyarat: [Rust](https://rustup.rs/) dan [Build Tools](https://v2.tauri.app/start/prerequisites/). PHP harus tersedia di PATH.
+
+```bash
+cd frontend
+npm install
+npm run desktop:dev     # Window development (PHP di-spawn otomatis)
+npm run desktop:build   # Build installer (.msi / .exe NSIS di Windows)
+```
+
+Backend PHP di-spawn otomatis saat aplikasi desktop dibuka dan dihentikan saat ditutup.
+
+### Server Demo (Satu Laptop)
+
+Topologi demo: laptopmu menjadi server, PC peserta menjalankan aplikasi desktop yang terhubung ke laptop itu.
+
+```powershell
+.\scripts\deploy-server.ps1 -CheckOnly
+.\scripts\deploy-server.ps1 -Migrate -SeedAdmin -OpenFirewall
+.\scripts\deploy-server.ps1 -Stop
+```
+
+Lihat [`docs/deploy/deploy.md`](docs/deploy/deploy.md) untuk panduan lengkap.
 
 ## Struktur Proyek
 
 ```
 Truecount/
-├── backend/                # PHP API
-│   ├── api/
-│   │   ├── auth/           # register · login · logout · me · change-password · webauthn (login/register) · security-setup · security-status · attempts (log/reset/list/photo)
-│   │   ├── elections/      # create/list/show/update/delete · candidates (CRUD + photo) · voters (list/register/delete) · results · vote · blockchain (seal/verify)
-│   │   ├── invites/        # create/list/verify/revoke
-│   │   ├── mfa/usb/        # register (start/verify) · authenticate (start/verify) · list/revoke/label
-│   │   ├── users/          # voters · search
-│   │   ├── voice-messages/ # admins · create · inbox · read · audio (terenkripsi)
-│   │   └── encrypted-messages/ # create · get
-│   ├── config/             # database.php · app.php · env.php
-│   ├── helpers/            # response.php · jwt.php · logger.php · datetime.php · webauthn.php · election_scheduler.php · storage.php
-│   ├── middleware/         # auth.php (requireAuth / requireAdmin)
-│   ├── services/crypto/    # AESGCMService · BallotService · BallotTallyService · BlockchainService · ChaCha20Poly1305Service · EncryptedMessageService · FileEncryptionService · SteganographyService · VigenereCipherService
-│   └── index.php           # Entry point + router
-│
+├── backend/                 # PHP API
+│   ├── api/                 # Endpoint: auth, elections, invites, mfa/usb, users, voice-messages, encrypted-messages
+│   ├── config/              # Konfigurasi database, app, env
+│   ├── helpers/             # Utility: response, jwt, logger, storage, webauthn
+│   ├── middleware/          # requireAuth, requireAdmin
+│   ├── services/crypto/     # AES-GCM, ChaCha20-Poly1305, blockchain, steganografi
+│   └── index.php            # Entry point + router
 ├── database/
-│   ├── migrations/
-│   │   ├── 001_init.sql        # 10 tabel lengkap
-│   │   ├── 002_invites.sql
-│   │   ├── 003_usb_tokens.sql
-│   │   ├── 004_usb_challenges.sql
-│   │   ├── 005_webauthn_challenges.sql
-│   │   ├── 006_biometric_last_used.sql
-│   │   ├── 007_auth_attempts.sql · 007b_add_aes_gcm_tag.sql · 007_fix_biometric_credentials_binary.sql
-│   │   ├── 008_sprint2_marker.sql
-│   │   ├── 009_add_photo_path_to_auth_attempts.sql · 009_add_photo_file_id_to_candidates.sql
-│   │   ├── 010_add_crypto_version.sql
-│   │   ├── 011_add_encrypted_files_columns.sql
-│   │   ├── 012_add_dev_role.sql
-│   │   └── 013_create_voice_messages.sql
-│   ├── seeds/
-│   │   ├── 001_admin.sql       # Akun admin default
-│   │   ├── 002_dummy_users.sql # pemilih1, pemilih2
-│   │   └── 003_dev_user.sql    # Akun dev default (Dev@1234)
-│   ├── migrate.php         # CLI runner (--seed, --fresh)
-│   └── generate_test_token.php # CLI generate file token USB (.truecount_token)
-│
-├── frontend/               # React + Vite
-│   ├── public/             # Aset statis (gambar artsy, logo, cursor set)
+│   ├── migrations/          # 13 file migrasi SQL
+│   ├── seeds/               # Seed: admin, dummy users, dev
+│   └── migrate.php          # CLI runner (--seed, --fresh)
+├── frontend/                # React + Vite
 │   ├── src/
-│   │   ├── pages/          # LandingPage · AboutPage · LoginPage · RegisterPage · SecuritySetupPage · DashboardPage · VotePage · ResultsPage · ProfileSettingsPage · UsbTokenTestPage · UserSecurityLogPage · EncryptedMessagesPage · DevPage
-│   │   ├── components/     # Nav (menu akun: avatar inisial · username · badge role · dropdown Pengaturan/Log Keamanan Saya/Keluar) · AuthGuard · RoleGuard · ElectionModals · UsbTokenPanel · HealthMonitor · Skeleton (ui) · IsometricFlow (+ IsoNode · IsoShared · isoTheme) · IsometricCrypto (+ CryptoCard)
-│   │   ├── hooks/          # useAuth · useAuthSession · useAuthSecurity · useFaceDetection · useUsbToken · useWebAuthn
-│   │   ├── styles/         # cursor.css (kursor kustom)
-│   │   ├── utils/          # webauthn.ts
-│   │   └── index.css · main.jsx · App.jsx · App.css
-│   ├── src-tauri/          # Tauri (desktop wrapper) — main.rs · lib.rs · tauri.conf.json · Cargo.toml
-│   ├── package.json
+│   │   ├── pages/           # Landing, Masuk, Daftar, Dasbor, Pilih, Hasil, Pengaturan, dll.
+│   │   ├── components/      # Nav, AuthGuard, ElectionModals, HealthMonitor, dll.
+│   │   ├── hooks/           # useAuth, useAuthSecurity, useUsbToken, useWebAuthn
+│   │   └── src-tauri/       # Tauri (desktop wrapper)
 │   └── vite.config.js
-│
-├── tests/
-│   ├── api_test.php               # Test otomatis (auth, invite, register via undangan, hak akses, validasi, method)
-│   ├── usb_register_e2e_test.php  # E2E register USB token
-│   ├── usb_manage_test.php        # Kelola USB token
-│   ├── run-all-crypto-tests.ps1   # Runner tes kripto
-│   ├── crypto/                    # test-aes · test-aes-aad · test-chacha20 · test-encrypted-message · *-aad · *-chacha · test-file-encryption · *-metadata · *-tampering · test-steganography · *-capacity · *-persistence · *-psnr · *-tampering · test-tampering-db · test-vigenere · check-encryption-keys.php · fixtures/
-│   └── blockchain/                # test-blockchain-tampering · test-blockchain-hardening · test-ballot-integrity · test-seal-invalid-chain.php
-│
+├── tests/                   # Uji API, USB, kripto, blockchain
 ├── docs/
-│   ├── deploy/           # deploy.md · demo-server-config-plan.md · deploy-to-cloud-plan.md
-│   ├── desktop/          # desktop.md (Panduan konversi ke desktop app)
-│   ├── admin/            # PANDUAN_ADMIN.md (Panduan operasional admin/panitia)
-│   ├── dev/              # knowledge_transfer.md (Konteks proyek untuk AI) · user-flow.md · dev-page-plan.md · pembagian_jobdesk_secure_e_voting.md (Pembagian tugas tim)
-│   └── project/          # (kosong — pembagian_jobdesk pindah ke docs/dev/)
-│
-├── storage/              # Data runtime lama (auth_photos) — root aktif sekarang `backend/storage/` (lihat knowledge_transfer.md)
-│
+│   ├── deploy/              # Panduan deploy lokal & server
+│   ├── desktop/             # Panduan konversi ke desktop
+│   ├── admin/               # Panduan operasional admin
+│   └── dev/                 # Konteks proyek untuk AI & onboarding
 ├── scripts/
-│   ├── deploy-server.ps1 # Deploy + start server demo (LAN)
-│   ├── free-ports.ps1    # Bebaskan port 5173/5183/8000
-│   └── check_db.php      # Cek kondisi database
-│
-├── .env.example
-└── README.md
+│   ├── deploy-server.ps1    # Deploy + start server demo (LAN)
+│   ├── free-ports.ps1       # Bebaskan port 5173 / 5183 / 8000
+│   └── check_db.php         # Cek kondisi database
+└── .env.example
 ```
-
-## Quick Start - Web
-
-### 1. Setup
-
-```bash
-cp .env.example .env        # isi DB_PASS, JWT_SECRET
-```
-
-> **Tips:** pastikan `DB_HOST=127.0.0.1` (bukan `localhost`) — di Windows `localhost` menambah delay **±2 detik** per koneksi MySQL sehingga aplikasi terus-menerus dinyatakan "tidak dapat terhubung".
-
-### 2. Database
-
-```bash
-php database/migrate.php --seed
-```
-
-### Akun Default & Dummy
-
-| Username | Password | Role | Email | Keterangan |
-| --- | --- | --- | --- | --- |
-| `admin` | `Admin@1234` | admin | admin@truecount.local | Akun utama |
-| `pemilih1` | `Pemilih@123` | voter | pemilih1@truecount.local | Testing pemilihan |
-| `pemilih2` | `Pemilih@123` | voter | pemilih2@truecount.local | Testing pemilihan |
-| `dev` | `Dev@1234` | dev | dev@truecount.local | Akses halaman dev (`/dev`) |
-
-### 3. Backend + Frontend
-
-Dua cara:
-
-**Cara cepat - satu terminal menjalankan PHP + Vite sekaligus:**
-
-```bash
-cd frontend
-npm install
-npm run dev:full     # PHP :8000 + Vite :5173 sekaligus
-```
-
-**Cara terpisah (2 terminal):**
-
-```bash
-# Terminal 1 - backend
-php -S localhost:8000 -t backend backend/index.php
-
-# Terminal 2 - frontend
-cd frontend
-npm install
-npm run dev     # http://localhost:5173
-```
-
-## Quick Start - Desktop (Tauri)
-
-> Prasyarat tambahan: [Rust](https://rustup.rs/) + [Build Tools](https://v2.tauri.app/start/prerequisites/)
->
-> + **PHP terinstall di PATH** (backend di-spawn otomatis oleh app, port 8000).
-
-```bash
-cd frontend
-npm install
-
-# Jalankan React + Tauri window sekaligus (PHP di-spawn otomatis)
-npm run desktop:dev
-
-# Build installer (.msi + .exe NSIS di Windows)
-npm run desktop:build
-```
-
-Backend PHP di-spawn otomatis saat app start (tanpa konsol) dan di-kill saat app ditutup. Kalau port 8000 sudah dipakai server lain, app akan memakai server yang sudah ada.
-
-Log aplikasi (jika troubleshooting): `%LOCALAPPDATA%\com.truecount.app\logs\` (Windows) - berisi `truecount.log` dan `php.log`.
-
-Lihat [`docs/desktop/desktop.md`](docs/desktop/desktop.md) untuk panduan lengkap.
-
-## Quick Start - Server Demo (1 Laptop)
-
-Topologi demo: **laptopmu menjadi server**, PC peserta menjalankan app desktop yang terhubung ke laptop itu. Satu database, satu sumber kebenaran.
-
-> Prasyarat: PHP 8.1+ di PATH, MySQL/MariaDB berjalan, database `truecount_db` sudah dibuat (atau pakai `-Migrate`).
-
-```powershell
-# Periksa prasyarat + siapkan .env, tanpa menyalakan server
-.\scripts\deploy-server.ps1 -CheckOnly
-
-# Siapkan database + akun admin, lalu nyalakan server untuk LAN
-.\scripts\deploy-server.ps1 -Migrate -SeedAdmin -OpenFirewall
-
-# Hentikan server
-.\scripts\deploy-server.ps1 -Stop
-```
-
-Saat server jalan, script menampilkan:
-
-- URL lokal: `http://localhost:8000/`
-- URL LAN untuk client: `http://<ip-laptop>:8000/`
-- Health check: `http://localhost:8000/health`
-
-Tanpa parameter, script hanya memeriksa prasyarat dan menyalakan server memakai `.env` yang sudah ada.
-
-| Parameter | Fungsi |
-|---|---|
-| `-Port 8000` | Port API |
-| `-BindAddress 0.0.0.0` | Agar bisa diakses client di LAN |
-| `-Migrate` | Jalankan `database/migrate.php` |
-| `-SeedAdmin` | Seed akun admin saja |
-| `-BuildFrontend` | `npm run build` di `frontend/` |
-| `-OpenFirewall` | Rule inbound TCP, profil **Private** (butuh Administrator) |
-| `-CheckOnly` | Preflight saja, jangan nyalakan server |
-| `-Stop` | Hentikan server di port tersebut |
-| `-Force` | Izinkan script menghentikan proses yang memakai port |
-| `-RecreateEnv` | Buat ulang `.env` (butuh ketik `OVERWRITE`) |
-
-Yang **tidak** dilakukan script: membuka port 3306, membuat rule profil Public, mencetak secret ke console, atau menjalankan `migrate.php --fresh`/`--seed`. Migration aman dijalankan berulang karena setiap file dicatat di tabel `schema_migrations`.
-
-Script juga memperingatkan kalau MySQL listen di `0.0.0.0:3306` (seharusnya `127.0.0.1`) — perbaiki lewat `bind-address` di `my.ini`.
-
-Panduan lengkap + keamanan: [`docs/deploy/deploy.md`](docs/deploy/deploy.md#211-script-deploy-server-lokal-windows) · rencana topologi: [`docs/deploy/demo-server-config-plan.md`](docs/deploy/demo-server-config-plan.md).
-
-### Mengarahkan client desktop ke laptop server
-
-Alamat server **tidak lagi hardcode**. Tiap client menyimpan alamatnya sendiri di `app_config.json` dan bisa diubah tanpa rebuild:
-
-1. Buka halaman config tersembunyi: tekan **Ctrl + Shift + Alt + S** di aplikasi desktop, atau ketik `__tcServerConfig()` di DevTools console.
-2. Pilih mode:
-   - **Client** - PC peserta, tidak menjalankan PHP lokal.
-   - **Server** - laptop penyelenggara, PHP listen di `0.0.0.0:8000`.
-   - **Standalone** - PHP lokal hanya untuk laptop itu sendiri (`127.0.0.1`).
-3. Isi alamat server, mis. `http://192.168.2.102:8000`, lalu **Tes koneksi**.
-4. **Simpan & sambungkan** — config disimpan lalu koneksi langsung dicoba ulang dari halaman itu (3× percobaan), tanpa dilempar ke halaman beranda.
-
-Halaman ini tidak punya link di navigasi. Database dan kredensial tetap hanya ada di laptop server.
-
-> **Catatan demo penting:**
->
-> - **Kamera:** di aplikasi desktop kamera jalan **tanpa HTTPS** (webview = secure context). Akses via **browser** membutuhkan HTTPS — lihat `npm run dev:https` di [`docs/deploy/deploy.md`](docs/deploy/deploy.md) bagian 1.5.
-> - **Jaringan:** client (PC/HP) hanya bisa menjangkau server kalau (1) firewall port 8000 terbuka (`-OpenFirewall`) dan (2) semua perangkat berada di **Wi-Fi yang sama persis** — berhati-hatilah dengan SSID kembar (mis. "Nabe Kusuma" vs "Nabe Kusuma Wi-Fi").
-> - **Foto** (paslon & log keamanan) disimpan di laptop server dan dilayani lewat API — client tidak memerlukan file lokal apa pun, tapi server harus sedang berjalan.
-
-Build client tetap memakai alamat default dari `frontend/.env`:
-
-```env
-VITE_DEFAULT_SERVER_URL=http://192.168.2.102:8000
-```
-
-Kalau `app_config.json` belum ada, alamat itu yang dipakai. Setelah disimpan, config runtime menang atas nilai build.
-
-> **Catatan:** halaman setup server berbasis PHP (`backend/setup/index.php`) masih rencana; untuk sekarang gunakan `scripts/deploy-server.ps1` di laptop server.
-
 
 ## API Endpoints
 
@@ -246,32 +119,30 @@ Base URL: `http://localhost:8000`
 
 | Method | Path | Auth | Keterangan |
 |--------|------|------|------------|
-| GET | `/health` | - | Health check |
-| POST | `/auth/register` | Undangan | Daftar akun - wajib `invite_token` |
-| POST | `/auth/login` | - | Login, dapat JWT |
-| POST | `/auth/logout` | - | Logout |
+| GET | `/health` | — | Health check |
+| POST | `/auth/register` | Undangan | Daftar akun, wajib `invite_token` |
+| POST | `/auth/login` | — | Login, dapat JWT |
+| POST | `/auth/logout` | — | Logout |
 | GET | `/auth/me` | JWT | Info user dari token |
 | POST | `/auth/change-password` | JWT | Ganti password (Argon2id) |
-| GET | `/auth/security-setup` | JWT | Cek status keamanan user (wajib setup) |
-| POST | `/auth/security-status` | - | Cek status keamanan by identifier (publik) |
-| POST | `/auth/attempts/log` | - | Log attempt login (internal backend) |
-| POST | `/auth/attempts/reset` | - | Reset failed attempts |
+| GET | `/auth/security-setup` | JWT | Cek status keamanan user |
+| POST | `/auth/security-status` | — | Cek status keamanan by identifier (publik) |
 | GET | `/auth/attempts/list` | JWT (admin) | Daftar percobaan login (audit admin) |
 | GET | `/auth/attempts/{id}/photo` | JWT (admin) | Foto kamera percobaan login |
-| POST | `/auth/webauthn/login/start` | - | Login Windows Hello - mulai |
-| POST | `/auth/webauthn/login/verify` | - | Login Windows Hello - verifikasi |
-| POST | `/auth/webauthn/register/start` | JWT | Register Windows Hello - mulai |
-| POST | `/auth/webauthn/register/verify` | JWT | Register Windows Hello - verifikasi |
+| POST | `/auth/webauthn/login/start` | — | Login Windows Hello — mulai |
+| POST | `/auth/webauthn/login/verify` | — | Login Windows Hello — verifikasi |
+| POST | `/auth/webauthn/register/start` | JWT | Register Windows Hello — mulai |
+| POST | `/auth/webauthn/register/verify` | JWT | Register Windows Hello — verifikasi |
 | GET | `/auth/webauthn/list` | JWT | Daftar Windows Hello |
 | POST | `/auth/webauthn/{id}/revoke` | JWT | Hapus Windows Hello |
-| GET | `/invites` | JWT (admin) | Daftar undangan + statistik status |
+| GET | `/invites` | JWT (admin) | Daftar undangan + statistik |
 | POST | `/invites` | JWT (admin) | Buat undangan pendaftaran |
-| GET | `/invites/verify` | - | Cek status undangan (`?token=...`) |
+| GET | `/invites/verify` | — | Cek status undangan (`?token=...`) |
 | POST | `/invites/{id}/revoke` | JWT (admin) | Batalkan undangan |
-| POST | `/mfa/usb/register/start` | JWT | MFA USB register - generate challenge |
-| POST | `/mfa/usb/register/verify` | JWT | MFA USB register - verifikasi ECDSA |
-| POST | `/mfa/usb/authenticate/start` | - (identifier) | MFA USB login - mulai challenge |
-| POST | `/mfa/usb/authenticate/verify` | - | MFA USB login - verifikasi signature → JWT |
+| POST | `/mfa/usb/register/start` | JWT | MFA USB register — generate challenge |
+| POST | `/mfa/usb/register/verify` | JWT | MFA USB register — verifikasi ECDSA |
+| POST | `/mfa/usb/authenticate/start` | — (identifier) | MFA USB login — mulai challenge |
+| POST | `/mfa/usb/authenticate/verify` | — | MFA USB login — verifikasi signature → JWT |
 | GET | `/mfa/usb/list` | JWT | Daftar token USB user |
 | POST | `/mfa/usb/{id}/revoke` | JWT | Nonaktifkan token USB |
 | POST | `/mfa/usb/{id}/label` | JWT | Update label token USB |
@@ -293,99 +164,76 @@ Base URL: `http://localhost:8000`
 | POST | `/elections/:id/vote` | JWT | Kirim suara (voter) |
 | POST | `/elections/blockchain/seal` | JWT (admin) | Seal block blockchain |
 | GET | `/elections/blockchain/verify` | JWT | Verifikasi integritas blockchain |
-| GET | `/users/voters` | JWT (admin) | Daftar semua voter aktif di sistem |
+| GET | `/users/voters` | JWT (admin) | Daftar semua voter aktif |
 | GET | `/users/search?q=` | JWT (admin) | Cari pengguna (admin) |
 | GET | `/voice-messages/admins` | JWT (admin) | Daftar admin aktif penerima pesan suara |
-| POST | `/voice-messages` | JWT (admin) | Kirim pesan suara (multipart: `audio`, `recipient_id`, `duration_seconds`) |
+| POST | `/voice-messages` | JWT (admin) | Kirim pesan suara (multipart) |
 | GET | `/voice-messages/inbox` | JWT (admin) | Daftar pesan suara yang diterima |
 | POST | `/voice-messages/:id/read` | JWT (admin) | Tandai pesan suara sudah dibaca |
 | GET | `/voice-messages/:id/audio` | JWT (admin) | Putar audio pesan suara (hanya penerima) |
 | POST | `/encrypted-messages` | JWT | Buat pesan terenkripsi |
 | GET | `/encrypted-messages/:id` | JWT | Ambil pesan terenkripsi |
-| GET | `/dev/flow` | JWT (admin/dev) | Data flow aplikasi (nodes & edges) untuk halaman dev |
-| GET | `/dev/crypto` | JWT (admin/dev) | Data algoritma kriptografi untuk halaman dev |
+| GET | `/dev/flow` | JWT (admin / dev) | Data flow aplikasi untuk halaman dev |
+| GET | `/dev/crypto` | JWT (admin / dev) | Data algoritma kriptografi untuk halaman dev |
 
-Pendaftaran publik **ditutup** - akun hanya bisa dibuat lewat tautan undangan yang dibuat admin (`/daftar?undangan=<token>`). Halaman `/daftar` juga menerima **link undangan ATAU kode undangan yang ditempel/diketik manual** (penting untuk alur desktop, di mana link undangan tidak bisa diklik langsung) - URL diseragamkan otomatis menjadi `/daftar?undangan=<token>`.
+Pendaftaran publik ditutup. Akun hanya bisa dibuat lewat tautan undangan yang dibuat admin (`/daftar?undangan=<token>`).
 
-### Error Format
+### Format Error
 
-Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia." }`
+Semua error menggunakan format:
 
-### HTTP Status Codes yang dipakai
+```json
+{ "error": "Pesan error dalam Bahasa Indonesia." }
+```
 
-- `200` - OK
-- `201` - Created (register berhasil / undangan dibuat)
-- `401` - Unauthorized (token invalid / credentials salah)
-- `403` - Forbidden (akun nonaktif / bukan admin / daftar tanpa undangan)
-- `404` - Not found (endpoint atau undangan tidak ada)
-- `405` - Method not allowed
-- `409` - Conflict (username/email duplikat)
-- `422` - Unprocessable Entity (validasi gagal)
+### Kode Status HTTP
 
-## URL Routing Frontend
-
-| Path | Halaman | Keterangan |
-|------|---------|------------|
-| `/` | Landing Page | Halaman utama |
-| `/tentang` | About Page | Tentang aplikasi (proyek, tim, stack) |
-| `/masuk` | Login | Login + tombol "Daftar dengan undangan" (`/login` alias → redirect) |
-| `/daftar` | Register | Pendaftaran invite-only, via `?undangan=<token>` atau tempel link/kode undangan manual di halaman (`/register` alias → redirect) |
-| `/atur-keamanan` | Security Setup | Setup keamanan wajib (Windows Hello/Dongle) sebelum akses dashboard |
-| `/dasbor` | Dashboard | Admin: tab Pemilihan · Undangan · Blockchain Audit · Log Keamanan (query `?tab=`). Pemilih: VoterDashboardView (`/dashboard` alias → redirect) |
-| `/pilih` | Halaman Pemilihan | Kandidat, tombol besar berwarna (Sprint 2) |
-| `/hasil/:id` | Hasil Pemilihan | Tally suara + verifikasi blockchain (Sprint 2) |
-| `/pengaturan` | Profile Settings | Change password, Windows Hello, USB token management |
-| `/usb-token-test` | USB Token Test | Deteksi, decrypt, challenge-response |
-| `/pesan-terenkripsi` | Pesan Terenkripsi | Halaman bertab: **Pesan Teks** (enkripsi/dekripsi) dan **Pesan Suara** (khusus admin); tab aktif bisa dibuka via `?tab=teks` / `?tab=suara` |
-| `/pesan-suara` | Alias → tab suara | Redirect ke `/pesan-terenkripsi?tab=suara` |
-| `/log-keamanan/:userId` | Log Keamanan Pengguna | Riwayat percobaan login + foto kamera (audit admin) |
-| `/dev` | Halaman Dev | Diagram flow aplikasi (2D, klik blok untuk detail) + grid algoritma kripto (hanya admin & dev) |
-| `*` | Redirect → `/` | Catchall |
-
-Semua route terlindungi (`/dasbor`, `/pilih`, `/pengaturan`, dll.) dipelihara oleh `AuthGuard` yang redirect ke `/atur-keamanan` jika user belum setup Windows Hello atau Dongle. Halaman `/dev` selain itu dilindungi oleh `RoleGuard` yang hanya mengizinkan role `admin` dan `dev`.
-
-Navigasi tengah setelah login berisi **Dasbor**, **Pemilihan**, dan satu entri **Pesan Terenkripsi** (ikon bubble chat). Halaman ini memuat dua tab: **Pesan Teks** untuk semua pengguna dan **Pesan Suara** yang hanya tampil untuk role `admin`. URL lama `/pesan-suara` otomatis diarahkan ke tab suara, dan tab dapat dibuka langsung lewat `?tab=teks` atau `?tab=suara`. Berpindah tab tidak memuat ulang halaman sehingga isian pesan atau rekaman yang belum dikirim tetap tersimpan.
-
-### Navbar & Menu Akun
-
-Sesudah login, sisi kanan navbar menampilkan **akun yang sedang aktif**: avatar inisial, username, dan badge peran (`Admin` / `Dev` / `Pemilih`). Mengkliknya membuka **menu akun** berisi email, **Pengaturan** (`/pengaturan`), **Keluar**, dan — hanya untuk akun `Admin` — **Log Keamanan Saya** (`/log-keamanan/{id}` milik akun tersebut, karena endpoint log di backend khusus admin). Datanya diambil dari `useAuth()` (`GET /auth/me`) sehingga tidak ada endpoint tambahan; sebelum login navbar tetap hanya menampilkan tombol **Masuk**. Di layar kecil baris akun tampil sebagai bagian dari drawer menu. **Pengaturan tidak lagi menjadi link menu tengah** — pengaturan profil diakses lewat menu akun ini.
+| Kode | Keterangan |
+|------|------------|
+| 200 | OK |
+| 201 | Created |
+| 401 | Unauthorized |
+| 403 | Forbidden |
+| 404 | Not found |
+| 405 | Method not allowed |
+| 409 | Conflict |
+| 422 | Unprocessable Entity |
 
 ## Test Otomatis
 
+Backend harus berjalan di `localhost:8000`.
+
 ```bash
-# Backend harus jalan di localhost:8000
 php tests/api_test.php
 ```
 
-Output: test case - auth, invite (buat/daftar/verifikasi), register via undangan, hak akses, validasi, method check.
+Output mencakup test case: auth, invite (buat / daftar / verifikasi), register via undangan, hak akses, validasi, dan method check.
 
 Tes tambahan:
-- `tests/usb_register_e2e_test.php` - E2E register USB token
-- `tests/usb_manage_test.php` - Kelola USB token
-- `tests/run-all-crypto-tests.ps1` - Runner tes kripto (AES, ChaCha20, Vigenere, steganografi, file encryption, blockchain)
 
-## Deploy
+- `tests/usb_register_e2e_test.php` — E2E register USB token
+- `tests/usb_manage_test.php` — Kelola USB token
+- `tests/run-all-crypto-tests.ps1` — Runner tes kripto (AES, ChaCha20, Vigenere, steganografi, file encryption, blockchain)
 
-Panduan lengkap (web + desktop): [`docs/deploy/deploy.md`](docs/deploy/deploy.md)
+## Stack
 
-## Dokumentasi
-
-| Dokumen | Isi |
-| --- | --- |
-| [`docs/admin/PANDUAN_ADMIN.md`](docs/admin/PANDUAN_ADMIN.md) | **Panduan operasional admin/panitia** (undangan, USB token, troubleshooting) |
-| [`docs/deploy/deploy.md`](docs/deploy/deploy.md) | Setup lokal, server, Nginx, HTTPS, checklist |
-| [`docs/desktop/desktop.md`](docs/desktop/desktop.md) | Konversi ke .exe / .dmg / .deb via Tauri |
-| [`docs/dev/knowledge_transfer.md`](docs/dev/knowledge_transfer.md) | Konteks lengkap untuk AI / onboarding |
-| [`docs/dev/pembagian_jobdesk_secure_e_voting.md`](docs/dev/pembagian_jobdesk_secure_e_voting.md) | Pembagian tugas tim |
+| Lapisan | Teknologi |
+|---------|-----------|
+| Frontend | React 19 + Vite 8 |
+| Desktop | Tauri v2 (Rust) |
+| Backend | PHP 8.1+ (native, tanpa framework) |
+| Database | MySQL 8 / MariaDB 10.6 |
+| Autentikasi | JWT HS256 + Argon2id |
+| Font | Plus Jakarta Sans |
 
 ## Tim Pengembang
 
-Project ini dibuat untuk menuntaskan **Proyek Akhir Mata Kuliah Kriptografi**.
+Project ini dibuat untuk **Proyek Akhir Mata Kuliah Kriptografi**.
 
-| # | Nama | Peran | Fokus Sprint |
-|---|------|-------|--------------|
-| 1 | **Rio Meidi Ataurrahman** | Authentication & User Management | Sprint 1 (Auth, Invite, Dashboard) · Sprint 4 (MFA: WebAuthn, USB Token) · Sprint 4b (Auth Security Layer: Session Mgmt, Failed Attempts, Camera Enforcement) |
-| 2 | **Muhamad Ifsal Fadhilah** | Election Management & Voting System | Sprint 2 (Election CRUD, Voting, Results) ✅ SELESAI |
-| 3 | **Erlan Rifqi Davin D** | Cryptography & Advanced Security | Sprint 3 (Vigenere, AES-256-GCM, ChaCha20, Blockchain, Steganografi) ✅ SELESAI |
+| Nama | Peran | Fokus Sprint |
+|------|-------|--------------|
+| Rio Meidi Ataurrahman | Authentication & User Management | Sprint 1, 4, 4b |
+| Muhamad Ifsal Fadhilah | Election Management & Voting System | Sprint 2 |
+| Erlan Rifqi Davin D | Cryptography & Advanced Security | Sprint 3 |
 
-> **Anggota:** Mahasiswa S1 Informatika UPN "Veteran" Yogyakarta Angkatan 2024
+> Mahasiswa S1 Informatika UPN "Veteran" Yogyakarta, Angkatan 2024.

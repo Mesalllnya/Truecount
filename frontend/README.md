@@ -1,16 +1,49 @@
-# React + Vite
+# Frontend TrueCount
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Frontend React 19 + Vite 8 untuk TrueCount. Mendukung web browser dan aplikasi desktop (Tauri).
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19 + Vite 8
+- Tauri v2 (Rust) untuk desktop
+- Plus Jakarta Sans (font)
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev:full   # PHP backend + Vite sekaligus
+# atau
+npm run dev         # Vite saja (backend harus jalan terpisah)
+```
 
-## Expanding the Oxlint configuration
+## Build
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```bash
+# Web
+npm run build
+
+# Desktop (Tauri)
+npm run desktop:build
+```
+
+## Struktur
+
+```
+frontend/
+├── src/
+│   ├── pages/           # Halaman: Landing, Masuk, Daftar, Dasbor, Pilih, Hasil, dll.
+│   ├── components/      # Nav, AuthGuard, ElectionModals, HealthMonitor, dll.
+│   ├── hooks/           # useAuth, useAuthSecurity, useUsbToken, useWebAuthn
+│   ├── styles/          # cursor.css
+│   ├── utils/           # webauthn.ts
+│   └── src-tauri/       # Tauri (desktop wrapper)
+├── public/              # Aset statis
+└── vite.config.js
+```
+
+## Lihat Juga
+
+- [`../README.md`](../README.md) — Dokumentasi lengkap TrueCount
+- [`../docs/desktop/desktop.md`](../docs/desktop/desktop.md) — Panduan desktop Tauri
+- [`../docs/deploy/deploy.md`](../docs/deploy/deploy.md) — Panduan deploy

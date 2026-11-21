@@ -18,12 +18,17 @@
 // Set zona waktu default ke WIB (UTC+7)
 date_default_timezone_set('Asia/Jakarta');
 
+require_once __DIR__ . '/storage.php';
+
 /**
  * Pastikan folder log ada, kembalikan path-nya.
+ *
+ * Memakai storagePath('logs') agar lokasi log ikut TC_STORAGE_ROOT.
+ * Di container, TC_STORAGE_ROOT diarahkan ke volume persisten.
  */
 function tc_log_dir(): string
 {
-    $dir = __DIR__ . '/../storage/logs';
+    $dir = storagePath('logs');
     if (!is_dir($dir)) {
         $created = @mkdir($dir, 0775, true);
         if (!$created && !is_dir($dir)) {

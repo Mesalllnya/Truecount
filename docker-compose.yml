@@ -1,0 +1,64 @@
+name: truecount
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-truecount_db}
+      MYSQL_USER: ${DB_USER:-truecount}
+      MYSQL_PASSWORD: ${DB_PASS:?DB_PASS wajib diisi di .env.docker}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD wajib diisi di .env.docker}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    # Tidak dipublikasikan ke host. Buka hanya untuk debugging:
+    # ports:
+    #   - "127.0.0.1:3307:3306"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: truecount-backend:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-truecount_db}
+      DB_USER: ${DB_USER:-truecount}
+      DB_PASS: ${DB_PASS:?DB_PASS wajib diisi di .env.docker}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib diisi di .env.docker}
+      JWT_EXPIRE: ${JWT_EXPIRE:-3600}
+      INVITE_EXPIRE_DAYS: ${INVITE_EXPIRE_DAYS:-7}
+      ENCRYPTION_KEY_B64: ${ENCRYPTION_KEY_B64:?ENCRYPTION_KEY_B64 wajib diisi di .env.docker}
+      CHACHA20_KEY_B64: ${CHACHA20_KEY_B64:?CHACHA20_KEY_B64 wajib diisi di .env.docker}
+      SERVER_ID: ${SERVER_ID:-}
+      SERVER_LABEL: ${SERVER_LABEL:-Docker Demo}
+      TC_STORAGE_ROOT: /var/www/html/backend/storage
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      RUN_SEED: ${RUN_SEED:-false}
+      DB_WAIT_ATTEMPTS: ${DB_WAIT_ATTEMPTS:-60}
+    ports:
+      - "${BACKEND_PORT:-8000}:80"
+    volumes:
+      - backend_storage:/var/www/html/backend/storage
+      - backend_uploads:/var/www/html/backend/uploads
+
+volumes:
+  db_data:
+  backend_storage:
+  backend_uploads:

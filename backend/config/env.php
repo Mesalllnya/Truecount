@@ -10,8 +10,25 @@
 // membaca konfigurasi dari folder aplikasi yang writable.
 $envFile = getenv('TC_ENV_PATH') ?: dirname(__DIR__, 2) . '/.env';
 
+// Variabel dari environment proses (Docker / Kubernetes / systemd) dipakai
+// lebih dulu, sehingga container tidak wajib menyertakan file .env.
+// File .env tetap didukung untuk mode lokal/desktop dan tidak menimpa
+// variabel yang sudah diberikan oleh proses induk.
+foreach (getenv() as $processKey => $processValue) {
+    if (!isset($_ENV[$processKey])) {
+        $_ENV[$processKey] = $processValue;
+    }
+}
+
 if (!file_exists($envFile)) {
-    throw new RuntimeException('.env file tidak ditemukan. Dicek: ' . $envFile);
+    // Mode container: konfigurasi boleh sepenuhnya berasal dari environment.
+    if (getenv('DB_HOST') === false) {
+        throw new RuntimeException(
+            '.env file tidak ditemukan. Dicek: ' . $envFile .
+            '. Di container, set variabel environment DB_HOST (dan lainnya) atau mount file .env.'
+        );
+    }
+    return;
 }
 
 $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);

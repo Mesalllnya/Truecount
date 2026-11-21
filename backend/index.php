@@ -55,8 +55,10 @@ try {
 }
 
 // Warning / error PHP native juga masuk ke file log
+$tcLogDir = storagePath('logs');
+ensureStorageDir($tcLogDir);
 ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/storage/logs/php_errors.log');
+ini_set('error_log', $tcLogDir . '/php_errors.log');
 
 // Semua exception / error fatal → JSON ke client, detail ke file log
 set_exception_handler(function (Throwable $e): void {

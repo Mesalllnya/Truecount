@@ -1,0 +1,4 @@
+# Pastikan shell script container tetap LF walau di-checkout di Windows.
+docker/*.sh text eol=lf
+Dockerfile text eol=lf
+*.conf text eol=lf

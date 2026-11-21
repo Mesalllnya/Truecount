@@ -136,6 +136,12 @@ match (true) {
     $uri === '/auth/login' => (function () {
         require_once __DIR__ . '/api/auth/login.php';
     })(),
+    $uri === '/auth/check-username' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/auth/check_username.php';
+    })(),
+    $uri === '/auth/check-username' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
     $uri === '/auth/logout' => (function () {
         require_once __DIR__ . '/api/auth/logout.php';
     })(),

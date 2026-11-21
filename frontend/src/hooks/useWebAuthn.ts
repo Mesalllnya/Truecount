@@ -288,8 +288,11 @@ export function useWebAuthnRegister() {
       if (!res.ok) throw new Error(data.error || 'Gagal memulai registrasi')
 
       // 2. Buat credential baru
+      if (!data.challenge || !data.user?.id) {
+        throw new Error('Respons server tidak valid untuk registrasi WebAuthn')
+      }
       const challenge = base64urlDecode(data.challenge)
-      const userId = base64urlDecode(data.user_id)
+      const userId = base64urlDecode(data.user.id)
 
       const credential = await navigator.credentials.create({
         publicKey: {

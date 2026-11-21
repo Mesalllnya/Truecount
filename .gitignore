@@ -2,6 +2,8 @@
 .env
 .env.bak.*
 .env.tmp.*
+.env.docker
+.env.docker.bak.*
 
 # ── PHP vendor ───────────────────────────────────────────
 backend/vendor/

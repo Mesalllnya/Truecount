@@ -1,0 +1,20 @@
+# TrueCount - Apache rewrite rules
+#
+# Dipakai saat backend disajikan Apache (container Docker atau VPS).
+# Untuk PHP built-in server (`php -S ... backend/index.php`) file ini diabaikan.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Jangan pernah menyajikan file/folder internal secara langsung.
+    # Foto auth & file terenkripsi hanya boleh diambil lewat endpoint API.
+    RewriteRule ^(config|helpers|middleware|services|storage|tests)(/|$) - [F,L]
+    RewriteRule (^|/)\. - [F,L]
+
+    # Front controller: request yang bukan file/folder nyata diarahkan ke index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>

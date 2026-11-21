@@ -5,11 +5,13 @@ Dokumen ini mencakup dua skenario:
 - **[Lokal / Development](#1-lokal--development)** - untuk pengerjaan sehari-hari di laptop masing-masing.
 - **[Server / Production](#2-server--production)** - untuk demo akhir atau hosting publik.
 
-> **Rencana demo 1 laptop + client desktop (aktif):** lihat [`demo-server-config-plan.md`](demo-server-config-plan.md) untuk topologi server laptop, konfigurasi alamat server di tiap client, halaman config tersembunyi, dan migrasi app yang sudah terpasang.
+> **Deploy backend + MySQL dengan Docker:** lihat [`docker.md`](docker.md) untuk `Dockerfile`, `docker-compose.yml`, volume storage, dan contoh pod/Kubernetes.
 >
 > Untuk demo di laptop sendiri, langkah manual di bawah bisa diringkas dengan [`scripts/deploy-server.ps1`](../../scripts/deploy-server.ps1) - lihat [2.11 Script deploy server lokal (Windows)](#211-script-deploy-server-lokal-windows).
 >
-> **Rencana migrasi ke cloud/VPS (ditunda):** lihat [`deploy-to-cloud-plan.md`](deploy-to-cloud-plan.md) untuk keputusan arsitektur, refactor yang dibutuhkan, konfigurasi nginx, backup, dan checklist production.
+> **Konfigurasi client/server/standalone di aplikasi desktop:** lihat [`../desktop/desktop.md`](../desktop/desktop.md#konfigurasi-runtime-client--server--standalone).
+>
+> **Dokumen rencana (arsip):** topologi 1 laptop + client desktop ada di [`demo-server-config-plan.md`](../archive/demo-server-config-plan.md); rencana cloud/VPS ada di [`deploy-to-cloud-plan.md`](../archive/deploy-to-cloud-plan.md). Keduanya bukan acuan lagi.
 
 ---
 

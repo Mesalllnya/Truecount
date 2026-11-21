@@ -19,9 +19,12 @@ Secure e-voting system untuk pemilihan akademik. Tersedia sebagai aplikasi web d
 | Dokumen | Isi |
 |---------|-----|
 | [`docs/deploy/deploy.md`](docs/deploy/deploy.md) | Setup lokal, server, Nginx, HTTPS, checklist |
+| [`docs/deploy/docker.md`](docs/deploy/docker.md) | Deploy backend + MySQL dengan Docker Compose / pod |
 | [`docs/desktop/desktop.md`](docs/desktop/desktop.md) | Konversi ke .exe / .dmg / .deb via Tauri |
 | [`docs/admin/PANDUAN_ADMIN.md`](docs/admin/PANDUAN_ADMIN.md) | Panduan operasional admin dan panitia |
 | [`docs/dev/knowledge_transfer.md`](docs/dev/knowledge_transfer.md) | Konteks lengkap untuk AI dan onboarding |
+| [`docs/dev/user-flow.md`](docs/dev/user-flow.md) | Alur pengguna per peran + diagram Mermaid |
+| [`docs/archive/README.md`](docs/archive/README.md) | Dokumen rencana yang sudah selesai/ditunda (arsip) |
 
 ## Cara Kerja
 

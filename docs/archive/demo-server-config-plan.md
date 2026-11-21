@@ -1,9 +1,11 @@
 # TrueCount — Server 1 Laptop + Client Desktop
 
-> **Status:** Sebagian dieksekusi — konfigurasi client (route `/__server`, `app_config.json`, mode Rust, `/health` identitas server) sudah diimplementasi. Halaman setup server berbasis PHP masih rencana.
+> **📦 ARSIP (21 Nov 2026):** Dokumen ini bukan acuan lagi. Bagian yang sudah jadi (route `/__server`, `app_config.json`, mode Rust, identitas `/health`) sudah dijelaskan di [`../desktop/desktop.md`](../desktop/desktop.md). Alasan arsip: [`README.md`](README.md).
+>
+> **Status asli:** Sebagian dieksekusi — konfigurasi client sudah diimplementasi. Halaman setup server berbasis PHP masih rencana.
 > **Terakhir diperbarui:** 19 November 2026
 > **Topologi:** 1 laptop menjadi server, N PC peserta menjalankan aplikasi desktop yang terhubung ke laptop itu.
-> **Dokumen terkait:** [`deploy.md`](deploy.md) · [`deploy-to-cloud-plan.md`](deploy-to-cloud-plan.md) (ditunda) · [`../desktop/desktop.md`](../desktop/desktop.md)
+> **Dokumen terkait:** [`../deploy/deploy.md`](../deploy/deploy.md) · [`deploy-to-cloud-plan.md`](deploy-to-cloud-plan.md) · [`../desktop/desktop.md`](../desktop/desktop.md)
 
 ---
 
@@ -706,7 +708,7 @@ Sudah tersedia: [`scripts/deploy-server.ps1`](../../scripts/deploy-server.ps1).
 .\scripts\deploy-server.ps1 -Stop
 ```
 
-Script menangani preflight (PHP, ekstensi, MySQL, port), pembuatan `.env` + secret, migrasi, seed admin, build frontend, firewall profil Private, deteksi IP LAN, health check, dan penghentian server. Detail parameter dan troubleshooting ada di [`deploy.md` § 2.11](deploy.md#211-script-deploy-server-lokal-windows).
+Script menangani preflight (PHP, ekstensi, MySQL, port), pembuatan `.env` + secret, migrasi, seed admin, build frontend, firewall profil Private, deteksi IP LAN, health check, dan penghentian server. Detail parameter dan troubleshooting ada di [`deploy.md` § 2.11](../deploy/deploy.md#211-script-deploy-server-lokal-windows).
 
 Batasan: script memakai `php -S`, jadi tetap terkena batas satu request sekaligus di Windows.
 

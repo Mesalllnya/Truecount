@@ -1,0 +1,27 @@
+# Jangan kirim data lokal / rahasia ke build context
+.git
+.gitignore
+.env
+.env.*
+
+# Frontend tidak dipakai image backend
+frontend
+node_modules
+**/node_modules
+**/dist
+
+# Data runtime user
+backend/storage
+backend/uploads
+storage
+
+# Dokumen, script dev, dan test tidak perlu di image produksi
+docs
+scripts
+tests
+backend/tests
+*.log
+.DS_Store
+Thumbs.db
+.vscode
+.idea

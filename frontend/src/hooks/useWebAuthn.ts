@@ -268,12 +268,14 @@ export function useWebAuthnRegister() {
 
   const register = useCallback(async (
     username: string,
-    displayName: string
+    displayName?: string
   ): Promise<{ credentialId: string } | null> => {
     if (!isWebAuthnSupported()) {
       setError('WebAuthn tidak didukung di browser ini')
       return null
     }
+
+    const safeDisplayName = displayName || username
 
     setIsLoading(true)
     setError(null)
@@ -282,7 +284,7 @@ export function useWebAuthnRegister() {
       const res = await fetch(apiUrl('/auth/webauthn/register/start'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, display_name: displayName }),
+        body: JSON.stringify({ username, display_name: safeDisplayName }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Gagal memulai registrasi')
@@ -301,7 +303,7 @@ export function useWebAuthnRegister() {
           user: {
             id: userId,
             name: username,
-            displayName,
+            displayName: safeDisplayName,
           },
           pubKeyCredParams: [
             { type: 'public-key', alg: -7 },  // ES256

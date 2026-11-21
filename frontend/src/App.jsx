@@ -11,6 +11,7 @@ import UsbTokenTestPage from './pages/UsbTokenTestPage'
 import ProfileSettingsPage from './pages/ProfileSettingsPage'
 import ResultsPage from './pages/ResultsPage'
 import UserSecurityLogPage from './pages/UserSecurityLogPage'
+import UserProfilePage from './pages/UserProfilePage'
 import HealthMonitor from './components/HealthMonitor'
 import Nav from './components/Nav'
 import EncryptedMessagesPage from './pages/EncryptedMessagesPage'
@@ -184,6 +185,7 @@ function AppRoutes() {
           />
           <Route path="/hasil/:id"       element={<ResultsPage />} />
           <Route path="/pengaturan"      element={<ProfileSettingsPage />} />
+          <Route path="/profil/:userId?"   element={<UserProfilePage />} />
           <Route path="/usb-token-test"  element={<UsbTokenTestPage />} />
           <Route path="/pesan-terenkripsi" element={<EncryptedMessagesPage />} />
           <Route path="/log-keamanan/:userId" element={<UserSecurityLogPage />} />

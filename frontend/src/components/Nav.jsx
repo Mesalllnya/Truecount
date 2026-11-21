@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { useAuth } from '../hooks/useAuthSession'
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg'
-import { ChevronDown, ClipboardList, LayoutDashboard, LogIn, LogOut, Menu, Settings, X } from 'lucide-react'
+import { ChevronDown, ClipboardList, LayoutDashboard, LogIn, LogOut, Menu, Settings, User, X } from 'lucide-react'
 import './Nav.css'
 
 /* ── Scroll-reveal hook ─────────────────────────────────── */
@@ -150,6 +150,11 @@ function AccountMenu({ user, onLogout }) {
         <Link to="/pengaturan" role="menuitem" className="nav-account-item" onClick={close}>
           <Settings size={16} strokeWidth={1.5} aria-hidden="true" />
           <span>Pengaturan</span>
+        </Link>
+
+        <Link to="/profil" role="menuitem" className="nav-account-item" onClick={close}>
+          <User size={16} strokeWidth={1.5} aria-hidden="true" />
+          <span>Profil</span>
         </Link>
 
         {/* Endpoint log & pencarian user dibungkus requireAdmin() di backend,

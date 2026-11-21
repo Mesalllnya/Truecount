@@ -1,0 +1,433 @@
+/* ============================================================
+   IdPhotoCapture.css - ID Photo Capture Component
+   TrueCount Design System
+   Font: Plus Jakarta Sans · Palette: #F13C35
+   ============================================================ */
+
+.id-photo-capture {
+  --tc-radius: 12px;
+  --tc-radius-sm: 8px;
+  --tc-border: var(--border, #e4e4e1);
+  --tc-surface: var(--white, #fff);
+  --tc-surface-dim: var(--off-white, #fafaf8);
+  --tc-text: var(--black, #0d0d0d);
+  --tc-text-muted: var(--muted, #6a6a67);
+  --tc-primary: var(--red, #F13C35);
+  --tc-primary-dark: var(--red-dark, #c72e27);
+  --tc-success: #2a7a3b;
+  --tc-error: var(--error, #c0392b);
+  --tc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  width: 100%;
+  font-family: var(--font, 'Plus Jakarta Sans', -apple-system, sans-serif);
+}
+
+/* ── Camera Viewport ─────────────────────────────────────── */
+.id-photo-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: 420px;
+  background: var(--tc-text);
+  border-radius: var(--tc-radius);
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.id-photo-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.id-photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: var(--tc-surface-dim);
+}
+
+.id-photo-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--tc-text-muted);
+  font-size: 0.85rem;
+}
+
+.spinner-large {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--tc-border);
+  border-top-color: var(--tc-primary);
+  border-radius: 50%;
+  animation: tc-spin 0.8s linear infinite;
+}
+
+@keyframes tc-spin {
+  to { transform: rotate(360deg); }
+}
+
+.id-photo-permission {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--tc-text-muted);
+}
+
+.id-photo-permission svg {
+  opacity: 0.5;
+}
+
+.id-photo-permission p {
+  margin: 0;
+  font-size: 0.9rem;
+  max-width: 260px;
+  line-height: 1.5;
+}
+
+/* ── ID Card Guide Frame ─────────────────────────────────── */
+.id-photo-guide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.guide-frame {
+  position: relative;
+  width: 72%;
+  aspect-ratio: 85.6 / 54; /* KTP/SIM aspect ratio */
+  max-height: 65%;
+  /* Subtle inner glow to show capture area */
+  box-shadow: 
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 0 40px rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+/* Corner brackets using single element with gradients */
+.guide-frame::before,
+.guide-frame::after {
+  content: '';
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border: 2.5px solid rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+}
+
+.guide-frame::before {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.guide-frame::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Additional corner indicators */
+.guide-label {
+  position: absolute;
+  bottom: -2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  background: rgba(13, 13, 13, 0.75);
+  backdrop-filter: blur(12px);
+  color: white;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* ── Camera Status Indicator ─────────────────────────────── */
+.id-photo-status {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(13, 13, 13, 0.65);
+  backdrop-filter: blur(8px);
+  color: white;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tc-success);
+  box-shadow: 0 0 0 2px rgba(42, 122, 59, 0.3);
+}
+
+.status-dot.active {
+  animation: tc-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tc-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Instructions ────────────────────────────────────────── */
+.id-photo-instructions {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.15rem;
+  background: var(--tc-surface-dim);
+  border: 1px solid var(--tc-border);
+  border-radius: var(--tc-radius-sm);
+}
+
+.id-photo-instructions h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tc-text);
+}
+
+.id-photo-instructions ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.id-photo-instructions li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--tc-text-muted);
+  line-height: 1.5;
+}
+
+.id-photo-instructions li::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  margin-top: 0.45rem;
+  border-radius: 50%;
+  background: var(--tc-primary);
+  flex-shrink: 0;
+}
+
+/* ── Actions ─────────────────────────────────────────────── */
+.id-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.id-photo-actions .btn-submit,
+.id-photo-actions .btn-submit--secondary {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+}
+
+.btn-capture {
+  min-width: 180px;
+}
+
+/* Cancel button - full width below */
+.id-photo-cancel {
+  margin-top: 0.65rem;
+}
+
+.id-photo-cancel .btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ── Result State ────────────────────────────────────────── */
+.id-photo-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.result-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-width: 320px;
+  max-height: 380px;
+  border-radius: var(--tc-radius);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(13, 13, 13, 0.12);
+}
+
+.result-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.result-badge {
+  position: absolute;
+  bottom: 0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: var(--tc-success);
+  color: white;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(42, 122, 59, 0.3);
+}
+
+.result-message {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--tc-text-muted);
+  text-align: center;
+}
+
+/* ── Error State ─────────────────────────────────────────── */
+.id-photo-capture .field-error {
+  margin-top: 1rem;
+  animation: tc-shake 320ms var(--tc-ease);
+}
+
+@keyframes tc-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .id-photo-viewport {
+    max-height: 360px;
+  }
+
+  .guide-frame {
+    width: 80%;
+  }
+
+  .guide-label {
+    font-size: 0.72rem;
+    padding: 0.4rem 0.7rem;
+  }
+}
+
+/* ── Reduced Motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .spinner-large,
+  .status-dot.active,
+  .field-error {
+    animation: none;
+  }
+}
+
+/* ── High Contrast ───────────────────────────────────────── */
+@media (prefers-contrast: high) {
+  .guide-corner {
+    border-color: white;
+    border-width: 3px;
+  }
+
+  .guide-label,
+  .id-photo-status {
+    background: black;
+    backdrop-filter: none;
+  }
+}
+
+/* ── ID Photo Preview Card (in account form) ─────────────── */
+.id-photo-preview-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--off-white, #fafaf8);
+  border: 1px solid var(--border, #e4e4e1);
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+}
+
+.id-photo-preview-thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid var(--red, #F13C35);
+}
+
+.id-photo-preview-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.id-photo-preview-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  padding: 1px 5px;
+  background: var(--red, #F13C35);
+  color: white;
+  font-size: 0.62rem;
+  font-weight: 700;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+
+.btn-small {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+}
+
+/* ── Placeholder for custom guide image ──────────────────── */
+.guide-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: var(--font, 'Plus Jakarta Sans', sans-serif);
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 1.5rem;
+  line-height: 1.5;
+}

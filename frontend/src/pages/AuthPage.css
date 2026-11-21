@@ -2050,3 +2050,220 @@
     animation: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ID PHOTO CAPTURE STEP (RegisterPage)
+   ═══════════════════════════════════════════════════════════ */
+
+.id-photo-step-page {
+  animation: cardReveal 400ms var(--ease-out) both;
+}
+
+.id-photo-step-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.id-photo-step-header h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--black);
+  margin: 0 0 0.4rem;
+  letter-spacing: -0.02em;
+}
+
+.id-photo-step-header p {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Progress indicator */
+.register-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.register-progress .progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--subtle);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: color 160ms ease-out;
+}
+
+.register-progress .progress-step.active {
+  color: var(--red);
+}
+
+.register-progress .progress-step.completed {
+  color: #2a7a3b;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: background 160ms ease-out, color 160ms ease-out;
+}
+
+.progress-step.active .step-number {
+  background: var(--red);
+  color: white;
+}
+
+.progress-step.completed .step-number {
+  background: #2a7a3b;
+  color: white;
+}
+
+.step-label {
+  white-space: nowrap;
+}
+
+.progress-separator {
+  flex: 1;
+  max-width: 80px;
+  height: 2px;
+  background: var(--border);
+  margin-top: 4px;
+}
+
+.progress-step.active ~ .progress-separator {
+  background: var(--red);
+}
+
+/* Type toggle buttons */
+.id-photo-type-toggle {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.id-photo-type-toggle .type-btn {
+  flex: 1;
+  max-width: 120px;
+  padding: 0.65rem 1.25rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--white);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--black);
+  cursor: pointer;
+  transition: border-color 150ms, background 150ms, color 150ms, transform 100ms;
+  text-align: center;
+}
+
+.id-photo-type-toggle .type-btn:hover:not(.active) {
+  border-color: var(--black);
+  background: var(--off-white);
+}
+
+.id-photo-type-toggle .type-btn.active {
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--white);
+}
+
+.id-photo-type-toggle .type-btn:active {
+  transform: scale(0.98);
+}
+
+.id-photo-type-toggle .type-btn:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* Required note */
+.id-photo-required-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  padding: 0.6rem 0.9rem;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #8d6e00;
+  font-weight: 500;
+}
+
+.id-photo-required-note [data-icon] {
+  flex-shrink: 0;
+  color: #f59e0b;
+}
+
+/* Actions */
+.id-photo-step-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.id-photo-step-actions .btn-submit {
+  flex: 1;
+  min-width: 180px;
+  max-width: 260px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 420px) {
+  .register-progress {
+    gap: 0.3rem;
+  }
+
+  .register-progress .progress-step {
+    font-size: 0.68rem;
+  }
+
+  .step-number {
+    width: 24px;
+    height: 24px;
+    font-size: 0.68rem;
+  }
+
+  .step-label {
+    font-size: 0.65rem;
+  }
+
+  .progress-separator {
+    max-width: 50px;
+  }
+
+  .id-photo-type-toggle .type-btn {
+    padding: 0.6rem 0.9rem;
+    min-width: 70px;
+  }
+
+  .id-photo-type-toggle .type-btn span {
+    font-size: 0.78rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .id-photo-step-page,
+  .register-progress .step-number {
+    animation: none;
+    transition: none;
+  }
+}

@@ -234,6 +234,8 @@ function New-EnvFile {
     }
 
     $values = [ordered]@{
+        'DB_HOST'            = '127.0.0.1'
+        'TC_STORAGE_ROOT'    = 'backend/storage'
         'JWT_SECRET'         = (New-PhpSecret 'echo bin2hex(random_bytes(32));')
         'ENCRYPTION_KEY_B64' = (New-PhpSecret 'echo base64_encode(random_bytes(32));')
         'CHACHA20_KEY_B64'   = (New-PhpSecret 'echo base64_encode(random_bytes(32));')
@@ -325,6 +327,24 @@ function Initialize-Env {
         }
 
         $map = Read-EnvMap $script:EnvPath
+
+        # MySQL di Windows: "localhost" di-resolve ke IPv6 (::1) lebih dulu,
+        # gagal setelah ±2 detik baru fallback ke IPv4. Ganti ke 127.0.0.1.
+        if ($map.ContainsKey('DB_HOST') -and $map['DB_HOST'] -eq 'localhost') {
+            Backup-Env $script:EnvPath
+            Set-EnvValue $script:EnvPath 'DB_HOST' '127.0.0.1'
+            $map = Read-EnvMap $script:EnvPath
+            Write-Warn 'DB_HOST diubah localhost -> 127.0.0.1 (mencegah delay ±2 detik per koneksi MySQL).'
+        }
+
+        # TC_STORAGE_ROOT: pakai folder storage yang sama baik oleh app desktop
+        # maupun deploy-server.ps1, agar foto/log tidak terpecah dua lokasi.
+        if (-not $map.ContainsKey('TC_STORAGE_ROOT') -or [string]::IsNullOrWhiteSpace($map['TC_STORAGE_ROOT'])) {
+            Backup-Env $script:EnvPath
+            Set-EnvValue $script:EnvPath 'TC_STORAGE_ROOT' 'backend/storage'
+            $map = Read-EnvMap $script:EnvPath
+            Write-Warn 'TC_STORAGE_ROOT ditambahkan = backend/storage (storage seragam untuk semua server).'
+        }
 
         foreach ($key in @('DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER')) {
             if (-not $map.ContainsKey($key) -or [string]::IsNullOrWhiteSpace($map[$key])) {
@@ -655,7 +675,7 @@ function Start-DemoServer {
             if ($server.HasExited) { break }
 
             try {
-                $health = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 2 -ErrorAction Stop
+                $health = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 5 -ErrorAction Stop
                 $label  = if ($health.server_label) { $health.server_label } else { 'TrueCount' }
                 Write-Ok ("Health: {0} | database: {1} | server: {2}" -f $health.status, $health.database, $label)
                 $healthy = $true

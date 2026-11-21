@@ -227,6 +227,32 @@ export default function LoginPage() {
     return photo;
   }, [capturePhoto, previewVideoElement]);
 
+  // ── Log percobaan gagal yang terjadi DI PERANGKAT (Windows Hello) ─────────
+  // Kegagalan pada langkah navigator.credentials.get() — user menekan Batal
+  // atau PIN Windows salah sampai ditolak OS — tidak pernah mencapai backend
+  // (/auth/webauthn/login/verify tidak terpanggil), sehingga backend tidak
+  // mencatat baris log & foto kamera sama sekali. Dipanggil dari sini HANYA
+  // untuk kasus itu; kegagalan tahap verify tetap dicatat oleh backend
+  // (webauthn_login_verify.php) sehingga tidak ada duplikasi baris.
+  const logDeviceSideFailure = useCallback(async ({ identifier, method, error, authPhoto }) => {
+    try {
+      await fetch(apiUrl('/auth/attempts/log'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier,
+          method,
+          success: false,
+          error,
+          auth_photo: authPhoto || undefined,
+          user_agent: navigator.userAgent,
+        }),
+      })
+    } catch {
+      // Logging tidak boleh menghalangi alur login.
+    }
+  }, []);
+
   // ── Gate kamera: WAJIB online untuk SEMUA metode masuk ────────
   // 'ok' = kamera siap, 'blocked' = kamera tertutup/gelap (harus dihitung
   // gagal), 'checking' = masih diperiksa (tunggu, tidak dihitung gagal).
@@ -705,6 +731,14 @@ export default function LoginPage() {
       } catch (incErr) {
         console.warn('[Login] Failed to log webauthn attempt:', incErr)
       }
+      // Gagal di perangkat (cancel / PIN Windows salah): backend tidak tahu,
+      // jadi catat sendiri ke server beserta foto kamera yang tadi di-capture.
+      await logDeviceSideFailure({
+        identifier,
+        method: 'webauthn',
+        error: errMsg,
+        authPhoto: photo,
+      })
     } finally {
       setLoading(false)
       setAuthPhoto(null)

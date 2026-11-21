@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "productName": "TrueCount",
   "version": "0.2.0",
-  "identifier": "com.truecount.app",
+  "identifier": "com.truecount.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:5173",

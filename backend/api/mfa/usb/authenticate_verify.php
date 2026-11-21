@@ -20,6 +20,7 @@
 require_once __DIR__ . '/../../../helpers/response.php';
 require_once __DIR__ . '/../../../config/database.php';
 require_once __DIR__ . '/../../../helpers/jwt.php';
+require_once __DIR__ . '/../../../helpers/auth_photo.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
@@ -44,12 +45,10 @@ if ($authPhoto && str_starts_with($authPhoto, 'data:image/')) {
             $base64 = $parts[1];
             $imageData = base64_decode($base64);
             if ($imageData !== false) {
-                $uploadDir = storagePath('auth_photos') . '/';
-                ensureStorageDir(rtrim($uploadDir, '/'));
-                $filename = 'usb_' . date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.jpg';
-                $filepath = $uploadDir . $filename;
-                if (file_put_contents($filepath, $imageData) !== false) {
-                    $photoPath = 'storage/auth_photos/' . $filename;
+                try {
+                    $photoPath = encryptAuthPhoto($imageData, storagePath('auth_photos'));
+                } catch (Throwable $e) {
+                    error_log('[USB Auth] Enkripsi foto gagal: ' . $e->getMessage());
                 }
             }
         }

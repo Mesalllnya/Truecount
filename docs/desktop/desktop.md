@@ -130,6 +130,11 @@ karena PHP hanya listen loopback.
 | macOS | `~/Library/Application Support/com.truecount.app/app_config.json` |
 | Linux | `~/.config/com.truecount.app/app_config.json` |
 
+> **Catatan:** nama folder `com.truecount.app` dipertahankan secara eksplisit
+> (`pin_data_dir()` di `lib.rs`) agar instalasi lama tidak kehilangan data —
+> identifier bundle sendiri kini `com.truecount.desktop` (Tauri melarang
+> identifier berakhiran `.app`).
+
 ```json
 {
   "mode": "client",
@@ -354,6 +359,7 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 | Performance | Browser | WebView native OS |
 | `window.localStorage` | ✅ | ✅ |
 | Native dialog/file | ❌ | ✅ via Tauri plugins |
+| Kamera (`getUserMedia`) | Butuh halaman **HTTPS** / localhost (secure context) | ✅ Tanpa HTTPS — webview Tauri adalah secure context |
 
 ---
 
@@ -375,6 +381,11 @@ langsung terlihat (PHP tidak ditemukan, port bentrok, atau error koneksi MySQL).
 | Masalah | Penyebab umum | Solusi |
 | --- | --- | --- |
 | "Tidak dapat terhubung ke server" | PHP gagal spawn / error backend | Cek `%LOCALAPPDATA%\com.truecount.app\logs\truecount.log` dan `php.log` |
+| "Tidak dapat terhubung" padahal status server nyala & `/health` jalan di browser | `DB_HOST=localhost` di `.env` membuat setiap koneksi MySQL lambat ±2 detik (resolve IPv6 `::1` lebih dulu) → `/health` melewati timeout check | Ganti `DB_HOST=127.0.0.1` di `.env` (repo **dan** `%APPDATA%\com.truecount.app\.env`) |
+| Client PC / HP tidak bisa menjangkau laptop server | Firewall port 8000 tertutup, atau perangkat beda jaringan/SSID | `.\scripts\deploy-server.ps1 -OpenFirewall` (PowerShell Admin); pastikan semua perangkat satu Wi-Fi yang **sama persis** |
+| Browser (bukan aplikasi) tidak bisa menampilkan kamera | Halaman dibuka via `http://<ip-lan>` — browser mematikan kamera di non-secure context | Gunakan **aplikasi desktop** (kamera jalan tanpa HTTPS), atau `npm run dev:https` untuk akses browser (lihat `../deploy/deploy.md` bagian 1.5) |
+| Foto paslon / log keamanan tidak tampil di perangkat lain | Foto disimpan & dilayani **server** lewat API; kalau server mati atau file storage terpecah antar folder, foto tidak bisa diambil | Pastikan server hidup; jangan campur server app desktop (storage `%APPDATA%`) dan `deploy-server.ps1` (storage repo) untuk data yang sama |
+| Browser menampilkan "not send any data" / "tidak dapat menerima apa-apa" | Salah pasangan skema http/https antara server frontend dan URL yang dibuka | Samakan: `dev -- --host` ↔ `http://`, `dev:https` ↔ `https://` |
 | Log: "gagal menjalankan `php`" | `php` tidak ada di PATH | Install PHP 8.1+ dan pastikan `where php` ditemukan |
 | Log: `Failed opening required '\\?\C:\...'` | Extended path belum di-strip | Pastikan `clean_path()` dipanggil sebelum spawn (sudah di `lib.rs`) |
 | "Entry Point Not Found: TaskDialogIndirect" | Fitur `dialog` Tauri aktif (Windows lama) | Pastikan `default-features = false` di `Cargo.toml` |

@@ -50,7 +50,7 @@ cp .env.example .env
 Buka `.env` dan sesuaikan:
 
 ```env
-DB_HOST=localhost
+DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_NAME=truecount_db
 DB_USER=root
@@ -62,6 +62,8 @@ FRONTEND_ORIGIN=http://localhost:5173
 JWT_SECRET=ganti-ini-dengan-string-acak-minimal-32-karakter
 JWT_EXPIRE=3600
 ```
+
+> **⚠️ `DB_HOST` harus `127.0.0.1`, jangan `localhost`.** Di Windows, `localhost` di-resolve ke IPv6 (`::1`) lebih dulu sehingga setiap koneksi MySQL mundur **±2 detik** sebelum fallback ke IPv4. Efeknya `/health` dan semua request jadi lambat, dan aplikasi desktop terus-menerus dinyatakan "tidak dapat terhubung" karena check timeout (lihat `docs/dev/knowledge_transfer.md` poin 25).
 
 > **Tips:** Buat JWT_SECRET dari terminal:
 >
@@ -127,6 +129,19 @@ npm run dev:full
 
 Frontend tersedia di `http://localhost:5173`.
 
+**Akses dari HP / PC lain (LAN) — dua mode:**
+
+| Perintah | URL yang dibuka di client | Kamera di browser |
+|---|---|---|
+| `npm run dev -- --host` | `http://<ip-lan>:5173` | ❌ (browser hanya mengizinkan kamera di HTTPS/localhost) |
+| `npm run dev:https` | `https://<ip-lan>:5173` | ✅ (self-signed — terima peringatan sertifikat sekali) |
+
+`npm run dev:https` menjalankan Vite dengan **HTTPS self-signed** dan **mem-proxy route API ke PHP (`127.0.0.1:8000`)** sehingga halaman & API berada di origin yang sama — alamat server di aplikasi cukup diisi sama dengan URL halaman (`https://<ip-lan>:5173`).
+
+> **Aturan emas:** skema harus cocok — `dev -- --host` ↔ `http://`, `dev:https` ↔ `https://`. Salah pasangan → browser menampilkan *"not send any data"* / *"tidak dapat menerima apa-apa"*.
+>
+> **Untuk demo dengan aplikasi desktop (Tauri) mode ini tidak diperlukan** — webview aplikasi adalah secure context, kamera jalan tanpa HTTPS.
+
 ### 1.6 Ringkasan Port Lokal
 
 | Service   | URL                        |
@@ -184,7 +199,7 @@ Nilai yang **wajib** diganti di production:
 APP_ENV=production
 FRONTEND_ORIGIN=https://domain-kamu.com
 
-DB_HOST=localhost
+DB_HOST=127.0.0.1
 DB_NAME=truecount_db
 DB_USER=truecount_user   # buat user khusus, jangan pakai root
 DB_PASS=password-kuat-disini
@@ -320,13 +335,13 @@ Script ini hanya untuk Windows (PowerShell 5.1+) dan memakai `php -S`, bukan Ngi
 #### Yang dilakukan script
 
 1. **Preflight** - cek PHP >= 8.1 di PATH, ekstensi `pdo_mysql`, `mbstring`, `openssl`, `gd`, `fileinfo`, dan MySQL/MariaDB berjalan.
-2. **Siapkan `.env`** - kalau belum ada, salin dari `.env.example` lalu buat otomatis `JWT_SECRET`, `ENCRYPTION_KEY_B64`, `CHACHA20_KEY_B64`, `SERVER_ID`, `SETUP_TOKEN`. Kalau `.env` sudah ada, hanya key yang hilang/kosong yang dilengkapi (dengan backup `.env.bak.<timestamp>`).
+2. **Siapkan `.env`** - kalau belum ada, salin dari `.env.example` lalu buat otomatis `JWT_SECRET`, `ENCRYPTION_KEY_B64`, `CHACHA20_KEY_B64`, `SERVER_ID`, `SETUP_TOKEN`. Kalau `.env` sudah ada, hanya key yang hilang/kosong yang dilengkapi (dengan backup `.env.bak.<timestamp>`). Nilai `DB_HOST` selalu dipaksa `127.0.0.1` (bukan `localhost` — di Windows `localhost` menambah delay ±2 detik per koneksi MySQL), dan `.env` lama yang masih `DB_HOST=localhost` otomatis dibetulkan (dengan backup).
 3. **Cek port** - kalau port dipakai, script berhenti dan menyarankan `scripts/free-ports.ps1`. Dengan `-Force`, proses pemilik port dihentikan.
 4. **Migrasi** (`-Migrate`) - `php database/migrate.php`, tanpa `--seed` dan tanpa `--fresh`. Migration yang sudah berhasil dicatat di tabel `schema_migrations`, jadi aman dijalankan berulang; database lama yang belum punya catatan akan ditandai otomatis saat objeknya sudah ada.
 5. **Seed admin** (`-SeedAdmin`) - `php scripts/seed_admin.php`, hanya akun admin dan idempoten (`ON DUPLICATE KEY UPDATE`).
 6. **Build frontend** (`-BuildFrontend`) - `npm run build` di `frontend/`.
 7. **Firewall** (`-OpenFirewall`) - rule inbound TCP port API, profil **Private** saja. Butuh PowerShell Administrator.
-8. **Nyalakan server** - `php -S 0.0.0.0:8000 -t backend backend/index.php`, lalu polling `/health` dan menampilkan status database.
+8. **Nyalakan server** - `php -S 0.0.0.0:8000 -t backend backend/index.php`, lalu polling `/health` (timeout 5 detik) dan menampilkan status database.
 
 #### Parameter
 
@@ -377,7 +392,7 @@ Di tiap PC peserta, alamat masih bisa diubah tanpa rebuild:
 - Tekan **Ctrl + Shift + Alt + S**, atau jalankan `__tcServerConfig()` di DevTools console.
 - Mode **Client** = tanpa PHP lokal; mode **Server** = PHP laptop listen `0.0.0.0:8000`; mode **Standalone** = `127.0.0.1:8000`.
 - Tekan **Tes koneksi** untuk memastikan `/health` menjawab dan database `connected`.
-- **Simpan & muat ulang** menulis `app_config.json` di folder config aplikasi.
+- **Simpan & sambungkan** menyimpan `app_config.json` di folder config aplikasi, lalu **langsung mencoba koneksi dari halaman itu** (3× percobaan otomatis) tanpa melempar user ke landing page — hasilnya tampil di panel Status koneksi. Tombol **Buka beranda** tersedia kalau ingin melanjutkan.
 
 Server `/health` mengembalikan `server_id`, `server_label`, dan `time`, sehingga client bisa memastikan terhubung ke laptop yang benar. Query log seperti `?token=` disamarkan menjadi `***`.
 
@@ -441,7 +456,14 @@ Server `/health` mengembalikan `server_id`, `server_label`, dan `time`, sehingga
 
 | Masalah | Kemungkinan Penyebab | Solusi |
 | --- | --- | --- |
-| `CORS error` di browser | `FRONTEND_ORIGIN` di `.env` tidak cocok | Pastikan isinya persis sama dengan URL frontend (termasuk port) |
+| `CORS error` di browser | `FRONTEND_ORIGIN` di `.env` tidak cocok | Pastikan isinya persis sama dengan URL frontend (termasuk port). Origin IP LAN (10.x / 172.16–31.x / 192.168.x) sudah diizinkan otomatis sejak 20 Nov 2026 |
+| "Tidak dapat terhubung ke server" padahal `/health` jalan di browser | Dulu: `DB_HOST=localhost` membuat `/health` ~2 detik sehingga selalu melewati timeout 2 detik | Pakai `DB_HOST=127.0.0.1` (cek `.env` — sudah otomatis dibetulkan `deploy-server.ps1`) |
+| App/browser tidak bisa connect, padahal request muncul di log server | CORS menolak origin pemanggil (kasus lama untuk akses via IP LAN) | Update `backend/helpers/response.php` ke versi terbaru (origin IP privat diizinkan) |
+| Browser HP: *"not send any data"* / *"tidak dapat menerima apa-apa"* | Salah pasangan skema: `https://` ke server http (atau sebaliknya) | Samakan: `dev -- --host` ↔ `http://`, `dev:https` ↔ `https://` |
+| Membuka `/health` malah "ketendang" ke landing page | Request tidak kena proxy API (server lama tanpa config baru) | Restart frontend dengan config terbaru; pastikan banner Vite sesuai mode (`https://` untuk `dev:https`) |
+| Kamera tidak muncul di browser (HP/PC) | Halaman dibuka via `http://<ip-lan>` — browser menonaktifkan kamera di non-secure context | Pakai `npm run dev:https`, **atau** pakai aplikasi desktop TrueCount (kamera jalan tanpa HTTPS) |
+| Foto (paslon / log keamanan) tidak tampil di PC lain | File foto hanya ada di laptop server, atau server tidak sedang jalan | Foto dilayani via API dari server — pastikan app mode Server/deploy-server hidup dan file storage tidak terpecah antar folder (lihat `desktop.md` bagian storage root) |
+| Client tidak bisa menjangkau server dari perangkat lain | Firewall port 8000 tertutup, atau perangkat beda jaringan/SSID | `.\scripts\deploy-server.ps1 -OpenFirewall` (Admin, profil Private); pastikan semua perangkat satu Wi-Fi yang sama (SSID kembar seperti "X" vs "X Wi-Fi" sering menipu) |
 | `PDOException: could not find driver` | Ekstensi `pdo_mysql` PHP belum aktif | Aktifkan di `php.ini`: `extension=pdo_mysql` |
 | `Access denied for user` MySQL | User / password salah | Cek `.env` dan cocokkan dengan user MySQL |
 | Migration gagal di tengah jalan | Ada syntax error di SQL atau tabel sudah ada | Jalankan `php database/migrate.php --fresh` |
@@ -454,7 +476,8 @@ Server `/health` mengembalikan `server_id`, `server_label`, dan `time`, sehingga
 
 | Variable          | Default                        | Keterangan                                    |
 |-------------------|--------------------------------|-----------------------------------------------|
-| `DB_HOST`         | `localhost`                    | Host MySQL                                    |
+| `DB_HOST`         | `127.0.0.1`                    | Host MySQL — **pakai `127.0.0.1`, bukan `localhost`** (di Windows `localhost` di-resolve ke IPv6 lebih dulu → delay ±2 detik per koneksi) |
+| `TC_STORAGE_ROOT` | *(kosong = `backend/storage`)* | Lokasi folder storage foto/log. **Harus path absolut** di `.env` agar sama di Tauri dan `deploy-server.ps1`. Contoh Windows: `D:/proyek/truecount/backend/storage` |
 | `DB_PORT`         | `3306`                         | Port MySQL                                    |
 | `DB_NAME`         | `truecount_db`                 | Nama database                                 |
 | `DB_USER`         | `root`                         | User MySQL                                    |

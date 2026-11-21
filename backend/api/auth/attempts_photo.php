@@ -15,6 +15,7 @@
 
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../middleware/auth.php';
+require_once __DIR__ . '/../../helpers/auth_photo.php';
 require_once __DIR__ . '/../../config/database.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -42,6 +43,8 @@ if (!$row || empty($row['photo_path'])) {
 
 // photo_path disimpan sebagai "storage/auth_photos/xxx.jpg"
 // Path absolut di-resolve lewat storage root (bisa dioverride TC_STORAGE_ROOT).
+// Path sengaja TIDAK diubah (bukan pindah folder) agar referensi database
+// pada kolom photo_path tetap utuh dan tidak ancur.
 $filename = basename($row['photo_path']);
 $dir      = realpath(storagePath('auth_photos'));
 $file     = $dir ? realpath($dir . DIRECTORY_SEPARATOR . $filename) : false;
@@ -51,16 +54,17 @@ if ($file === false || !str_starts_with($file, $dir . DIRECTORY_SEPARATOR) || !i
     jsonResponse(['error' => 'Foto tidak ditemukan di penyimpanan.'], 404);
 }
 
-$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-$mimes = [
-    'jpg'  => 'image/jpeg',
-    'jpeg' => 'image/jpeg',
-    'png'  => 'image/png',
-    'webp' => 'image/webp',
-];
+try {
+    // Dekripsi terlebih dahulu sebelum disajikan. Foto lama (legacy) yang
+    // belum punya metadata dikembalikan utuh untuk backward compatibility.
+    $content = decryptAuthPhoto($file);
 
-header('Content-Type: ' . ($mimes[$ext] ?? 'application/octet-stream'));
-header('Content-Length: ' . filesize($file));
-header('Cache-Control: private, max-age=300');
-readfile($file);
-exit;
+    header('Content-Type: image/jpeg');
+    header('Content-Length: ' . strlen($content));
+    header('Cache-Control: private, max-age=300');
+    echo $content;
+    exit;
+} catch (Throwable $e) {
+    error_log('[Auth Attempt Photo] Dekripsi gagal: ' . $e->getMessage());
+    jsonResponse(['error' => 'Gagal mendekripsi foto keamanan.'], 500);
+}

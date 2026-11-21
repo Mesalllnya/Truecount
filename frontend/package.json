@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:https": "cross-env TC_HTTPS=1 vite --host",
     "dev:backend": "php -S localhost:8000 -t ../backend ../backend/index.php",
     "dev:full": "npm run free-ports && concurrently -n php,vite -c red,cyan \"npm:dev:backend\" \"npm:dev\"",
     "free-ports": "powershell -ExecutionPolicy Bypass -File ../scripts/free-ports.ps1",
@@ -29,8 +30,10 @@
     "@tauri-apps/cli": "^2.12.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "concurrently": "^10.0.6",
+    "cross-env": "^10.1.0",
     "esbuild": "^0.28.2",
     "oxlint": "^1.90.0",
     "terser": "^5.51.2",

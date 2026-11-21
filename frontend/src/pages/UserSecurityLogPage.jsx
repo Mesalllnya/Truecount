@@ -49,7 +49,8 @@ function formatDateTime(iso) {
 /* ── Komponen foto (fetch dengan token → blob URL) ─────────── */
 function AttemptPhoto({ attemptId, onOpen }) {
   const [url, setUrl] = useState(null)
-  const [failed, setFailed] = useState(false)
+  // null = belum selesai, 'not-found' = foto tidak ada, 'decrypt' = gagal dekripsi
+  const [failed, setFailed] = useState(null)
 
   useEffect(() => {
     let objectUrl = null
@@ -59,7 +60,7 @@ function AttemptPhoto({ attemptId, onOpen }) {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => {
-        if (!res.ok) throw new Error('no-photo')
+        if (!res.ok) throw new Error(res.status === 404 ? 'not-found' : 'decrypt')
         return res.blob()
       })
       .then(blob => {
@@ -67,8 +68,8 @@ function AttemptPhoto({ attemptId, onOpen }) {
         objectUrl = URL.createObjectURL(blob)
         setUrl(objectUrl)
       })
-      .catch(() => {
-        if (!cancelled) setFailed(true)
+      .catch(err => {
+        if (!cancelled) setFailed(err?.message ?? 'decrypt')
       })
     return () => {
       cancelled = true
@@ -77,9 +78,12 @@ function AttemptPhoto({ attemptId, onOpen }) {
   }, [attemptId])
 
   if (failed) {
+    const msg = failed === 'not-found'
+      ? 'Foto tidak ditemukan di penyimpanan.'
+      : 'Gagal mendekripsi foto keamanan.'
     return (
-      <span className="log-photo-empty" aria-hidden="true">
-        <CameraIcon />
+      <span className="log-photo-error" role="alert" aria-label={msg}>
+        {msg}
       </span>
     )
   }

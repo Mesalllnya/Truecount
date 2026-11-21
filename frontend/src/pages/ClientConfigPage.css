@@ -532,6 +532,17 @@
   color: #6b5416;
 }
 
+.cc-note--ok {
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  background: var(--cc-green-bg);
+  color: #1b5e20;
+}
+
+.cc-note--ok .cc-btn {
+  margin-top: 0.55rem;
+}
+
 /* ── Footnote ───────────────────────────────────────────── */
 .cc-footnote {
   grid-column: 1 / -1;

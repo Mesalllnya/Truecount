@@ -248,7 +248,7 @@ Rekaman dienkripsi di server dengan **ChaCha20-Poly1305** sebelum disimpan. File
 | Tidak bisa daftar akun | Pendaftaran ditutup publik — minta tautan undangan ke admin |
 | Tautan undangan "tidak valid" | Undangan mungkin kedaluwarsa (7 hari) atau sudah dipakai/dibatalkan |
 | Tidak bisa membuka link undangan di aplikasi desktop | Di halaman **Masuk**, klik tombol **"Daftar dengan undangan"**, tempel link/kode undangan di kolom **"Link atau kode undangan"**, lalu klik **"Lanjutkan"** |
-| Server tidak tersambung | Pastikan backend jalan (`npm run dev:full` atau app desktop otomatis spawn PHP) |
+| Server tidak tersambung | Pastikan backend jalan (`npm run dev:full` atau app desktop otomatis spawn PHP). Kalau server jalan tapi tetap "tidak dapat terhubung": cek `DB_HOST=127.0.0.1` di `.env` (bukan `localhost`), dan untuk akses dari PC/HP lain pastikan firewall port 8000 terbuka (`deploy-server.ps1 -OpenFirewall`) serta semua perangkat satu Wi-Fi — lihat [deploy.md](../deploy/deploy.md) bagian Troubleshooting |
 | Kamera tetap menyala setelah pindah dari halaman login | Sudah diatasi: kamera **hanya nyala di halaman Masuk**. Semua stream kamera terdaftar di registry global dan dipaksa mati otomatis saat pindah ke halaman lain (landing, dasbor, dll). Kalau masih terjadi, tutup buka ulang aplikasi. |
 | Foto tidak muncul di Log Keamanan | Foto hanya disimpan untuk percobaan login **setelah** perbaikan diterapkan. Percobaan lama tidak memiliki foto (placeholder kamera akan ditampilkan). |
 | Tombol **Mulai Rekam** tidak bereaksi / error mikrofon | Izinkan akses mikrofon untuk situs/aplikasi, pastikan tidak ada aplikasi lain yang memakai mikrofon, lalu muat ulang halaman. Di browser, fitur rekam butuh `https://` atau `localhost`. |

@@ -132,10 +132,11 @@ pub fn run() {
         })
         .setup(|app| {
             // ── Siapkan logger ──────────────────────────────────────────
-            let log_dir = app
-                .path()
-                .app_log_dir()
-                .unwrap_or_else(|_| std::env::temp_dir().join("truecount"));
+            let log_dir = pin_data_dir(
+                app.path()
+                    .app_log_dir()
+                    .unwrap_or_else(|_| std::env::temp_dir().join("truecount")),
+            );
             if let Err(e) = fs::create_dir_all(&log_dir) {
                 eprintln!("[TrueCount] Gagal buat folder log: {e}");
             }
@@ -239,12 +240,34 @@ fn clean_path(path: &std::path::Path) -> PathBuf {
     }
 }
 
+/// Identifier bundle pada `tauri.conf.json`. Sengaja tidak berakhiran `.app`
+/// (Tauri memperingatkan konflik dengan ekstensi bundle macOS).
+const BUNDLE_IDENTIFIER: &str = "com.truecount.desktop";
+
+/// Nama folder data yang dipertahankan agar instalasi lama tetap menemukan
+/// config, `.env`, backend, dan logs di `%APPDATA%\com.truecount.app` (lihat docs).
+const DATA_DIR_NAME: &str = "com.truecount.app";
+
+/// `app_config_dir` / `app_log_dir` memakai identifier sebagai salah satu segmen
+/// path-nya. Ganti segmen itu dengan `DATA_DIR_NAME` supaya lokasi data tidak
+/// ikut berpindah saat identifier diperbaiki.
+fn pin_data_dir(path: PathBuf) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::Normal(name) if name == BUNDLE_IDENTIFIER => out.push(DATA_DIR_NAME),
+            other => out.push(other.as_os_str()),
+        }
+    }
+    out
+}
+
 /// Lokasi file konfigurasi runtime.
 fn app_config_path(app: &tauri::AppHandle) -> Option<PathBuf> {
     app.path()
         .app_config_dir()
         .ok()
-        .map(|dir| dir.join("app_config.json"))
+        .map(|dir| pin_data_dir(dir).join("app_config.json"))
 }
 
 /// Baca config dari disk. File kosong/rusak → default build.
@@ -325,9 +348,11 @@ fn restart_php_backend(app: &tauri::AppHandle, config: &AppConfig) -> Result<(),
 
 /// Folder konfigurasi aplikasi yang writable (mis. %APPDATA%\com.truecount.app).
 fn runtime_root(app: &tauri::AppHandle) -> PathBuf {
-    app.path()
-        .app_config_dir()
-        .unwrap_or_else(|_| std::env::temp_dir().join("com.truecount.app"))
+    pin_data_dir(
+        app.path()
+            .app_config_dir()
+            .unwrap_or_else(|_| std::env::temp_dir().join(DATA_DIR_NAME)),
+    )
 }
 
 /// Salin backend ke folder writable agar upload/log tidak menulis ke Program Files.
@@ -433,10 +458,11 @@ fn prepare_runtime_backend(
 /// Jalankan PHP backend sesuai mode: client = tidak jalan, standalone = 127.0.0.1,
 /// server = 0.0.0.0 (bisa diakses PC lain di LAN).
 fn spawn_php_backend(app: &tauri::AppHandle, config: &AppConfig) -> Result<(), String> {
-    let log_dir = app
-        .path()
-        .app_log_dir()
-        .unwrap_or_else(|_| std::env::temp_dir().join("truecount"));
+    let log_dir = pin_data_dir(
+        app.path()
+            .app_log_dir()
+            .unwrap_or_else(|_| std::env::temp_dir().join("truecount")),
+    );
 
     let log_state = app.try_state::<AppLog>();
     let note = |msg: &str| {

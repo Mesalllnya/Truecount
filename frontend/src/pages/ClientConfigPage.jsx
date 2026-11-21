@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import {
@@ -65,14 +65,18 @@ function StatusRow({ label, value, tone = 'default' }) {
 
 export default function ClientConfigPage() {
   const navigate = useNavigate()
-  const saved = useMemo(() => getAppConfig(), [])
+  const [active, setActive] = useState(() => getAppConfig())
 
-  const [mode, setMode] = useState(saved.mode)
-  const [url, setUrl] = useState(saved.serverUrl)
+  const [mode, setMode] = useState(active.mode)
+  const [url, setUrl] = useState(active.serverUrl)
   const [lanIp, setLanIp] = useState(null)
-  const [test, setTest] = useState({ state: 'idle', health: null, error: null })
+  const [test, setTest] = useState({ state: 'idle', health: null, error: null, attempt: 0, attempts: 0 })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
+  const [savedOk, setSavedOk] = useState(false)
+
+  // Nomor "run" pemeriksaan koneksi — membatalkan retry lama yang masih berjalan.
+  const connectRunRef = useRef(0)
 
   const validation = normalizeServerUrl(url)
   const activeMode = MODES.find((item) => item.id === mode) ?? MODES[0]
@@ -92,6 +96,9 @@ export default function ClientConfigPage() {
     return () => { cancelled = true }
   }, [])
 
+  // Saat halaman ditinggalkan, batalkan retry koneksi yang masih berjalan.
+  useEffect(() => () => { connectRunRef.current += 1 }, [])
+
   // Mode Server: isi otomatis dengan IP LAN laptop ini, bukan localhost.
   // Hanya saat lanIp/mode berubah, supaya user tetap bisa mengetik alamat lain.
   useEffect(() => {
@@ -102,23 +109,55 @@ export default function ClientConfigPage() {
   function useLanAddress() {
     if (!lanUrl) return
     setUrl(lanUrl)
-    setTest({ state: 'idle', health: null, error: null })
+    resetTest()
+  }
+
+  function resetTest() {
+    setTest({ state: 'idle', health: null, error: null, attempt: 0, attempts: 0 })
+    setSavedOk(false)
+  }
+
+  /**
+   * Periksa koneksi ke server dari halaman ini.
+   * retries > 1: coba ulang otomatis (untuk kasus backend baru dinyalakan
+   * dan butuh waktu beberapa detik sebelum siap).
+   */
+  async function runConnectionCheck(targetUrl, { retries = 1, prefix = '' } = {}) {
+    const runId = ++connectRunRef.current
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      if (runId !== connectRunRef.current) return
+      setTest({ state: 'testing', health: null, error: null, attempt, attempts: retries })
+
+      try {
+        const health = await testServerConnection(targetUrl)
+        if (runId !== connectRunRef.current) return
+        setTest({ state: 'ok', health, error: null, attempt, attempts: retries })
+        return
+      } catch (err) {
+        if (runId !== connectRunRef.current) return
+        const message = err instanceof Error ? err.message : 'Tes koneksi gagal.'
+
+        if (attempt === retries) {
+          setTest({
+            state: 'error',
+            health: null,
+            error: prefix + message,
+            attempt,
+            attempts: retries,
+          })
+          return
+        }
+
+        // Jeda sebentar sebelum mencoba lagi.
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+      }
+    }
   }
 
   async function handleTest() {
     setSaveError(null)
-    setTest({ state: 'testing', health: null, error: null })
-
-    try {
-      const health = await testServerConnection(url)
-      setTest({ state: 'ok', health, error: null })
-    } catch (err) {
-      setTest({
-        state: 'error',
-        health: null,
-        error: err instanceof Error ? err.message : 'Tes koneksi gagal.',
-      })
-    }
+    await runConnectionCheck(url, { retries: 1 })
   }
 
   async function handleSave(event) {
@@ -130,14 +169,29 @@ export default function ClientConfigPage() {
 
     try {
       await saveAppConfig({ mode, serverUrl: validation.url })
-      try {
-        window.location.assign('/')
-      } catch {
-        navigate('/', { replace: true })
-      }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Gagal menyimpan konfigurasi.')
       setSaving(false)
+      return
+    }
+
+    setActive({ mode, serverUrl: validation.url })
+    setSavedOk(true)
+    setSaving(false)
+
+    // Tidak dilempar ke landing page: langsung coba hubungi server dari
+    // halaman ini, dengan beberapa kali percobaan otomatis.
+    await runConnectionCheck(validation.url, {
+      retries: 3,
+      prefix: 'Konfigurasi tersimpan, tetapi server belum terhubung. ',
+    })
+  }
+
+  function goHome() {
+    try {
+      window.location.assign('/')
+    } catch {
+      navigate('/', { replace: true })
     }
   }
 
@@ -145,7 +199,7 @@ export default function ClientConfigPage() {
     const fallback = defaultAppConfig()
     setMode(fallback.mode)
     setUrl(fallback.serverUrl)
-    setTest({ state: 'idle', health: null, error: null })
+    resetTest()
   }
 
   const health = test.health
@@ -169,11 +223,11 @@ export default function ClientConfigPage() {
             <p>Arahkan aplikasi ini ke laptop yang menjalankan pemilihan.</p>
           </div>
 
-          <div className="cc-current" title={saved.serverUrl}>
-            <span className="cc-current-dot" data-mode={saved.mode} />
+          <div className="cc-current" title={active.serverUrl}>
+            <span className="cc-current-dot" data-mode={active.mode} />
             <div>
               <span className="cc-current-label">Alamat aktif</span>
-              <strong>{saved.serverUrl.replace(/^https?:\/\//, '')}</strong>
+              <strong>{active.serverUrl.replace(/^https?:\/\//, '')}</strong>
             </div>
           </div>
         </div>
@@ -193,7 +247,7 @@ export default function ClientConfigPage() {
                   className={`cc-mode${mode === item.id ? ' is-active' : ''}`}
                   onClick={() => {
                     setMode(item.id)
-                    setTest({ state: 'idle', health: null, error: null })
+                    resetTest()
                   }}
                 >
                   <Icon name={item.icon} size={18} />
@@ -219,7 +273,7 @@ export default function ClientConfigPage() {
                 value={url}
                 onChange={(event) => {
                   setUrl(event.target.value)
-                  setTest({ state: 'idle', health: null, error: null })
+                  resetTest()
                 }}
                 aria-invalid={validation.ok ? 'false' : 'true'}
                 aria-describedby={validation.ok ? 'cc-url-help' : 'cc-url-error'}
@@ -265,7 +319,7 @@ export default function ClientConfigPage() {
               disabled={!validation.ok || saving}
             >
               <Icon name="save" size={17} />
-              {saving ? 'Menyimpan…' : 'Simpan & muat ulang'}
+              {saving ? 'Menyimpan…' : 'Simpan & sambungkan'}
             </button>
           </div>
 
@@ -290,11 +344,36 @@ export default function ClientConfigPage() {
             </p>
           )}
 
+          {test.state === 'testing' && (
+            <p className="cc-status-empty">
+              <Icon name="activity" size={15} /> Menyambungkan ke server
+              {test.attempts > 1 ? ` (percobaan ${test.attempt} dari ${test.attempts})` : ''}…
+            </p>
+          )}
+
           {test.state === 'error' && (
             <div className="cc-status-error" role="alert">
               <Icon name="alert" size={18} />
               <p>{test.error}</p>
             </div>
+          )}
+
+          {savedOk && test.state === 'ok' && (
+            <div className="cc-note cc-note--ok">
+              <p>Konfigurasi tersimpan dan server terhubung.</p>
+              <button type="button" className="cc-btn cc-btn--secondary" onClick={goHome}>
+                <Icon name="arrow" size={15} />
+                Buka beranda
+              </button>
+            </div>
+          )}
+
+          {savedOk && test.state === 'error' && (
+            <p className="cc-note cc-note--warn">
+              Konfigurasi sudah tersimpan. Kalau server baru saja dinyalakan, beri
+              waktu beberapa detik lalu tekan <strong>Tes koneksi</strong> untuk
+              mencoba lagi.
+            </p>
           )}
 
           {test.state === 'ok' && (

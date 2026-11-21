@@ -328,11 +328,11 @@ Klik algoritma untuk lihat detail implementasi (file PHP, ukuran key, mode opera
 
 ---
 
-## 11. Diagram Alur Pengguna (Mermaid)
+## 12. Diagram Alur Pengguna (Mermaid)
 
 Diagram di bawah ini menggunakan sintaksis **Mermaid**. Untuk melihat render visual, buka file ini di GitHub, GitLab, VS Code (dengan extension Mermaid), atau salin blok kode ke [mermaid.live](https://mermaid.live).
 
-### 11.1 Alur Keseluruhan (Overview)
+### 12.1 Alur Keseluruhan (Overview)
 
 ```mermaid
 flowchart TD
@@ -366,7 +366,7 @@ flowchart TD
     style H fill:#eef6ff,stroke:#1d4ed8
 ```
 
-### 11.2 Alur Registrasi (Hanya Lewat Undangan)
+### 12.2 Alur Registrasi (Hanya Lewat Undangan)
 
 ```mermaid
 flowchart TD
@@ -388,7 +388,7 @@ flowchart TD
     style L fill:#bfb,stroke:#2a7a3b
 ```
 
-### 11.3 Alur Login (`/masuk`) — 3 Metode
+### 12.3 Alur Login (`/masuk`) — 3 Metode
 
 ```mermaid
 flowchart TD
@@ -440,7 +440,7 @@ flowchart TD
     style AB fill:#bfb,stroke:#2a7a3b
 ```
 
-### 11.4 Alur Setup Keamanan Wajib (`/atur-keamanan`)
+### 12.4 Alur Setup Keamanan Wajib (`/atur-keamanan`)
 
 ```mermaid
 flowchart TD
@@ -472,7 +472,7 @@ flowchart TD
     style S fill:#e1f5e1,stroke:#2a7a3b
 ```
 
-### 11.5 Alur Admin / Panitia (`/dasbor`)
+### 12.5 Alur Admin / Panitia (`/dasbor`)
 
 ```mermaid
 flowchart TD
@@ -507,7 +507,7 @@ flowchart TD
     style H fill:#fff4e1,stroke:#b45309
 ```
 
-### 11.6 Alur Pemilih / Voter
+### 12.6 Alur Pemilih / Voter
 
 ```mermaid
 flowchart TD
@@ -543,7 +543,7 @@ flowchart TD
     style R fill:#eef6ff,stroke:#1d4ed8
 ```
 
-### 11.7 Alur Logout
+### 12.7 Alur Logout
 
 ```mermaid
 flowchart TD
@@ -557,7 +557,7 @@ flowchart TD
 
 ---
 
-## 12. Tabel Ringkasan Status Diagram
+## 13. Tabel Ringkasan Status Diagram
 
 | Status | Warna | Keterangan |
 |--------|-------|------------|
@@ -567,7 +567,7 @@ flowchart TD
 
 ---
 
-## 13. Diagram Alur Singkat (Admin vs Pemilih)
+## 14. Diagram Alur Singkat (Admin vs Pemilih)
 
 ```
 ADMIN:

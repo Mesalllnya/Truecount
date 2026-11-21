@@ -43,6 +43,10 @@ if ($currentPassword === '' || $newPassword === '') {
 // Validasi password baru
 if (strlen($newPassword) < 8) {
     jsonResponse(['error' => 'Password baru minimal 8 karakter.'], 422);
+} elseif (!preg_match('/[0-9]/', $newPassword)) {
+    jsonResponse(['error' => 'Password baru wajib mengandung minimal 1 angka.'], 422);
+} elseif (!preg_match('/[^a-zA-Z0-9]/', $newPassword)) {
+    jsonResponse(['error' => 'Password baru wajib mengandung minimal 1 karakter khusus (mis. !@#$%^&*).'], 422);
 }
 if ($currentPassword === $newPassword) {
     jsonResponse(['error' => 'Password baru harus berbeda dari password lama.'], 422);

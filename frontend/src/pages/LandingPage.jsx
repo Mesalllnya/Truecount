@@ -48,7 +48,7 @@ export default function LandingPage() {
     try {
       const res = await fetch(apiUrl('/health'), {
         method: 'GET',
-        signal: AbortSignal.timeout(2000),
+        signal: AbortSignal.timeout(3500),
       })
       if (!res.ok) {
         navigate('/server-error')

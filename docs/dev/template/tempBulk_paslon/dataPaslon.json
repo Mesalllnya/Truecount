@@ -1,0 +1,52 @@
+{
+  // ===========================================================================
+  // TrueCount - Template Data Paslon untuk Bulk Import
+  // File: docs/dev/template/tempBulk_paslon/dataPaslon.json
+  // ===========================================================================
+  // Isi file ini dengan data pemilihan dan calon paslon, lalu jalankan:
+  //   php scripts/bulk_import_paslon.php <path-ke-folder-template>
+  //
+  // Gambar paslon (belum dienkripsi) simpan di subfolder img/ dengan nama file
+  // yang cocok ke kolom image_file di bawah.
+  // Panduan lengkap: PANDUAN_BULK_PASLON.md
+  // ===========================================================================
+
+  // ID admin yang akan menjadi created_by / uploaded_by foto.
+  // Bisa dilihat dari tabel users (default admin = 1).
+  "admin_user_id": 1,
+
+  // Data pemilihan. Jika election_id tidak disediakan, pemilihan baru akan dibuat.
+  "election": {
+    // Jika sudah punya pemilihan draft, isi id-nya di sini dan title/status diabaikan.
+    "election_id": null,
+
+    "title": "Pemilihan Ketua HIMTI 2026",
+    "description": "Pemilihan ketua HIMTI periode 2026-2027.",
+    "start_time": "2026-12-01 08:00:00",
+    "end_time": "2026-12-05 17:00:00",
+    "status": "draft"
+  },
+
+  "candidates": [
+    {
+      // Nama calon (maksimal 150 karakter, wajib diisi).
+      "name": "Raka Pratama",
+
+      // Visi calon (opsional).
+      "vision": "Inovasi dan kemajuan bagi semua mahasiswa.",
+
+      // Misi calon (opsional).
+      "mission": "Meningkatkan fasilitas kampus dan apresiasi prestasi akademik.",
+
+      // Nama file gambar di folder img/ (tanpa folder, hanya nama file).
+      // Harus ada di img/<image_file>. Format JPEG/PNG/WebP, maks 2 MB.
+      "image_file": "paslon_01_raka.jpg"
+    },
+    {
+      "name": "Siti Rahayu",
+      "vision": "Kampus yang lebih inklusif dan berdaya saing.",
+      "mission": "Membuka lebih banyak kesempatan beasiswa dan magang.",
+      "image_file": "paslon_02_siti.jpg"
+    }
+  ]
+}

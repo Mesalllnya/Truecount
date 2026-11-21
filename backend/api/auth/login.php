@@ -12,6 +12,7 @@
 
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/jwt.php';
+require_once __DIR__ . '/../../helpers/auth_photo.php';
 require_once __DIR__ . '/../../config/database.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -38,16 +39,11 @@ if ($authPhoto && str_starts_with($authPhoto, 'data:image/')) {
             $base64 = $parts[1];
             $imageData = base64_decode($base64);
             if ($imageData !== false) {
-                // Create upload directory (storage root: <backend>/storage)
-                $uploadDir = storagePath('auth_photos') . '/';
-                ensureStorageDir(rtrim($uploadDir, '/'));
-                
-                // Generate filename: timestamp_random.jpg
-                $filename = 'auth_' . date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.jpg';
-                $filepath = $uploadDir . $filename;
-                
-                if (file_put_contents($filepath, $imageData) !== false) {
-                    $photoPath = 'storage/auth_photos/' . $filename;
+                try {
+                    $photoPath = encryptAuthPhoto($imageData, storagePath('auth_photos'));
+                } catch (Throwable $e) {
+                    error_log('[Auth Login] Enkripsi foto gagal: ' . $e->getMessage());
+                    // Lanjutkan tanpa foto - jangan blokir login.
                 }
             }
         }

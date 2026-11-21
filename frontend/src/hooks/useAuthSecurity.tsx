@@ -337,10 +337,20 @@ export function useCameraPermission() {
 
     // Cek ketersediaan mediaDevices
     if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      const msg = 'navigator.mediaDevices.getUserMedia tidak tersedia di environment ini';
+      // Browser hanya mengekspos kamera di secure context (HTTPS / localhost).
+      // Halaman yang dibuka via http://<ip-lan> sengaja tidak mendapat API kamera.
+      const insecure =
+        typeof window !== 'undefined' && window.isSecureContext === false;
+      const msg = insecure
+        ? 'getUserMedia diblokir: halaman dibuka tanpa HTTPS (bukan secure context)'
+        : 'navigator.mediaDevices.getUserMedia tidak tersedia di environment ini';
       logCamera('ERROR', msg);
       if (runId === runIdRef.current && isMountedRef.current) {
-        setError('Kamera tidak didukung pada perangkat ini.');
+        setError(
+          insecure
+            ? 'Kamera hanya tersedia di HTTPS atau aplikasi desktop TrueCount. Buka halaman ini lewat HTTPS, atau gunakan aplikasi desktop.'
+            : 'Kamera tidak didukung pada perangkat ini.',
+        );
         setHasPermission(false);
         setIsChecking(false);
       }

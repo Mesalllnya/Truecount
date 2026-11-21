@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiUrl } from '../lib/appConfig'
+import { useAuth } from '../hooks/useAuthSession'
 import Icon from '../components/Icon'
 import './UserProfilePage.css'
 
@@ -307,6 +308,7 @@ function RequestChangeModal({ isOpen, onClose, onSubmit }) {
 export default function UserProfilePage() {
   const { userId } = useParams()
   const navigate = useNavigate()
+  const { user: authUser } = useAuth()
   const token = localStorage.getItem('tc_token')
   const isOwnProfile = !userId // If no userId in URL, show current user's profile
 
@@ -321,9 +323,7 @@ export default function UserProfilePage() {
     setLoading(true)
     setError('')
     try {
-      const targetId = userId || (user?.id ?? '')
-      // If viewing own profile and no userId, we need to get current user info
-      // For now, assume userId is passed or we redirect to login
+      const targetId = userId || authUser?.id || ''
       if (!targetId) {
         throw new Error('User ID tidak ditemukan.')
       }
@@ -341,7 +341,7 @@ export default function UserProfilePage() {
     } finally {
       setLoading(false)
     }
-  }, [userId, token, user?.id])
+  }, [userId, token, authUser?.id])
 
   useEffect(() => {
     if (!token) {

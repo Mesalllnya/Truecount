@@ -464,6 +464,14 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    // GET /users/photo?id=... - foto ID terenkripsi (user sendiri atau admin)
+    $uri === '/users/photo' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/users/show_photo.php';
+    })(),
+    $uri === '/users/photo' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
     // GET /auth/attempts/{id}/photo - foto kamera percobaan login (admin)
     preg_match('#^/auth/attempts/(\d+)/photo$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
         $_SERVER['REQUEST_URI'] = '/auth/attempts/' . $m[1] . '/photo';

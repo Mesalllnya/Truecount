@@ -50,6 +50,10 @@ if ($email === '') {
 
 if (strlen($password) < 8) {
     $errors[] = 'Kata sandi minimal 8 karakter.';
+} elseif (!preg_match('/[0-9]/', $password)) {
+    $errors[] = 'Kata sandi wajib mengandung minimal 1 angka.';
+} elseif (!preg_match('/[^a-zA-Z0-9]/', $password)) {
+    $errors[] = 'Kata sandi wajib mengandung minimal 1 karakter khusus (mis. !@#$%^&*).';
 }
 
 if (!empty($errors)) {

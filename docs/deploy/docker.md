@@ -5,7 +5,7 @@ Frontend React tetap di-build terpisah (web statis atau app desktop Tauri), lalu
 diarahkan ke alamat backend container.
 
 > Untuk deploy tanpa Docker (VPS + Nginx/Apache native), lihat [`deploy.md`](deploy.md).
-> Untuk rencana cloud jangka panjang, lihat [`deploy-to-cloud-plan.md`](deploy-to-cloud-plan.md).
+> Untuk rencana cloud jangka panjang yang sudah diarsipkan, lihat [`../archive/deploy-to-cloud-plan.md`](../archive/deploy-to-cloud-plan.md).
 
 ---
 

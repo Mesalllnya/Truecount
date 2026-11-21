@@ -1,5 +1,7 @@
 # Halaman Dev TrueCount — Rencana Implementasi & Pitch Deck
 
+> **📦 ARSIP (21 Nov 2026):** Rencana ini sudah dieksekusi (versi 2D, bukan 3D). Dokumentasi terkini ada di [`../dev/knowledge_transfer.md`](../dev/knowledge_transfer.md) §12 dan [`../dev/user-flow.md`](../dev/user-flow.md) §11. Alasan arsip: [`README.md`](README.md).
+
 > Halaman eksklusif untuk **Admin** dan **Developer**. Berisi visualisasi 3D isometrik interaktif yang menjelaskan cara kerja aplikasi TrueCount dari awal hingga akhir, serta algoritma kriptografi yang diterapkan. Cocok digunakan sebagai dokumentasi teknis untuk tim dan materi presentasi (pitch deck) untuk evaluator.
 
 > **Status implementasi:** bagian "3D isometrik" di dokumen ini adalah rencana awal. Versi yang dikirim berupa **diagram 2D** — kartu langkah + panah SVG di kanvas ber-grid, tanpa efek isometrik — di `frontend/src/components/IsometricFlow.tsx` dan `IsometricCrypto.tsx`. Rincian teknis terkini ada di `docs/dev/knowledge_transfer.md`, bagian **Halaman Dev**.

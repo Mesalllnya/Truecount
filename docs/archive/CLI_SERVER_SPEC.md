@@ -1,5 +1,7 @@
 # TrueCount Server CLI - Specification
 
+> **📦 ARSIP (21 Nov 2026):** Spesifikasi ini tidak dilanjutkan. Masalah storage terfragmentasi diselesaikan lewat Docker + volume, bukan repo CLI terpisah — lihat [`../deploy/docker.md`](../deploy/docker.md). Alasan arsip: [`README.md`](README.md).
+
 **Repository:** `truecount-server-cli` (new, separate from main repo)  
 **Language:** Rust (recommended - shares Tauri/backend logic) or PHP CLI (no new deps)  
 **Status:** Specification phase - not yet implemented

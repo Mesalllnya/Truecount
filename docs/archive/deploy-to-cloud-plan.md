@@ -1,8 +1,10 @@
 # TrueCount — Deploy to Cloud Plan
 
-> **Status:** ⏸️ Ditunda — arah aktif sekarang adalah demo 1 PC. Lihat [`demo-server-config-plan.md`](demo-server-config-plan.md).
+> **📦 ARSIP (21 Nov 2026):** Dokumen ini bukan acuan lagi. Deploy ke VPS sekarang diarahkan lewat Docker — lihat [`../deploy/docker.md`](../deploy/docker.md). Alasan arsip: [`README.md`](README.md).
+>
+> **Status asli:** ⏸️ Ditunda — arah aktif saat itu adalah demo 1 PC.
 > **Terakhir diperbarui:** 18 November 2026
-> **Dokumen terkait:** [`deploy.md`](deploy.md) · [`demo-server-config-plan.md`](demo-server-config-plan.md) · [`../desktop/desktop.md`](../desktop/desktop.md)
+> **Dokumen terkait:** [`../deploy/deploy.md`](../deploy/deploy.md) · [`demo-server-config-plan.md`](demo-server-config-plan.md) · [`../desktop/desktop.md`](../desktop/desktop.md)
 
 ---
 

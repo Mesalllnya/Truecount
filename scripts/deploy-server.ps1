@@ -235,6 +235,7 @@ function New-EnvFile {
 
     $values = [ordered]@{
         'DB_HOST'            = '127.0.0.1'
+        'TC_STORAGE_ROOT'    = 'backend/storage'
         'JWT_SECRET'         = (New-PhpSecret 'echo bin2hex(random_bytes(32));')
         'ENCRYPTION_KEY_B64' = (New-PhpSecret 'echo base64_encode(random_bytes(32));')
         'CHACHA20_KEY_B64'   = (New-PhpSecret 'echo base64_encode(random_bytes(32));')
@@ -334,6 +335,15 @@ function Initialize-Env {
             Set-EnvValue $script:EnvPath 'DB_HOST' '127.0.0.1'
             $map = Read-EnvMap $script:EnvPath
             Write-Warn 'DB_HOST diubah localhost -> 127.0.0.1 (mencegah delay ±2 detik per koneksi MySQL).'
+        }
+
+        # TC_STORAGE_ROOT: pakai folder storage yang sama baik oleh app desktop
+        # maupun deploy-server.ps1, agar foto/log tidak terpecah dua lokasi.
+        if (-not $map.ContainsKey('TC_STORAGE_ROOT') -or [string]::IsNullOrWhiteSpace($map['TC_STORAGE_ROOT'])) {
+            Backup-Env $script:EnvPath
+            Set-EnvValue $script:EnvPath 'TC_STORAGE_ROOT' 'backend/storage'
+            $map = Read-EnvMap $script:EnvPath
+            Write-Warn 'TC_STORAGE_ROOT ditambahkan = backend/storage (storage seragam untuk semua server).'
         }
 
         foreach ($key in @('DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER')) {

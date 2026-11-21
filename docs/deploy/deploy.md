@@ -477,6 +477,7 @@ Server `/health` mengembalikan `server_id`, `server_label`, dan `time`, sehingga
 | Variable          | Default                        | Keterangan                                    |
 |-------------------|--------------------------------|-----------------------------------------------|
 | `DB_HOST`         | `127.0.0.1`                    | Host MySQL — **pakai `127.0.0.1`, bukan `localhost`** (di Windows `localhost` di-resolve ke IPv6 lebih dulu → delay ±2 detik per koneksi) |
+| `TC_STORAGE_ROOT` | *(kosong = `backend/storage`)* | Lokasi folder storage foto/log. **Harus path absolut** di `.env` agar sama di Tauri dan `deploy-server.ps1`. Contoh Windows: `D:/proyek/truecount/backend/storage` |
 | `DB_PORT`         | `3306`                         | Port MySQL                                    |
 | `DB_NAME`         | `truecount_db`                 | Nama database                                 |
 | `DB_USER`         | `root`                         | User MySQL                                    |

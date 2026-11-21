@@ -76,6 +76,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   // Password field visible by default; confirm field masked by default
+  const [showPass, setShowPass] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
 
   // Username validation state
@@ -556,16 +557,26 @@ export default function RegisterPage() {
 
       <div className="field">
         <label htmlFor="password">Kata sandi</label>
-        <input
-          id="password"
-          name="password"
-          type="text"
-          autoComplete="new-password"
-          placeholder="Min. 8 karakter"
-          value={form.password}
-          onChange={handleChange}
-          required
-        />
+        <div className="password-input-wrapper">
+          <input
+            id="password"
+            name="password"
+            type={showPass ? 'text' : 'password'}
+            autoComplete="new-password"
+            placeholder="Min. 8 karakter, 1 angka, 1 karakter khusus"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            onClick={() => setShowPass(v => !v)}
+            aria-label={showPass ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+          >
+            {showPass ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
+          </button>
+        </div>
       </div>
 
       <div className="field">
@@ -576,7 +587,7 @@ export default function RegisterPage() {
             name="confirm"
             type={showConfirm ? 'text' : 'password'}
             autoComplete="new-password"
-            placeholder="••••••••"
+            placeholder="Ulangi kata sandi"
             value={form.confirm}
             onChange={handleChange}
             required

@@ -156,6 +156,30 @@ export default function LoginPage() {
   // ── Auth Session ──────────────────────────────────────────────
   const { login } = useAuth()
 
+  // ── Navigate after login: cek setup keamanan dulu ─────────
+  async function navigateAfterLogin() {
+    try {
+      const token = localStorage.getItem('tc_token')
+      if (!token) {
+        navigate('/dasbor')
+        return
+      }
+      const res = await fetch(apiUrl('/auth/security-setup'), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (res.ok && data.requires_setup) {
+        // Belum setup keamanan → paksa ke halaman setup
+        navigate('/atur-keamanan', { replace: true })
+      } else {
+        navigate('/dasbor', { replace: true })
+      }
+    } catch {
+      // Gagal cek → tetap ke dasbor (AuthGuard akan handle)
+      navigate('/dasbor', { replace: true })
+    }
+  }
+
   // ── Failed Attempts Tracking ────────────────────────────────
   const { state: attemptsState, increment, reset } = useFailedAttempts()
 
@@ -510,7 +534,7 @@ export default function LoginPage() {
       } catch (incErr) {
         console.warn('[Login] Failed to log dongle attempt:', incErr)
       }
-      navigate('/dasbor')
+      await navigateAfterLogin()
     } catch (err) {
       setUsbAuthStep('error')
       const errMsg = err?.message || 'Terjadi kesalahan.'
@@ -648,7 +672,7 @@ export default function LoginPage() {
       } catch (incErr) {
         console.warn('[Login] Failed to log password attempt:', incErr)
       }
-      navigate('/dasbor')
+      await navigateAfterLogin()
     } catch (err) {
       const errMsg =
         err instanceof Error && err.message !== 'Failed to fetch'
@@ -691,8 +715,8 @@ export default function LoginPage() {
         } catch (incErr) {
           console.warn('[Login] Failed to log webauthn attempt:', incErr)
         }
-        stopCamera() // matikan kamera sebelum pindah ke dasbor
-        navigate('/dasbor')
+        stopCamera() // matikan kamera sebelum pindah
+        await navigateAfterLogin()
       } else {
         const errMsg = webauthnError || 'Autentikasi Windows Hello gagal'
         setError(errMsg)

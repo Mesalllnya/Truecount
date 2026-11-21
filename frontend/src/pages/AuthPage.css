@@ -1095,6 +1095,88 @@
   border-style: dashed;
 }
 
+/* ── Username status indicator ────────────────────────────── */
+.username-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.username-input-wrapper input {
+  width: 100%;
+  padding-right: 2.5rem;
+}
+
+.username-input-wrapper input.input-success {
+  border-color: #2a7a3b;
+}
+
+.username-input-wrapper input.input-error {
+  border-color: var(--error);
+}
+
+.username-input-wrapper input.input-success:focus {
+  border-color: #2a7a3b;
+  box-shadow: 0 0 0 3px rgba(42, 122, 59, 0.12);
+}
+
+.username-input-wrapper input.input-error:focus {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+}
+
+.username-status {
+  position: absolute;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.username-status.available {
+  color: #2a7a3b;
+}
+
+.username-status.taken {
+  color: var(--error);
+}
+
+.username-status.invalid {
+  color: #f59e0b;
+}
+
+.status-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--black);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.username-status-msg {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  animation: cardReveal 200ms ease-out;
+}
+
+.username-status-msg.available {
+  color: #2a7a3b;
+}
+
+.username-status-msg.taken {
+  color: var(--error);
+}
+
+.username-status-msg.invalid {
+  color: #b45309;
+}
+
 /* ── Footer: teks tanpa tautan (undangan via admin) ─────── */
 .auth-footer-note {
   color: var(--black);

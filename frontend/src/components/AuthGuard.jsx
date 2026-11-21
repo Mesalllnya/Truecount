@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthGuard } from '../hooks/useAuthSecurity.tsx';
+import { useAuth } from '../hooks/useAuthSession';
 
 /**
  * AuthGuard - Protects routes that require security setup (Windows Hello or Dongle)
@@ -15,11 +16,17 @@ import { useAuthGuard } from '../hooks/useAuthSecurity.tsx';
 export default function AuthGuard() {
   const location = useLocation();
   const { canAccess, isLoading, status, refetch } = useAuthGuard();
+  const { user } = useAuth();
 
   // Refetch on mount and when returning from setup page
   useEffect(() => {
     refetch();
   }, [refetch]);
+
+  // Dev role exempt from security setup requirement
+  if (user?.role === 'dev') {
+    return <Outlet />;
+  }
 
   // Show loading while checking
   if (isLoading) {

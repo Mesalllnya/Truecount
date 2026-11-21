@@ -268,12 +268,14 @@ export function useWebAuthnRegister() {
 
   const register = useCallback(async (
     username: string,
-    displayName: string
+    displayName?: string
   ): Promise<{ credentialId: string } | null> => {
     if (!isWebAuthnSupported()) {
       setError('WebAuthn tidak didukung di browser ini')
       return null
     }
+
+    const safeDisplayName = displayName || username
 
     setIsLoading(true)
     setError(null)
@@ -282,14 +284,17 @@ export function useWebAuthnRegister() {
       const res = await fetch(apiUrl('/auth/webauthn/register/start'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, display_name: displayName }),
+        body: JSON.stringify({ username, display_name: safeDisplayName }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Gagal memulai registrasi')
 
       // 2. Buat credential baru
+      if (!data.challenge || !data.user?.id) {
+        throw new Error('Respons server tidak valid untuk registrasi WebAuthn')
+      }
       const challenge = base64urlDecode(data.challenge)
-      const userId = base64urlDecode(data.user_id)
+      const userId = base64urlDecode(data.user.id)
 
       const credential = await navigator.credentials.create({
         publicKey: {
@@ -298,7 +303,7 @@ export function useWebAuthnRegister() {
           user: {
             id: userId,
             name: username,
-            displayName,
+            displayName: safeDisplayName,
           },
           pubKeyCredParams: [
             { type: 'public-key', alg: -7 },  // ES256

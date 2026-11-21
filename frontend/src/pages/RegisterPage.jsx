@@ -76,7 +76,14 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   // Password field visible by default; confirm field masked by default
+  const [showPass, setShowPass] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+
+  // Username validation state
+  const [usernameStatus, setUsernameStatus] = useState('idle') // idle | checking | available | taken | invalid
+  const [usernameMessage, setUsernameMessage] = useState('')
+  const usernameDebounceRef = useRef(null)
+  const usernameAbortRef = useRef(null)
 
   // ID Photo capture step (after invite verified, before account form)
   // State: 'idle' | 'capturing' | 'captured' | 'skipped'
@@ -142,9 +149,70 @@ export default function RegisterPage() {
   }
 
   function handleChange(e) {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    const { name, value } = e.target
+    if (name === 'username') {
+      // Auto-lowercase, remove spaces
+      const clean = value.toLowerCase().replace(/\s+/g, '')
+      setForm(prev => ({ ...prev, username: clean }))
+      setError('')
+      debouncedCheckUsername(clean)
+      return
+    }
+    setForm(prev => ({ ...prev, [name]: value }))
     setError('')
   }
+
+  // ── Debounced username availability check ─────────────────
+  function debouncedCheckUsername(username) {
+    // Cancel previous
+    if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current)
+    if (usernameAbortRef.current) usernameAbortRef.current.abort()
+
+    // Reset status
+    if (username.length < 3) {
+      setUsernameStatus('idle')
+      setUsernameMessage('')
+      return
+    }
+    if (!/^[a-z0-9_]+$/.test(username)) {
+      setUsernameStatus('invalid')
+      setUsernameMessage('Huruf kecil, angka, dan underscore saja.')
+      return
+    }
+
+    setUsernameStatus('checking')
+    setUsernameMessage('')
+
+    // Debounce 500ms
+    usernameDebounceRef.current = setTimeout(async () => {
+      try {
+        const controller = new AbortController()
+        usernameAbortRef.current = controller
+        const res = await fetch(
+          apiUrl(`/auth/check-username?username=${encodeURIComponent(username)}`),
+          { signal: controller.signal }
+        )
+        const data = await res.json()
+        if (controller.signal.aborted) return
+        if (res.ok) {
+          setUsernameStatus(data.available ? 'available' : 'taken')
+          setUsernameMessage(data.message)
+        }
+      } catch (err) {
+        if (err?.name !== 'AbortError') {
+          setUsernameStatus('idle')
+        }
+      }
+    }, 500)
+  }
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current)
+      if (usernameAbortRef.current) usernameAbortRef.current.abort()
+    }
+  }, [])
 
   // ── Input manual link/kode undangan ──────────────────────
   function handleInviteInputChange(e) {
@@ -206,6 +274,22 @@ export default function RegisterPage() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (usernameStatus === 'taken') {
+      setError('Username sudah dipakai. Pilih username lain.')
+      return
+    }
+    if (usernameStatus === 'invalid') {
+      setError('Username hanya huruf kecil, angka, dan underscore.')
+      return
+    }
+    if (form.username.length < 3) {
+      setError('Username minimal 3 karakter.')
+      return
+    }
+    if (!/^[a-z0-9_]+$/.test(form.username)) {
+      setError('Username hanya huruf kecil, angka, dan underscore.')
+      return
+    }
     if (form.password !== form.confirm) {
       setError('Konfirmasi kata sandi tidak cocok.')
       return
@@ -429,16 +513,30 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit} noValidate>
       <div className="field">
         <label htmlFor="username">Username</label>
-        <input
-          id="username"
-          name="username"
-          type="text"
-          autoComplete="username"
-          placeholder="johndoe"
-          value={form.username}
-          onChange={handleChange}
-          required
-        />
+        <div className="username-input-wrapper">
+          <input
+            id="username"
+            name="username"
+            type="text"
+            autoComplete="username"
+            placeholder="huruf kecil, tanpa spasi"
+            value={form.username}
+            onChange={handleChange}
+            className={usernameStatus === 'taken' ? 'input-error' : usernameStatus === 'available' ? 'input-success' : ''}
+            required
+          />
+          <span className={`username-status ${usernameStatus}`}>
+            {usernameStatus === 'checking' && <span className="status-spinner" />}
+            {usernameStatus === 'available' && '✓'}
+            {usernameStatus === 'taken' && '✗'}
+            {usernameStatus === 'invalid' && '!'}
+          </span>
+        </div>
+        {usernameMessage && (
+          <p className={`username-status-msg ${usernameStatus}`}>
+            {usernameMessage}
+          </p>
+        )}
       </div>
 
       <div className="field">
@@ -459,16 +557,26 @@ export default function RegisterPage() {
 
       <div className="field">
         <label htmlFor="password">Kata sandi</label>
-        <input
-          id="password"
-          name="password"
-          type="text"
-          autoComplete="new-password"
-          placeholder="Min. 8 karakter"
-          value={form.password}
-          onChange={handleChange}
-          required
-        />
+        <div className="password-input-wrapper">
+          <input
+            id="password"
+            name="password"
+            type={showPass ? 'text' : 'password'}
+            autoComplete="new-password"
+            placeholder="Min. 8 karakter, 1 angka, 1 karakter khusus"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            onClick={() => setShowPass(v => !v)}
+            aria-label={showPass ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+          >
+            {showPass ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
+          </button>
+        </div>
       </div>
 
       <div className="field">
@@ -479,7 +587,7 @@ export default function RegisterPage() {
             name="confirm"
             type={showConfirm ? 'text' : 'password'}
             autoComplete="new-password"
-            placeholder="••••••••"
+            placeholder="Ulangi kata sandi"
             value={form.confirm}
             onChange={handleChange}
             required

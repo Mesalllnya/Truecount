@@ -494,8 +494,25 @@ export default function LoginPage() {
           setUsbAuthError('USB dicabut. Colokkan kembali untuk melanjutkan.')
           setUsbAuthStep('waiting-usb')
         } else {
+          const errMsg = msg || 'Gagal mendekripsi. PIN salah?'
           setUsbAuthStep('error')
-          setUsbAuthError(msg || 'Gagal mendekripsi. PIN salah?')
+          setUsbAuthError(errMsg)
+          // Gagal di perangkat (PIN dongle salah): verifikasi PIN terjadi
+          // lokal dan tidak pernah mencapai backend, sehingga backend tidak
+          // mencatat baris log & foto kamera sama sekali. Dipanggil dari sini
+          // untuk mencatatnya sendiri — sama seperti perlakuan Windows Hello
+          // (logDeviceSideFailure di atas).
+          await logDeviceSideFailure({
+            identifier,
+            method: 'dongle',
+            error: errMsg,
+            authPhoto: photo,
+          })
+          try {
+            await increment(identifier, 'dongle', false, errMsg)
+          } catch (incErr) {
+            console.warn('[Login] Failed to log dongle attempt:', incErr)
+          }
         }
         return
       }
@@ -544,6 +561,14 @@ export default function LoginPage() {
       } catch (incErr) {
         console.warn('[Login] Failed to log dongle attempt:', incErr)
       }
+      // Gagal di perangkat (import key / sign challenge) juga tidak sampai ke
+      // backend — catat sendiri beserta foto kamera, seperti Windows Hello.
+      await logDeviceSideFailure({
+        identifier,
+        method: 'dongle',
+        error: errMsg,
+        authPhoto: photo,
+      })
     } finally {
       setAuthPhoto(null)
     }

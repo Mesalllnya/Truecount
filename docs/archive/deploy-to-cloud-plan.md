@@ -58,26 +58,27 @@ Tujuan: membuat TrueCount dapat diakses lewat internet dengan aman, tanpa mengor
 
 ### 2.1 Yang dipilih: satu VPS, same-origin
 
-```
-Internet
-   │
-   ▼
-Cloudflare (DNS + TLS + rate limit)        ← opsional
-   │
-   ▼
-VPS Ubuntu 24.04
-   ├─ nginx / Caddy :443
-   │    ├─ /              → frontend/dist        (SPA React)
-   │    └─ /api/*         → PHP-FPM → backend/index.php
-   ├─ PHP 8.3-FPM
-   │    ├─ pdo_mysql
-   │    ├─ mbstring
-   │    ├─ openssl
-   │    ├─ gd               ← wajib untuk steganografi & foto kandidat
-   │    └─ fileinfo
-   ├─ MySQL 8               ← bind 127.0.0.1 saja
-   ├─ .env                  → /var/www/truecount/.env
-   └─ storage/              → /var/www/truecount/storage (di luar webroot)
+```mermaid
+flowchart TB
+    internet["Internet"] --> cf["Cloudflare<br/>DNS + TLS + rate limit<br/>(opsional)"]
+    cf --> vps
+
+    subgraph vps["VPS Ubuntu 24.04"]
+        nginx["nginx / Caddy :443"]
+        spa["/ → frontend/dist<br/>SPA React"]
+        api["/api/* → PHP-FPM<br/>backend/index.php"]
+        php["PHP 8.3-FPM<br/>pdo_mysql · mbstring · openssl<br/>gd · fileinfo"]
+        mysql[("MySQL 8<br/>bind 127.0.0.1")]
+        env[".env<br/>/var/www/truecount/.env"]
+        st["storage/<br/>/var/www/truecount/storage<br/>(di luar webroot)"]
+
+        nginx --> spa
+        nginx --> api
+        api --> php
+        php --> mysql
+        php --> env
+        php --> st
+    end
 ```
 
 **Keuntungan:**

@@ -47,7 +47,7 @@ if ($label !== '' && mb_strlen($label) > 100) {
 // ── 1. Validasi challenge ───────────────────────────────────
 $db = getDB();
 $stmt = $db->prepare(
-    'SELECT id, challenge, status, expires_at
+    'SELECT id, challenge, status, expires_at, (expires_at < NOW()) AS is_expired
        FROM usb_challenges
       WHERE id = ? AND user_id = ?
       LIMIT 1'
@@ -63,7 +63,8 @@ if ($challengeRow['status'] !== 'pending') {
     jsonResponse(['error' => 'Challenge sudah dipakai atau kedaluwarsa.'], 400);
 }
 
-if (strtotime($challengeRow['expires_at']) < time()) {
+// Dibandingkan di SQL (NOW()) supaya tidak terpengaruh selisih timezone PHP vs MySQL.
+if ((int)$challengeRow['is_expired'] === 1) {
     // Tandai expired
     $db->prepare('UPDATE usb_challenges SET status = "expired" WHERE id = ?')
        ->execute([$challengeId]);

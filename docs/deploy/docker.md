@@ -11,26 +11,20 @@ diarahkan ke alamat backend container.
 
 ## 1. Arsitektur
 
-```
-┌──────────────────────────────────────────────────────────┐
-│ Docker host                                              │
-│                                                          │
-│  ┌────────────────────┐        ┌─────────────────────┐   │
-│  │ backend            │        │ db                  │   │
-│  │ php:8.3-apache     │───────▶│ mysql:8.0           │   │
-│  │ :80 → host :8000   │        │ volume: db_data     │   │
-│  │                    │        └─────────────────────┘   │
-│  │ volume:            │                                  │
-│  │  backend_storage   │  ← foto auth, file terenkripsi,  │
-│  │  backend_uploads   │    log; foto kandidat            │
-│  └────────────────────┘                                  │
-└──────────────────────────────────────────────────────────┘
-             ▲
-             │ HTTP (CORS)
-   ┌─────────┴──────────┐
-   │ frontend web/dist  │  ← build & serve terpisah
-   │ desktop Tauri      │
-   └────────────────────┘
+```mermaid
+flowchart LR
+    client["Frontend web/dist<br/>Desktop Tauri<br/>(build & serve terpisah)"]
+
+    subgraph host["Docker host"]
+        backend["backend<br/>php:8.3-apache<br/>:80 → host :8000"]
+        db[("db<br/>mysql:8.0<br/>volume: db_data")]
+        storage[("Volume backend_storage<br/>+ backend_uploads<br/>foto auth, file terenkripsi,<br/>log, foto kandidat")]
+
+        backend -->|"SQL :3306"| db
+        storage -.->|"mount"| backend
+    end
+
+    client -->|"HTTP (CORS)"| backend
 ```
 
 Yang **tidak** ada di container:
@@ -216,6 +210,27 @@ docker compose --env-file .env.docker exec -T db \
 
 > Perintah di atas membaca password dari environment **di dalam container `db`**,
 > bukan dari shell host.
+
+### 5.1 Akses database dari laptop
+
+Port MySQL hanya dibuka di loopback laptop: `127.0.0.1:3307` → container `db:3306`.
+Artinya `localhost:3306` **bukan** database container — port itu bisa dipakai MySQL
+lokal yang terpasang di laptop.
+
+| Field | Nilai |
+|---|---|
+| Host | `127.0.0.1` |
+| Port | `3307` |
+| User | `root` (atau `truecount`) |
+| Password | `MYSQL_ROOT_PASSWORD` / `DB_PASS` di `.env.docker` |
+| Database | `truecount_db` |
+
+```bash
+mysql -h 127.0.0.1 -P 3307 -u root -p truecount_db
+```
+
+Kalau tidak butuh akses dari laptop, hapus blok `ports:` pada service `db` di
+`docker-compose.yml` supaya database hanya bisa diakses dari network Compose.
 
 ---
 

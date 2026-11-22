@@ -43,5 +43,15 @@ function getDB(): PDO
 
     $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
 
+    // Samakan zona waktu sesi MySQL dengan zona waktu PHP.
+    //
+    // MySQL di container berjalan pada UTC, sedangkan PHP memakai
+    // Asia/Jakarta (index.php). Tanpa ini NOW()/CURRENT_TIMESTAMP berbeda
+    // 7 jam dari strtotime(), sehingga challenge yang baru dibuat langsung
+    // dianggap kedaluwarsa dan timestamp di UI tampil mundur 7 jam.
+    $phpTimezone = new DateTimeZone(date_default_timezone_get());
+    $offset = (new DateTimeImmutable('now', $phpTimezone))->format('P');
+    $pdo->exec('SET time_zone = ' . $pdo->quote($offset));
+
     return $pdo;
 }

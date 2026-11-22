@@ -418,12 +418,43 @@ function Test-Preflight {
 
     $process = Get-Process -Name 'mysqld', 'mariadbd' -ErrorAction SilentlyContinue
 
-    if (-not $service -and -not $process) {
-        throw 'MySQL/MariaDB tidak berjalan. Nyalakan service MySQL atau Laragon, lalu jalankan ulang.'
+    if ($service -or $process) {
+        Write-Ok 'MySQL/MariaDB berjalan.'
+        Test-MysqlExposure
+        return
     }
-    Write-Ok 'MySQL/MariaDB berjalan.'
 
-    Test-MysqlExposure
+    # Database bisa juga berjalan di luar Windows service, misalnya container
+    # Docker. Cek koneksi TCP ke DB_HOST:DB_PORT dari .env.
+    $dbHost = '127.0.0.1'
+    $dbPort = 3306
+
+    if (Test-Path -LiteralPath $script:EnvPath) {
+        $envMap = Read-EnvMap $script:EnvPath
+
+        if ($envMap.ContainsKey('DB_HOST') -and -not [string]::IsNullOrWhiteSpace($envMap['DB_HOST'])) {
+            $dbHost = $envMap['DB_HOST']
+        }
+        if ($envMap.ContainsKey('DB_PORT') -and $envMap['DB_PORT'] -match '^\d+$') {
+            $dbPort = [int]$envMap['DB_PORT']
+        }
+    }
+
+    $tcpOk = $false
+    try {
+        $client = New-Object System.Net.Sockets.TcpClient
+        $tcpOk  = $client.ConnectAsync($dbHost, $dbPort).Wait(2000)
+        $client.Close()
+    }
+    catch {
+        $tcpOk = $false
+    }
+
+    if (-not $tcpOk) {
+        throw "MySQL/MariaDB tidak berjalan di ${dbHost}:${dbPort}. Nyalakan service MySQL/Laragon, atau jalankan database Docker (docker compose up -d db), lalu jalankan ulang."
+    }
+
+    Write-Ok "MySQL/MariaDB terdeteksi di ${dbHost}:${dbPort} (TCP)."
 }
 
 function Test-MysqlExposure {

@@ -8,5 +8,17 @@ USE `truecount_db`;
 ALTER TABLE `users`
     MODIFY COLUMN `role` ENUM('admin', 'voter', 'dev') NOT NULL DEFAULT 'voter';
 
--- Tambah index untuk mempercepat filter berdasarkan role
-CREATE INDEX IF NOT EXISTS `idx_users_role` ON `users` (`role`);
+-- Tambah index untuk mempercepat filter berdasarkan role.
+-- MySQL 8 tidak mendukung `CREATE INDEX IF NOT EXISTS` (sintaks MariaDB),
+-- jadi cek dulu lewat information_schema.
+SET @ddl = IF(
+    (SELECT COUNT(*) FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'users'
+       AND INDEX_NAME = 'idx_users_role') = 0,
+    'CREATE INDEX `idx_users_role` ON `users` (`role`)',
+    'DO 0'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

@@ -6,11 +6,13 @@
 
 ## 1. Ringkasan Alur Umum (Semua Pengguna)
 
-```
-Landing Page (/) 
-    → /masuk (Login) 
-    → [belum setup keamanan?] → /atur-keamanan (Security Setup) 
-    → /dasbor (Dashboard)
+```mermaid
+flowchart TD
+    A["Landing Page /"] --> B["/masuk (Login)"]
+    B --> C{"Sudah setup keamanan?"}
+    C -->|"Belum"| D["/atur-keamanan (Security Setup)"]
+    C -->|"Sudah"| E["/dasbor (Dashboard)"]
+    D --> E
 ```
 
 Setelah login dan setup keamanan selesai, pengguna dapat mengakses halaman terlindungi sesuai perannya.
@@ -23,18 +25,18 @@ Pendaftaran publik **ditutup**. Akun baru hanya bisa dibuat lewat tautan undanga
 
 ### Langkah demi langkah:
 
-```
-Admin buat undangan di /dasbor
-    → dapat tautan /daftar?undangan=<token>
-    → bagikan ke calon pengguna
-Calon pengguna buka tautan undangan
-    → RegisterPage verifikasi token via GET /invites/verify
-    → [token valid] tampilkan form pendaftaran
-    → [token invalid/kedaluwarsa] tampilkan error "Undangan tidak berlaku"
-Isi form (username, email, password)
-    → POST /auth/register dengan invite_token
-    → berhasil → redirect ke /masuk + notifikasi "Akun berhasil dibuat"
-Login via /masuk (lihat bagian 3)
+```mermaid
+flowchart TD
+    A["Admin buat undangan di /dasbor"] --> B["Dapat tautan /daftar?undangan=token"]
+    B --> C["Bagikan ke calon pengguna"]
+    C --> D["Calon pengguna buka tautan undangan"]
+    D --> E{"GET /invites/verify<br/>token valid?"}
+    E -->|"valid"| F["Tampilkan form pendaftaran"]
+    E -->|"invalid / kedaluwarsa"| G["Error: Undangan tidak berlaku"]
+    F --> H["Isi username, email, password"]
+    H --> I["POST /auth/register + invite_token"]
+    I --> J["Redirect /masuk<br/>notifikasi Akun berhasil dibuat"]
+    J --> K["Login via /masuk (bagian 3)"]
 ```
 
 ### Detail halaman register (`/daftar`):
@@ -64,36 +66,35 @@ Halaman login menampilkan **3 metode auth**, tersedia sesuai kondisi perangkat d
 
 ### Detail proses login:
 
+```mermaid
+flowchart TD
+    A["Buka /masuk"] --> B["Kamera dicek otomatis (useCameraPermission)<br/>status-dot berkedip hijau ↔ abu-abu"]
+    B --> C["Ketik identifier<br/>username / email"]
+    C --> D["POST /auth/security-status"]
+    D --> E{"Punya WebAuthn / Dongle?"}
+    E -->|"belum"| F["identifierNeedsSetup = true<br/>Kata Sandi otomatis dipilih (onboarding)"]
+    E -->|"sudah"| G["Pilih metode"]
+    F --> G
+    G --> H["Windows Hello"]
+    G --> I["Dongle USB (Tauri only)"]
+    G --> J["Kata Sandi"]
+    H --> H1["Verifikasi kamera<br/>canvas sampling, frame tidak gelap/shutter<br/>ambil foto auth_photo"]
+    H1 --> H2["loginWithWindowsHello(identifier, photo)"]
+    I --> I1["startUsbAuthenticate(identifier)<br/>scan USB tiap 2 detik → input PIN<br/>dekripsi private key → sign challenge"]
+    I1 --> I2["verifyUsbAuthenticate(challenge_id, signature, photo)"]
+    J --> J1["Verifikasi kamera tetap aktif<br/>POST /auth/login + auth_photo"]
+    H2 --> K["JWT diterima"]
+    I2 --> K
+    J1 --> K
+    K --> L["Simpan tc_token di localStorage<br/>navigate /dasbor"]
+    L --> M["Kamera dimatikan otomatis<br/>saat meninggalkan /masuk"]
 ```
-1. Kamera dicek otomatis (useCameraPermission)
-   - Titik indikator berkedip hijau ↔ abu-abu selama verifikasi
-   - User dapat mencapture foto ulang sebelum auth dikirim
-2. User ketik identifier (username atau email)
-3. Frontend POST /auth/security-status
-   - Belum punya WebAuthn/Dongle → identifierNeedsSetup = true
-   - Metode Kata Sandi otomatis dipilih (onboarding)
-4. User pilih metode:
-   a. Windows Hello:
-      - Kamera wajib aktif (canvas sampling, verifikasi frame tidak gelap/shutter)
-      - Ambil foto kamera (auth_photo)
-      - loginWithWindowsHello(identifier, photo)
-      - Success → JWT diterima → navigate /dasbor
-   b. Dongle USB (Tauri only):
-      - startUsbAuthenticate(identifier) → dapatkan challenge
-      - Scan USB otomatis (polling tiap 2 detik)
-      - Input PIN → dekripsi private key dari USB
-      - Sign challenge → verifyUsbAuthenticate(challenge_id, signature, photo)
-      - Success → JWT diterima → navigate /dasbor
-   c. Kata Sandi:
-      - Kamera tetap diverifikasi aktif
-      - POST /auth/login + auth_photo
-      - Success → JWT diterima → navigate /dasbor
-5. Setiap percobaan (sukses/gagal) di-log ke DB auth_attempts oleh backend
-   - Termasuk foto kamera, IP, user_agent, method
-6. Gagal 5x → lock 15 menit → Kata Sandi otomatis muncul (emergency fallback)
-7. Berhasil → simpan tc_token ke localStorage → navigate /dasbor
-8. Kamera matikan otomatis saat meninggalkan halaman login
-```
+
+Catatan:
+
+- Foto bisa di-capture ulang sebelum auth dikirim.
+- Setiap percobaan (sukses/gagal) di-log backend ke `auth_attempts`: foto kamera, IP, `user_agent`, method.
+- Gagal 5× → lock 15 menit → Kata Sandi otomatis muncul sebagai *emergency fallback*.
 
 ### Status indikator kamera (`status-dot`):
 
@@ -110,24 +111,24 @@ Sebelum mengakses halaman terlindungi (`/dasbor`, `/pilih`, `/pengaturan`, dll.)
 Pilih **minimal satu** metode:
 
 ### A. Windows Hello (WebAuthn)
-```
-Pilih "Windows Hello"
-    → Masukkan nama perangkat (contoh: "Laptop Kantor")
-    → Browser meminta autentikasi WebAuthn (Face ID / Windows Hello / PIN)
-    → Kamera tidak dinyalakan (kamera hanya aktif di halaman Masuk)
-    → Kredensial disimpan di biometric_credentials
-    → Berhasil → redirect ke returnTo (default /dasbor)
+```mermaid
+flowchart TD
+    A["Pilih Windows Hello"] --> B["Masukkan nama perangkat<br/>contoh: Laptop Kantor"]
+    B --> C["Browser meminta autentikasi WebAuthn<br/>Face ID / Windows Hello / PIN"]
+    C --> D["Kamera tidak dinyalakan<br/>(hanya aktif di halaman Masuk)"]
+    D --> E["Kredensial disimpan di biometric_credentials"]
+    E --> F["Berhasil → redirect returnTo<br/>default /dasbor"]
 ```
 
 ### B. Dongle Keamanan (USB Token)
-```
-Pilih "Dongle Keamanan"
-    → Pilih drive USB yang terdeteksi (scan otomatis tiap 2 detik)
-    → Buat token baru di flashdisk atau pilih token yang sudah ada
-    → Masukkan PIN (min. 4 karakter)
-    → Sign challenge → verifikasi di backend /mfa/usb/register/*
-    → Token terdaftar ke akun user
-    → Berhasil → redirect ke returnTo (default /dasbor)
+```mermaid
+flowchart TD
+    A["Pilih Dongle Keamanan"] --> B["Pilih drive USB terdeteksi<br/>scan otomatis tiap 2 detik"]
+    B --> C["Buat token baru di flashdisk<br/>atau pilih token yang sudah ada"]
+    C --> D["Masukkan PIN (min. 4 karakter)"]
+    D --> E["Sign challenge<br/>verifikasi di backend /mfa/usb/register/*"]
+    E --> F["Token terdaftar ke akun user"]
+    F --> G["Berhasil → redirect returnTo<br/>default /dasbor"]
 ```
 
 ---
@@ -138,23 +139,23 @@ Setelah login dan setup keamanan, admin melihat dashboard dengan 4 panel utama:
 
 ### A. Panel Undangan (Referral Pendaftaran)
 
-```
-Lihat statistik: total, menunggu, diterima, kedaluwarsa, dibatalkan
-    → Buat undangan baru: isi email (opsional) + peran (voter/admin)
-    → Dapatkan tautan /daftar?undangan=<token>
-    → Salin tautan & bagikan ke calon pemilih
-    → Batalkan undangan yang masih status menunggu
-Undangan otomatis kedaluwarsa setelah 7 hari (INVITE_EXPIRE_DAYS di .env)
+```mermaid
+flowchart TD
+    A["Lihat statistik undangan<br/>total, menunggu, diterima, kedaluwarsa, dibatalkan"] --> B["Buat undangan baru<br/>email opsional + peran voter/admin"]
+    B --> C["Dapat tautan /daftar?undangan=token"]
+    C --> D["Salin & bagikan ke calon pemilih"]
+    D --> E["Batalkan undangan berstatus menunggu"]
+    E -.-> F["Kedaluwarsa otomatis 7 hari<br/>INVITE_EXPIRE_DAYS di .env"]
 ```
 
 ### B. Panel Manajemen Pemilihan (Election Management)
 
-```
-Buat pemilihan baru: judul, deskripsi, waktu mulai, waktu selesai, status
-    → Kelola kandidat: tambah, ubah, hapus paslon + upload foto (terenkripsi)
-    → Tentukan peserta pemilih: daftarkan voter tertentu ke pemilihan
-    → Ubah status: Draft → Aktif (buka voting) → Selesai (tutup & siap hitung)
-    → Hapus pemilihan: hanya jika masih status draft
+```mermaid
+flowchart TD
+    A["Buat pemilihan baru<br/>judul, deskripsi, waktu mulai/selesai, status"] --> B["Kelola kandidat<br/>tambah, ubah, hapus paslon<br/>+ upload foto terenkripsi"]
+    B --> C["Tentukan peserta pemilih<br/>daftarkan voter ke pemilihan"]
+    C --> D["Ubah status<br/>Draft → Aktif → Selesai"]
+    D --> E["Hapus pemilihan<br/>hanya jika masih Draft"]
 ```
 
 Status pemilihan:
@@ -167,23 +168,27 @@ Status pemilihan:
 
 ### C. Blockchain Audit
 
-```
-Pilih pemilihan yang sudah Selesai (closed)
-    → Seal: cetak blok blockchain dengan merkle root dari semua suara
-    → Verify: periksa integritas rantai blockchain (tidak boleh diubah)
+```mermaid
+flowchart TD
+    A["Pilih pemilihan berstatus Selesai (closed)"] --> B["Seal<br/>cetak blok blockchain + merkle root semua suara"]
+    B --> C["Verify<br/>periksa integritas rantai blockchain"]
 ```
 
 ### D. Log Keamanan Pengguna (Audit Admin)
 
+```mermaid
+flowchart TD
+    A["Cari pengguna via /users/search<br/>username atau email"] --> B["Klik user"]
+    B --> C["Lihat riwayat percobaan login<br/>di /log-keamanan/:id"]
 ```
-Cari pengguna via /users/search (username atau email)
-    → Klik user → lihat riwayat percobaan login di /log-keamanan/:id
+
 Setiap baris log menampilkan:
-    - Waktu, Metode (Windows Hello / Dongle / Kata Sandi)
-    - Status (Berhasil / Gagal), IP Address, Keterangan error
-    - Foto kamera (bisa diperbesar via lightbox)
-Hanya admin yang bisa akses halaman ini
-```
+
+- Waktu, metode (Windows Hello / Dongle / Kata Sandi)
+- Status (Berhasil / Gagal), IP address, keterangan error
+- Foto kamera (bisa diperbesar via lightbox)
+
+Hanya admin yang bisa mengakses halaman ini.
 
 ---
 
@@ -199,16 +204,16 @@ Hanya admin yang bisa akses halaman ini
 
 ### 6.2 Di Halaman Pemilihan (`/pilih`)
 
-```
-Pilih salah satu pemilihan aktif
-    → Lihat daftar kandidat dengan foto, visi, misi
-    → Klik kartu kandidat untuk memilih (pilihan tersimpan sebagai draft di localStorage)
-    → Bisa mengubah pilihan kapan saja sebelum menekan tombol final
-    → Klik "Input Suara" → konfirmasi dialog
-    → Suara dikirim via POST /elections/:id/vote
-    → Suara dienkripsi (AES-256-GCM), tidak ada FK ke user (privasi by design)
-    → Setelah sukses → halaman konfirmasi "Suara kamu telah berhasil diinput"
-    → Tidak bisa memilih lagi pada pemilihan yang sama (has_voted = true)
+```mermaid
+flowchart TD
+    A["Pilih salah satu pemilihan aktif"] --> B["Lihat daftar kandidat<br/>foto, visi, misi"]
+    B --> C["Klik kartu kandidat<br/>draft tersimpan di localStorage"]
+    C --> D["Bisa ubah pilihan kapan saja<br/>sebelum menekan tombol final"]
+    D --> E["Klik Input Suara → dialog konfirmasi"]
+    E --> F["POST /elections/:id/vote"]
+    F --> G["Suara dienkripsi AES-256-GCM<br/>tanpa FK ke user (privasi by design)"]
+    G --> H["Halaman konfirmasi<br/>Suara kamu telah berhasil diinput"]
+    H --> I["has_voted = true<br/>tidak bisa memilih lagi"]
 ```
 
 ### 6.3 Lihat Hasil (`/hasil/:id`)
@@ -569,12 +574,15 @@ flowchart TD
 
 ## 14. Diagram Alur Singkat (Admin vs Pemilih)
 
-```
-ADMIN:
-Undangan → Buat Pemilihan → Kelola Kandidat → Daftarkan Voter → Buka Voting → Tutup → Seal Blockchain → Audit Log
+```mermaid
+flowchart LR
+    subgraph admin["Admin"]
+        A1["Undangan"] --> A2["Buat Pemilihan"] --> A3["Kelola Kandidat"] --> A4["Daftarkan Voter"] --> A5["Buka Voting"] --> A6["Tutup"] --> A7["Seal Blockchain"] --> A8["Audit Log"]
+    end
 
-PEMILIH:
-Undangan → Daftar → Login → Setup Keamanan → Lihat Pemilihan → Pilih Kandidat → Input Suara → Lihat Hasil
+    subgraph voter["Pemilih"]
+        V1["Undangan"] --> V2["Daftar"] --> V3["Login"] --> V4["Setup Keamanan"] --> V5["Lihat Pemilihan"] --> V6["Pilih Kandidat"] --> V7["Input Suara"] --> V8["Lihat Hasil"]
+    end
 ```
 
 ---

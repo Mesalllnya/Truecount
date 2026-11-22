@@ -211,6 +211,27 @@ docker compose --env-file .env.docker exec -T db \
 > Perintah di atas membaca password dari environment **di dalam container `db`**,
 > bukan dari shell host.
 
+### 5.1 Akses database dari laptop
+
+Port MySQL hanya dibuka di loopback laptop: `127.0.0.1:3307` → container `db:3306`.
+Artinya `localhost:3306` **bukan** database container — port itu bisa dipakai MySQL
+lokal yang terpasang di laptop.
+
+| Field | Nilai |
+|---|---|
+| Host | `127.0.0.1` |
+| Port | `3307` |
+| User | `root` (atau `truecount`) |
+| Password | `MYSQL_ROOT_PASSWORD` / `DB_PASS` di `.env.docker` |
+| Database | `truecount_db` |
+
+```bash
+mysql -h 127.0.0.1 -P 3307 -u root -p truecount_db
+```
+
+Kalau tidak butuh akses dari laptop, hapus blok `ports:` pada service `db` di
+`docker-compose.yml` supaya database hanya bisa diakses dari network Compose.
+
 ---
 
 ## 6. Operasional harian

@@ -82,7 +82,7 @@ $logAttempt = function ($identifier, $method, $success, $error) use ($db, $photo
 
 // ── 1. Validasi challenge ──────────────────────────────────────────
 $stmt = $db->prepare(
-    'SELECT id, user_id, challenge, expires_at
+    'SELECT id, user_id, challenge, expires_at, (expires_at < NOW()) AS is_expired
        FROM usb_challenges
       WHERE id = ? AND challenge_type = "authenticate" AND status = "pending"
       LIMIT 1'
@@ -95,7 +95,8 @@ if (!$challengeRow) {
     jsonResponse(['error' => 'Challenge tidak ditemukan atau sudah kedaluwarsa.'], 400);
 }
 
-if (strtotime($challengeRow['expires_at']) < time()) {
+// Dibandingkan di SQL (NOW()) supaya tidak terpengaruh selisih timezone PHP vs MySQL.
+if ((int)$challengeRow['is_expired'] === 1) {
     $db->prepare('UPDATE usb_challenges SET status = "expired" WHERE id = ?')->execute([$challengeId]);
     $logAttempt('', 'dongle', false, 'Challenge expired');
     jsonResponse(['error' => 'Challenge sudah kedaluwarsa. Silakan coba lagi.'], 400);

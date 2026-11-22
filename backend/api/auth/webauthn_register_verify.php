@@ -51,7 +51,7 @@ $db = getDB();
 try {
     // ── 1. Validasi challenge ──────────────────────────────────────────
 $stmt = $db->prepare(
-    'SELECT id, user_id, challenge, expires_at
+    'SELECT id, user_id, challenge, expires_at, (expires_at < NOW()) AS is_expired
        FROM webauthn_challenges
       WHERE id = ? AND type = "registration" AND status = "pending"
       LIMIT 1'
@@ -67,7 +67,8 @@ if ((int)$challengeRow['user_id'] !== $userId) {
     jsonResponse(['error' => 'Challenge tidak valid untuk user ini.'], 400);
 }
 
-if (strtotime($challengeRow['expires_at']) < time()) {
+// Dibandingkan di SQL (NOW()) supaya tidak terpengaruh selisih timezone PHP vs MySQL.
+if ((int)$challengeRow['is_expired'] === 1) {
     $db->prepare('UPDATE webauthn_challenges SET status = "expired" WHERE id = ?')->execute([$challengeId]);
     jsonResponse(['error' => 'Challenge sudah kedaluwarsa. Silakan coba lagi.'], 400);
 }

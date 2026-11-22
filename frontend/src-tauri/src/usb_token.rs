@@ -119,6 +119,23 @@ fn list_removable_drives() -> Vec<String> {
     drives
 }
 
+/// Fallback deteksi drive (Windows): cek root semua huruf drive A-Z untuk
+/// file token, tanpa bergantung pada PowerShell/WMI.
+///
+/// Dipakai untuk login, supaya dongle tetap terdeteksi walaupun WMI gagal,
+/// PowerShell diblokir kebijakan, atau drive dilaporkan sebagai fixed.
+#[cfg(target_os = "windows")]
+fn scan_drives_with_token() -> Vec<String> {
+    let mut drives = Vec::new();
+    for letter in b'A'..=b'Z' {
+        let root = format!("{}:\\", letter as char);
+        if Path::new(&root).join(".truecount_token").exists() {
+            drives.push(root);
+        }
+    }
+    drives
+}
+
 /// Scan file .truecount_token di drive (return token + error kalau format invalid)
 fn scan_token_file(drive: &str) -> Result<Option<UsbTokenFile>, String> {
     let path = Path::new(drive).join(".truecount_token");
@@ -157,7 +174,18 @@ fn compute_credential_id(pk_b64url: &str) -> Result<String, String> {
 #[tauri::command]
 pub async fn scan_usb_tokens() -> Result<Vec<UsbTokenDetected>, String> {
     let mut found = Vec::new();
-    for drive in list_removable_drives() {
+    let mut seen: HashSet<String> = HashSet::new();
+
+    let mut candidates = list_removable_drives();
+    #[cfg(target_os = "windows")]
+    {
+        candidates.extend(scan_drives_with_token());
+    }
+
+    for drive in candidates {
+        if !seen.insert(drive.clone()) {
+            continue;
+        }
         if let Ok(Some(token)) = scan_token_file(&drive) {
             let is_valid = !token.alg.is_empty() && token.alg != "ERROR" && !token.pk.is_empty();
             let credential_id = if is_valid {
@@ -267,7 +295,15 @@ pub fn start_usb_monitor(app: AppHandle) {
 
         loop {
             interval.tick().await;
-            let drives = list_removable_drives();
+            let mut drives = list_removable_drives();
+            #[cfg(target_os = "windows")]
+            {
+                for drive in scan_drives_with_token() {
+                    if !drives.contains(&drive) {
+                        drives.push(drive);
+                    }
+                }
+            }
             eprintln!("[usb-monitor] scan: {:?}", drives);
 
             for drive in &drives {

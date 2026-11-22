@@ -25,6 +25,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         libjpeg62-turbo-dev \
         libpng-dev \
         libwebp-dev \
+        libonig-dev \
         tzdata \
     && ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime \
     && echo "$TZ" > /etc/timezone \

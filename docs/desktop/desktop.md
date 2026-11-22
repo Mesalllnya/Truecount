@@ -6,18 +6,16 @@ Dokumen ini menjelaskan cara mengkonversi TrueCount dari web app menjadi aplikas
 
 ## Arsitektur Desktop
 
-```
-┌─────────────────────────────────────────┐
-│  Tauri Window (native OS frame)         │
-│  ┌───────────────────────────────────┐  │
-│  │  WebView (React + Vite)           │  │
-│  │  fetch() → alamat server (LAN)    │  │
-│  └───────────────────────────────────┘  │
-│  Rust backend                          │
-│    └─ spawn PHP sesuai mode            │
-└─────────────────────────────────────────┘
-         ↕ (client: lewat LAN)
-    PHP server di laptop penyelenggara
+```mermaid
+flowchart TB
+    subgraph tauri["Tauri Window (native OS frame)"]
+        webview["WebView<br/>React + Vite<br/>fetch() → alamat server"]
+        rust["Rust backend<br/>spawn PHP sesuai mode"]
+        webview --> rust
+    end
+
+    php["PHP server di laptop penyelenggara"]
+    tauri <-->|"client: lewat LAN"| php
 ```
 
 > **Catatan:** Rust membaca `app_config.json` saat start dan menentukan perilaku:

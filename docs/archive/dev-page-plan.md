@@ -112,14 +112,16 @@ Visualisasi alur lengkap aplikasi dari awal hingga akhir.
 
 **Alur Singkat:**
 
-```
-[Pengguna] → [Login] → [Setup Keamanan] → [Dasbor]
-   ↓                              ↓
-[Register via Undangan]     [Admin: Undangan, Pemilihan, Blockchain]
-                              ↓
-                         [Pemilih: Pilih Kandidat → Input Suara]
-                              ↓
-                         [Hasil Pemilihan + Verifikasi Blockchain]
+```mermaid
+flowchart TD
+    U["Pengguna"] --> L["Login"]
+    R["Register via Undangan"] --> L
+    L --> S["Setup Keamanan"]
+    S --> D["Dasbor"]
+    D --> A["Admin: Undangan, Pemilihan, Blockchain"]
+    D --> V["Pemilih: Pilih Kandidat → Input Suara"]
+    A --> H["Hasil Pemilihan + Verifikasi Blockchain"]
+    V --> H
 ```
 
 **Komponen `IsometricFlow.jsx` akan menampilkan:**

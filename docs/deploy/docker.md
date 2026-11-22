@@ -11,26 +11,20 @@ diarahkan ke alamat backend container.
 
 ## 1. Arsitektur
 
-```
-┌──────────────────────────────────────────────────────────┐
-│ Docker host                                              │
-│                                                          │
-│  ┌────────────────────┐        ┌─────────────────────┐   │
-│  │ backend            │        │ db                  │   │
-│  │ php:8.3-apache     │───────▶│ mysql:8.0           │   │
-│  │ :80 → host :8000   │        │ volume: db_data     │   │
-│  │                    │        └─────────────────────┘   │
-│  │ volume:            │                                  │
-│  │  backend_storage   │  ← foto auth, file terenkripsi,  │
-│  │  backend_uploads   │    log; foto kandidat            │
-│  └────────────────────┘                                  │
-└──────────────────────────────────────────────────────────┘
-             ▲
-             │ HTTP (CORS)
-   ┌─────────┴──────────┐
-   │ frontend web/dist  │  ← build & serve terpisah
-   │ desktop Tauri      │
-   └────────────────────┘
+```mermaid
+flowchart LR
+    client["Frontend web/dist<br/>Desktop Tauri<br/>(build & serve terpisah)"]
+
+    subgraph host["Docker host"]
+        backend["backend<br/>php:8.3-apache<br/>:80 → host :8000"]
+        db[("db<br/>mysql:8.0<br/>volume: db_data")]
+        storage[("Volume backend_storage<br/>+ backend_uploads<br/>foto auth, file terenkripsi,<br/>log, foto kandidat")]
+
+        backend -->|"SQL :3306"| db
+        storage -.->|"mount"| backend
+    end
+
+    client -->|"HTTP (CORS)"| backend
 ```
 
 Yang **tidak** ada di container:

@@ -13,21 +13,19 @@
 
 ### 0.1 Topologi yang dituju
 
-```
-        LAN (satu Wi-Fi / satu switch)
-   ┌────────────┐  ┌────────────┐  ┌────────────┐
-   │ PC peserta │  │ PC peserta │  │ PC peserta │
-   │ app Tauri  │  │ app Tauri  │  │ app Tauri  │
-   └─────┬──────┘  └─────┬──────┘  └─────┬──────┘
-         │  http://192.168.1.10:8000
-         └───────────────┼───────────────┘
-                         ▼
-        ┌──────────────────────────────────┐
-        │ LAPTOP KAMU (server)             │
-        │  PHP API  0.0.0.0:8000           │
-        │  MySQL    127.0.0.1:3306         │
-        │  storage/ + .env                 │
-        └──────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph lan["LAN — satu Wi-Fi / satu switch"]
+        c1["PC peserta 1<br/>app Tauri"]
+        c2["PC peserta 2<br/>app Tauri"]
+        c3["PC peserta N<br/>app Tauri"]
+
+        srv["Laptop server<br/>PHP API 0.0.0.0:8000<br/>MySQL 127.0.0.1:3306<br/>storage/ + .env"]
+
+        c1 -->|"http://192.168.1.10:8000"| srv
+        c2 -->|"http://192.168.1.10:8000"| srv
+        c3 -->|"http://192.168.1.10:8000"| srv
+    end
 ```
 
 Satu database, satu sumber kebenaran, semua client menulis ke laptop yang sama.
@@ -216,17 +214,23 @@ Tidak ada prefix `/api` di desktop, karena frontend memanggil `http://<server>:8
 
 ### 3.4 Alur data satu vote
 
-```
-Client A (Tauri)
-  → POST http://192.168.1.10:8000/votes
-  → PHP di laptop validasi JWT, cek sudah vote, enkripsi ballot
-  → INSERT ke MySQL laptop
-  → tulis blok chain
-  → response 200 ke Client A
+```mermaid
+sequenceDiagram
+    participant A as Client A Tauri
+    participant P as PHP di laptop server
+    participant D as MySQL
+    participant B as Client B Tauri
 
-Client B membuka hasil
-  → GET http://192.168.1.10:8000/results/:id
-  → membaca database yang sama
+    A->>P: POST /votes
+    P->>P: validasi JWT, cek sudah vote, enkripsi ballot
+    P->>D: INSERT ballot
+    P->>D: tulis blok chain
+    P-->>A: 200 OK
+
+    B->>P: GET /results/:id
+    P->>D: baca database yang sama
+    D-->>P: data hasil
+    P-->>B: 200 hasil
 ```
 
 ---

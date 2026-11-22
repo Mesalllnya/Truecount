@@ -465,65 +465,77 @@ Berikut alur lengkap penggunaan aplikasi dari awal hingga akhir, menurut peran p
 
 ### A. Alur Admin / Panitia
 
-```
-1. Login → /masuk (Windows Hello / Dongle / Kata Sandi fallback)
-2. AuthGuard cek security setup → jika belum setup, redirect /atur-keamanan
-3. Masuk /dasbor → lihat panel undangan (stats: menunggu/diterima/kedaluwarsa/dibatalkan)
-4. Buat undangan: POST /invites → dapatkan link /daftar?undangan=<token>
-5. Bagikan tautan undangan ke calon pemilih
-6. Buat pemilihan: POST /elections → atur judul, deskripsi, waktu mulai/selesai, status
-7. Kelola kandidat: POST /elections/:id/candidates (+ upload foto)
-8. Daftarkan voter ke pemilihan: POST /elections/:id/voters
-9. Saat voting berjalan: pantau hasil di /hasil/:id (tally + blockchain verify)
-10. Setelah selesai: seal blok: POST /elections/blockchain/seal
-11. Verifikasi integritas: GET /elections/blockchain/verify
-12. Audit: lihat log keamanan lewat /users/search → /log-keamanan/:id
-13. Logout → hapus token dari localStorage
+```mermaid
+flowchart TD
+    A["Login /masuk<br/>Windows Hello / Dongle / Kata Sandi fallback"] --> B["AuthGuard cek security setup"]
+    B -->|"belum setup"| C["Redirect /atur-keamanan"]
+    B -->|"sudah"| D["/dasbor — panel undangan<br/>statistik menunggu/diterima/kedaluwarsa/dibatalkan"]
+    C --> D
+    D --> E["Buat undangan: POST /invites<br/>link /daftar?undangan=token"]
+    E --> F["Bagikan tautan undangan ke calon pemilih"]
+    F --> G["Buat pemilihan: POST /elections<br/>judul, deskripsi, waktu, status"]
+    G --> H["Kelola kandidat: POST /elections/:id/candidates<br/>+ upload foto"]
+    H --> I["Daftarkan voter: POST /elections/:id/voters"]
+    I --> J["Pantau hasil /hasil/:id<br/>tally + blockchain verify"]
+    J --> K["Seal blok: POST /elections/blockchain/seal"]
+    K --> L["Verifikasi integritas:<br/>GET /elections/blockchain/verify"]
+    L --> M["Audit: /users/search → /log-keamanan/:id"]
+    M --> N["Logout → hapus token dari localStorage"]
 ```
 
 ### B. Alur Pemilih (Voter)
 
-```
-1. Menerima tautan/kode undangan dari admin → buka /daftar?undangan=<token>, atau tempel link/kode undangan di kolom "Link atau kode undangan" pada /daftar (alur desktop)
-2. Cek validitas undangan: GET /invites/verify?token=...
-3. Daftar akun: POST /auth/register (dengan invite_token) → password di-hash Argon2id
-4. Login: /masuk (Windows Hello default jika tersedia, else Dongle, else Kata Sandi)
-5. Kamera diverifikasi aktif (untuk Windows Hello / Kata Sandi)
-6. Jika belum setup keamanan → redirect /atur-keamanan (wajib setup Windows Hello atau Dongle)
-7. Masuk /pilih → lihat kandidat pemilihan yang aktif
-8. Kirim suara: POST /elections/:id/vote (terenkripsi AES-256-GCM, tanpa FK ke user)
-9. Lihat hasil: /hasil/:id (tally + verifikasi blockchain)
-10. Kelola keamanan pribadi: /pengaturan (ganti password, kelola Windows Hello, kelola USB token)
-11. (Opsional) Daftarkan USB token di /usb-token-test untuk MFA login
-12. Logout
+```mermaid
+flowchart TD
+    A["Terima tautan/kode undangan dari admin"] --> B["Buka /daftar?undangan=token<br/>atau tempel link/kode di kolom undangan"]
+    B --> C["Cek validitas: GET /invites/verify?token=..."]
+    C --> D["Daftar akun: POST /auth/register + invite_token<br/>password di-hash Argon2id"]
+    D --> E["Login /masuk<br/>Windows Hello → Dongle → Kata Sandi"]
+    E --> F["Kamera diverifikasi aktif<br/>(Windows Hello / Kata Sandi)"]
+    F --> G{"Sudah setup keamanan?"}
+    G -->|"belum"| H["Redirect /atur-keamanan<br/>wajib Windows Hello atau Dongle"]
+    G -->|"sudah"| I["Masuk /pilih<br/>lihat kandidat pemilihan aktif"]
+    H --> I
+    I --> J["Kirim suara: POST /elections/:id/vote<br/>AES-256-GCM, tanpa FK ke user"]
+    J --> K["Lihat hasil /hasil/:id<br/>tally + verifikasi blockchain"]
+    K --> L["Kelola keamanan di /pengaturan<br/>password, Windows Hello, USB token"]
+    L --> M["(Opsional) Daftarkan USB token<br/>di /usb-token-test untuk MFA"]
+    M --> N["Logout"]
 ```
 
 ### C. Alur Login dengan Security Layer (Sprint 4b)
 
-```
-1. User buka /masuk
-2. Default method: Windows Hello (jika supported + kamera aktif), Dongle (Tauri), Kata Sandi (HIDDEN)
-3. Input identifier (username/email)
-4. POST /auth/security-status → cek user punya WebAuthn/Dongle?
-   - Belum punya → Kata Sandi TAMPIL (onboarding)
-5. Pilih method:
-   a. Windows Hello → kamera wajib aktif (canvas sampling) → ambil foto → loginWithWindowsHello
-   b. Dongle → start USB auth → input PIN → sign challenge → verify → JWT
-   c. Kata Sandi → kamera tetap diverifikasi → POST /auth/login + photo
-6. Success → login(token, user) → navigate /dasbor
-7. Gagal 5x → lock 15 menit → Kata Sandi TAMPIL (emergency fallback)
-8. Berhasil → reset counter lokal + backend reset attempts
+```mermaid
+flowchart TD
+    A["User buka /masuk"] --> B["Default method<br/>Windows Hello (supported + kamera aktif)<br/>Dongle (Tauri) · Kata Sandi HIDDEN"]
+    B --> C["Input identifier (username/email)"]
+    C --> D["POST /auth/security-status"]
+    D --> E{"Punya WebAuthn / Dongle?"}
+    E -->|"belum"| F["Kata Sandi TAMPIL (onboarding)"]
+    E -->|"sudah"| G["Pilih method"]
+    F --> G
+    G --> H["Windows Hello<br/>kamera wajib aktif (canvas sampling)<br/>ambil foto → loginWithWindowsHello"]
+    G --> I["Dongle<br/>start USB auth → input PIN<br/>sign challenge → verify → JWT"]
+    G --> J["Kata Sandi<br/>kamera tetap diverifikasi<br/>POST /auth/login + photo"]
+    H --> R{"Berhasil?"}
+    I --> R
+    J --> R
+    R -->|"ya"| S["login(token, user) → navigate /dasbor<br/>reset counter lokal + backend reset attempts"]
+    R -->|"tidak, sudah 5x"| T["Lock 15 menit<br/>Kata Sandi TAMPIL (emergency fallback)"]
+    T -.-> J
 ```
 
 ### D. Alur USB Token (Sprint 4)
 
-```
-1. Colok flashdisk → app desktop scan tiap 2 detik (scan_usb_tokens)
-2. Buat token baru: "＋ Buat Token di USB" → generate keypair P-256 → encrypt → tulis .truecount_token
-   (atau via CLI: php database/generate_test_token.php <drive> <user_id> <pin>)
-3. Daftarkan token: /mfa/usb/register/start (challenge) → input PIN → sign → /mfa/usb/register/verify
-4. Token terdaftar ke akun login → tampil di panel USB token (daftar, revoke, label)
-5. Login MFA: /mfa/usb/authenticate/start → wait USB → input PIN → sign → /mfa/usb/authenticate/verify → JWT
+```mermaid
+flowchart TD
+    A["Colok flashdisk"] --> B["App desktop scan tiap 2 detik<br/>scan_usb_tokens"]
+    B --> C["Buat token baru: Buat Token di USB<br/>generate keypair P-256 → encrypt<br/>tulis .truecount_token"]
+    C -.->|"alternatif CLI"| C1["php database/generate_test_token.php<br/>drive user_id pin"]
+    C --> D["Daftarkan: /mfa/usb/register/start<br/>challenge → input PIN → sign<br/>→ /mfa/usb/register/verify"]
+    C1 --> D
+    D --> E["Token terdaftar ke akun<br/>tampil di panel USB token<br/>daftar, revoke, label"]
+    E --> F["Login MFA: /mfa/usb/authenticate/start<br/>wait USB → input PIN → sign<br/>→ /mfa/usb/authenticate/verify → JWT"]
 ```
 
 ---
@@ -952,36 +964,35 @@ CREATE TABLE `auth_attempts` (
 
 ### Flow Login dengan Security Layer
 
+```mermaid
+flowchart TD
+    A["User buka /masuk"] --> B["Default method<br/>Windows Hello (supported + kamera aktif)<br/>Dongle (Tauri desktop)<br/>Kata Sandi: HIDDEN"]
+    B --> C["Input identifier (username/email)"]
+    C --> D["POST /auth/security-status"]
+    D --> E{"Punya Windows Hello / Dongle?"}
+    E -->|"belum"| F["identifierNeedsSetup = true<br/>Kata Sandi TAMPIL (onboarding)"]
+    E -->|"sudah"| G["Pilih method"]
+    F --> G
+    G --> H["Windows Hello<br/>verifyCameraActive (canvas sampling)<br/>captureAuthPhoto → loginWithWindowsHello"]
+    G --> I["Dongle<br/>start USB auth → wait USB → input PIN<br/>sign challenge → verify"]
+    G --> J["Kata Sandi<br/>kamera tetap diverifikasi<br/>POST /auth/login + photo"]
+    H --> K{"Berhasil?"}
+    I --> K
+    J --> K
+    K -->|"ya"| L["login(token, user) via useAuth<br/>navigate /dasbor"]
+    K -->|"tidak"| M["increment() counter lokal<br/>+ backend log ke auth_attempts"]
+    M --> N{"Sudah 5x gagal?"}
+    N -->|"belum"| G
+    N -->|"ya"| O["Lock 15 menit<br/>showPasswordFallback = true<br/>Kata Sandi TAMPIL"]
+    O -.-> J
+    L --> P["reset() counter lokal<br/>+ POST /auth/attempts/reset"]
 ```
-1. User buka /masuk
-2. Default method: Windows Hello (jika supported + platform available + kamera aktif)
-   Dongle (jika Tauri desktop)
-   Kata Sandi: HIDDEN
-3. User input identifier (username/email)
-4. POST /auth/security-status → cek user punya Windows Hello/Dongle?
-   - Belum punya → identifierNeedsSetup = true → Kata Sandi TAMPIL (onboarding)
-5. User pilih method:
-   a. Windows Hello:
-      - Kamera wajib aktif (verifyCameraActive via canvas sampling)
-      - Ambil foto (captureAuthPhoto)
-      - loginWithWindowsHello(identifier, photo)
-      - Success → login(token, user) via useAuth → navigate /dasbor
-   b. Dongle:
-      - Start USB auth → wait USB → input PIN → sign challenge → verify
-      - Success → login(token, user) → navigate /dasbor
-   c. Kata Sandi (jika tersedia):
-      - Kamera tetap diverifikasi aktif
-      - POST /auth/login + photo
-      - Success → login(token, user) → navigate /dasbor
-6. Semua attempt → `increment()` di frontend (counter lokal untuk UI lockout/password fallback) + backend log ke `auth_attempts` secara internal (tidak ada duplikasi baris)
-7. Gagal 5x → lock 15 menit → `showPasswordFallback = true` → Kata Sandi TAMPIL
-8. Berhasil → `reset()` → counter lokal direset + backend `POST /auth/attempts/reset` (hapus baris gagal untuk identifier tersebut)
 
-Protected Routes (/dasbor, /pilih, /pengaturan, dll):
-- AuthGuard → GET /auth/security-setup (pakai JWT)
-- requires_setup=true → redirect /atur-keamanan (state returnTo)
-- Di /atur-keamanan: user setup Windows Hello/Dongle → complete → navigate returnTo
-```
+**Protected Routes** (`/dasbor`, `/pilih`, `/pengaturan`, dll.):
+
+- `AuthGuard` → `GET /auth/security-setup` (pakai JWT).
+- `requires_setup=true` → redirect `/atur-keamanan` (state `returnTo`).
+- Di `/atur-keamanan`: user setup Windows Hello/Dongle → complete → navigate `returnTo`.
 
 ### Camera Verification Logic
 

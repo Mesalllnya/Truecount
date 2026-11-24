@@ -1,11 +1,19 @@
+
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import './EncryptedMessagesPage.css'
 
 const API = 'http://localhost:8000'
 
+const ALGORITHM_LABELS = {
+  aes256gcm: 'AES-256-GCM',
+  chacha20: 'ChaCha20-Poly1305',
+  vigenere: 'Vigenère Cipher',
+}
+
 async function readJson(response) {
   const text = await response.text()
+
   try {
     return text ? JSON.parse(text) : {}
   } catch {
@@ -19,6 +27,8 @@ export default function EncryptedMessagesPage() {
 
   const [message, setMessage] = useState('')
   const [algorithm, setAlgorithm] = useState('aes256gcm')
+  const [vigenereKey, setVigenereKey] = useState('')
+  const [decryptKey, setDecryptKey] = useState('')
   const [messageId, setMessageId] = useState('')
   const [decryptId, setDecryptId] = useState('')
   const [plaintext, setPlaintext] = useState('')
@@ -39,6 +49,14 @@ export default function EncryptedMessagesPage() {
       return
     }
 
+    if (
+      algorithm === 'vigenere' &&
+      !/^[a-zA-Z]+$/.test(vigenereKey)
+    ) {
+      setError('Key Vigenère wajib berisi huruf A-Z tanpa spasi atau angka.')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -51,6 +69,7 @@ export default function EncryptedMessagesPage() {
         body: JSON.stringify({
           message,
           algorithm,
+          vigenere_key: algorithm === 'vigenere' ? vigenereKey : '',
         }),
       })
 
@@ -61,11 +80,22 @@ export default function EncryptedMessagesPage() {
       }
 
       const id = data.data?.id
-      if (!id) throw new Error('ID pesan tidak ditemukan pada respons.')
+
+      if (!id) {
+        throw new Error('ID pesan tidak ditemukan pada respons.')
+      }
 
       setMessageId(String(id))
       setDecryptId(String(id))
-      setSuccess(`Pesan berhasil dienkripsi menggunakan ${algorithm === 'aes256gcm' ? 'AES-256-GCM' : 'ChaCha20-Poly1305'}.`)
+
+      // Simpan sementara di state agar bisa langsung dipakai untuk dekripsi.
+      // Key tidak disimpan ke database.
+      setDecryptKey(algorithm === 'vigenere' ? vigenereKey : '')
+
+      setSuccess(
+        `Pesan berhasil dienkripsi menggunakan ${ALGORITHM_LABELS[algorithm]}.`
+      )
+
       setMessage('')
     } catch (err) {
       setError(err.message || 'Terjadi kesalahan.')
@@ -81,8 +111,14 @@ export default function EncryptedMessagesPage() {
     setPlaintext('')
 
     const id = Number(decryptId)
+
     if (!Number.isInteger(id) || id <= 0) {
       setError('Masukkan ID pesan yang valid.')
+      return
+    }
+
+    if (decryptKey && !/^[a-zA-Z]+$/.test(decryptKey)) {
+      setError('Key Vigenère hanya boleh berisi huruf A-Z.')
       return
     }
 
@@ -94,6 +130,7 @@ export default function EncryptedMessagesPage() {
         {
           headers: {
             Authorization: `Bearer ${token}`,
+            'X-Vigenere-Key': decryptKey,
           },
         }
       )
@@ -120,13 +157,22 @@ export default function EncryptedMessagesPage() {
           <span className="encrypted-eyebrow">TRUECOUNT SECURITY</span>
           <h1>Encrypted Messages</h1>
           <p>
-            Kirim dan simpan pesan menggunakan enkripsi authenticated
-            encryption.
+            Kirim dan simpan pesan menggunakan algoritma enkripsi
+            yang tersedia.
           </p>
         </header>
 
-        {error && <div className="encrypted-alert error" role="alert">{error}</div>}
-        {success && <div className="encrypted-alert success" role="status">{success}</div>}
+        {error && (
+          <div className="encrypted-alert error" role="alert">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="encrypted-alert success" role="status">
+            {success}
+          </div>
+        )}
 
         <section className="encrypted-card">
           <div className="encrypted-card-heading">
@@ -135,7 +181,10 @@ export default function EncryptedMessagesPage() {
           </div>
 
           <form onSubmit={handleEncrypt}>
-            <label htmlFor="message-algorithm">Algoritma enkripsi</label>
+            <label htmlFor="message-algorithm">
+              Algoritma enkripsi
+            </label>
+
             <select
               id="message-algorithm"
               value={algorithm}
@@ -144,9 +193,37 @@ export default function EncryptedMessagesPage() {
             >
               <option value="aes256gcm">AES-256-GCM</option>
               <option value="chacha20">ChaCha20-Poly1305</option>
+              <option value="vigenere">Vigenère Cipher</option>
             </select>
 
-            <label htmlFor="message-content">Isi pesan</label>
+            {algorithm === 'vigenere' && (
+              <>
+                <label htmlFor="vigenere-key">
+                  Key Vigenère
+                </label>
+
+                <input
+                  id="vigenere-key"
+                  type="password"
+                  value={vigenereKey}
+                  onChange={e => setVigenereKey(e.target.value)}
+                  placeholder="Masukkan key, contoh: KUNCI"
+                  autoComplete="off"
+                  required
+                  disabled={loading}
+                />
+
+                <small>
+                  Gunakan huruf A-Z saja. Simpan key ini karena diperlukan
+                  untuk dekripsi.
+                </small>
+              </>
+            )}
+
+            <label htmlFor="message-content">
+              Isi pesan
+            </label>
+
             <textarea
               id="message-content"
               value={message}
@@ -157,7 +234,11 @@ export default function EncryptedMessagesPage() {
               disabled={loading}
             />
 
-            <button className="encrypted-button" type="submit" disabled={loading}>
+            <button
+              className="encrypted-button"
+              type="submit"
+              disabled={loading}
+            >
               {loading ? 'Memproses...' : 'Enkripsi & Simpan'}
             </button>
           </form>
@@ -165,7 +246,10 @@ export default function EncryptedMessagesPage() {
           {messageId && (
             <div className="encrypted-result">
               <strong>Pesan berhasil disimpan!</strong>
-              <p>ID pesan: <code>{messageId}</code></p>
+              <p>
+                ID pesan: <code>{messageId}</code>
+              </p>
+
               <button
                 type="button"
                 className="encrypted-secondary-button"
@@ -183,11 +267,16 @@ export default function EncryptedMessagesPage() {
         <section className="encrypted-card">
           <div className="encrypted-card-heading">
             <h2>Dekripsi Pesan</h2>
-            <p>Masukkan ID pesan untuk mengambil dan membuka pesan milik akun ini.</p>
+            <p>
+              Masukkan ID pesan untuk mengambil dan membuka pesan milik akun ini.
+            </p>
           </div>
 
           <form onSubmit={handleDecrypt}>
-            <label htmlFor="decrypt-id">ID pesan</label>
+            <label htmlFor="decrypt-id">
+              ID pesan
+            </label>
+
             <input
               id="decrypt-id"
               type="number"
@@ -199,7 +288,30 @@ export default function EncryptedMessagesPage() {
               disabled={loading}
             />
 
-            <button className="encrypted-button" type="submit" disabled={loading}>
+            <label htmlFor="decrypt-key">
+              Key Vigenère (jika diperlukan)
+            </label>
+
+            <input
+              id="decrypt-key"
+              type="password"
+              value={decryptKey}
+              onChange={e => setDecryptKey(e.target.value)}
+              placeholder="Masukkan key untuk pesan Vigenère"
+              autoComplete="off"
+              disabled={loading}
+            />
+
+            <small>
+              Kosongkan jika pesan menggunakan AES-256-GCM
+              atau ChaCha20-Poly1305.
+            </small>
+
+            <button
+              className="encrypted-button"
+              type="submit"
+              disabled={loading}
+            >
               {loading ? 'Memproses...' : 'Dekripsi Pesan'}
             </button>
           </form>
@@ -214,7 +326,7 @@ export default function EncryptedMessagesPage() {
 
         <p className="encrypted-note">
           Pesan hanya dapat diakses oleh akun pemiliknya. Simpan ID pesan
-          untuk membukanya kembali.
+          dan key Vigenère untuk membukanya kembali.
         </p>
       </main>
     </div>

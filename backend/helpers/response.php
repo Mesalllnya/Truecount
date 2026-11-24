@@ -31,7 +31,7 @@ $allowOrigin = (in_array($origin, $allowedOrigins, true) || $isLocalOrigin)
 header('Access-Control-Allow-Origin: ' . $allowOrigin);
 header('Vary: Origin');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Vigenere-Key');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Private-Network: true');
 

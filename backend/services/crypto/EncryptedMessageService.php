@@ -1,3 +1,4 @@
+
 <?php
 
 /**
@@ -5,41 +6,35 @@
  * TrueCount - Cryptography Module
  *
  * Crypto version:
- * - 0: Legacy message, encrypted without AAD.
+ * - 0: Legacy message / Vigenere without AAD.
  * - 1: Message encrypted with user-specific AAD.
  */
 
 require_once __DIR__ . '/AESGCMService.php';
 require_once __DIR__ . '/ChaCha20Poly1305Service.php';
+require_once __DIR__ . '/VigenereCipherService.php';
 require_once __DIR__ . '/../../config/database.php';
 
 class EncryptedMessageService
 {
     private const SUPPORTED_ALGORITHMS = [
         'aes256gcm',
-        'chacha20'
+        'chacha20',
+        'vigenere'
     ];
 
     private const CRYPTO_VERSION = 1;
 
-    /**
-     * AAD mengikat ciphertext ke pemilik pesan.
-     */
     private static function buildAAD(int $userId): string
     {
         return 'truecount:message:v1:user:' . $userId;
     }
 
-    /**
-     * Enkripsi pesan dan simpan ke database.
-     *
-     * Pesan baru selalu menggunakan crypto_version 1 dan AAD.
-     * Default tetap AES agar kompatibel dengan API lama.
-     */
     public static function encryptAndStore(
         int $userId,
         string $plaintext,
-        string $algorithm = 'aes256gcm'
+        string $algorithm = 'aes256gcm',
+        string $vigenereKey = ''
     ): int {
         if ($userId <= 0) {
             throw new InvalidArgumentException('User ID tidak valid.');
@@ -55,22 +50,42 @@ class EncryptedMessageService
             );
         }
 
-        $aad = self::buildAAD($userId);
+        $nonce = null;
+        $tag = null;
 
-        switch ($algorithm) {
-            case 'aes256gcm':
-                $encrypted = AESGCMService::encrypt($plaintext, $aad);
-                break;
+        if ($algorithm === 'vigenere') {
+            $ciphertext = VigenereCipherService::encrypt(
+                $plaintext,
+                $vigenereKey
+            );
 
-            case 'chacha20':
-                $encrypted = ChaCha20Poly1305Service::encrypt(
-                    $plaintext,
-                    $aad
-                );
-                break;
+            // Vigenere tidak menggunakan nonce, tag, maupun AAD.
+            $cryptoVersion = 0;
+        } else {
+            $aad = self::buildAAD($userId);
 
-            default:
-                throw new InvalidArgumentException('Algoritma tidak valid.');
+            switch ($algorithm) {
+                case 'aes256gcm':
+                    $encrypted = AESGCMService::encrypt($plaintext, $aad);
+                    break;
+
+                case 'chacha20':
+                    $encrypted = ChaCha20Poly1305Service::encrypt(
+                        $plaintext,
+                        $aad
+                    );
+                    break;
+
+                default:
+                    throw new InvalidArgumentException(
+                        'Algoritma tidak valid.'
+                    );
+            }
+
+            $ciphertext = $encrypted['ciphertext'];
+            $nonce = $encrypted['nonce'];
+            $tag = $encrypted['tag'];
+            $cryptoVersion = self::CRYPTO_VERSION;
         }
 
         $db = getDB();
@@ -95,28 +110,23 @@ class EncryptedMessageService
                 )";
 
         $stmt = $db->prepare($sql);
+
         $stmt->execute([
-            ':user_id'        => $userId,
-            ':algorithm'      => $algorithm,
-            ':ciphertext'     => $encrypted['ciphertext'],
-            ':nonce'          => $encrypted['nonce'],
-            ':auth_tag'       => $encrypted['tag'],
-            ':crypto_version' => self::CRYPTO_VERSION
+            ':user_id' => $userId,
+            ':algorithm' => $algorithm,
+            ':ciphertext' => $ciphertext,
+            ':nonce' => $nonce,
+            ':auth_tag' => $tag,
+            ':crypto_version' => $cryptoVersion
         ]);
 
         return (int) $db->lastInsertId();
     }
 
-    /**
-     * Ambil pesan dari database dan dekripsi.
-     * Pesan hanya dapat diakses oleh pemiliknya.
-     *
-     * Versi 0: tanpa AAD (data lama).
-     * Versi 1: AAD berbasis user_id (data baru).
-     */
     public static function decryptById(
         int $messageId,
-        int $userId
+        int $userId,
+        string $vigenereKey = ''
     ): string {
         if ($messageId <= 0 || $userId <= 0) {
             throw new InvalidArgumentException('ID tidak valid.');
@@ -135,8 +145,9 @@ class EncryptedMessageService
                 LIMIT 1";
 
         $stmt = $db->prepare($sql);
+
         $stmt->execute([
-            ':id'      => $messageId,
+            ':id' => $messageId,
             ':user_id' => $userId
         ]);
 
@@ -148,6 +159,21 @@ class EncryptedMessageService
             );
         }
 
+        // Vigenere tidak menggunakan nonce, tag, maupun AAD.
+        if ($message['algorithm'] === 'vigenere') {
+            if ((int) $message['crypto_version'] !== 0) {
+                throw new RuntimeException(
+                    'Versi enkripsi Vigenere tidak didukung.'
+                );
+            }
+
+            return VigenereCipherService::decrypt(
+                $message['ciphertext'],
+                $vigenereKey
+            );
+        }
+
+        // Validasi khusus AES dan ChaCha.
         if (
             empty($message['iv_nonce']) ||
             empty($message['auth_tag']) ||

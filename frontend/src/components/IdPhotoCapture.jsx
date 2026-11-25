@@ -161,7 +161,7 @@ export default function IdPhotoCapture({ onCapture, onCancel, type = 'ktp' }) {
             <div className="guide-frame">
               <div className="guide-label">
                 <Icon name="camera" size={16} />
-                Posisikan muka dan {label} sejajar
+                Sejajarkan wajah &amp; {label}
               </div>
             </div>
           </div>
@@ -176,15 +176,8 @@ export default function IdPhotoCapture({ onCapture, onCancel, type = 'ktp' }) {
         )}
       </div>
 
-      {/* Instructions */}
-      <div className="id-photo-instructions">
-        <h3>Foto {label}</h3>
-        <ul>
-          <li>Pastikan wajah dan {label} terlihat jelas</li>
-          <li>Posisikan wajah dan {label} sejajar</li>
-          <li>Gunakan pencahayaan yang cukup</li>
-        </ul>
-      </div>
+      {/* Panduan foto (contoh + aturan) dimiliki oleh RegisterPage,
+          tepat di atas kamera — satu sumber kebenaran untuk step ini. */}
 
       {/* Action buttons */}
       <div className="id-photo-actions">

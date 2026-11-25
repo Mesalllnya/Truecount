@@ -651,6 +651,55 @@ export default function RegisterPage() {
           </div>
         )}
 
+        {/* Panduan format foto - satu sumber aturan untuk step ini:
+            contoh visual + checklist, sebelum kamera. */}
+        {idPhotoStep !== 'captured' && (
+          <div className="id-photo-guide-card">
+            <div className="id-photo-guide-head">
+              <Icon name="info" size={16} aria-hidden="true" />
+              <div>
+                <strong>Panduan foto {label}</strong>
+                <span>Dua format yang bisa dipakai — pilih yang paling mudah.</span>
+              </div>
+            </div>
+
+            <div className="id-photo-guide-examples">
+              <figure className="guide-example">
+                <img
+                  src="/formatFotoWebcam.png"
+                  width="1672"
+                  height="941"
+                  alt={`Contoh foto ${label} format webcam: wajah dan ${label} sejajar menghadap kamera`}
+                  loading="lazy"
+                />
+                <figcaption>
+                  <span className="guide-example-tag">Webcam</span>
+                  <span className="guide-example-desc">Kamera laptop/PC</span>
+                </figcaption>
+              </figure>
+              <figure className="guide-example">
+                <img
+                  src="/formatFotoSelfie.png"
+                  width="1024"
+                  height="1536"
+                  alt={`Contoh foto ${label} format selfie: wajah dan ${label} dalam satu frame`}
+                  loading="lazy"
+                />
+                <figcaption>
+                  <span className="guide-example-tag">Selfie</span>
+                  <span className="guide-example-desc">Kamera depan ponsel</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <ul className="id-photo-guide-rules">
+              <li>Wajah dan {label} terlihat jelas, tidak buram</li>
+              <li>Wajah dan {label} muat dalam satu frame</li>
+              <li>Cahaya cukup — hindari bayangan di {label}</li>
+            </ul>
+          </div>
+        )}
+
         <IdPhotoCapture
           key={idPhotoData.type}  // Force remount when type changes
           type={idPhotoData.type}
@@ -719,7 +768,7 @@ export default function RegisterPage() {
         </Link>
       </div>
 
-      <div className="auth-card">
+      <div className={`auth-card${idPhotoStep !== 'account' ? ' auth-card--wide' : ''}`}>
         <div className="auth-header">
           <h1>Klaim undangan</h1>
           <p>Selesaikan detail akun Anda untuk bergabung dengan TrueCount</p>

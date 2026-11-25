@@ -128,6 +128,12 @@
     border: 1px solid var(--border);
     border-radius: 16px;
     box-shadow: 0 24px 48px rgba(13, 13, 13, 0.08);
+    transition: max-width 320ms var(--ease-out);
+  }
+
+  /* Step foto ID butuh ruang lebih (pratinjau kamera + panduan) */
+  .auth-card.auth-card--wide {
+    max-width: 760px;
   }
 }
 
@@ -2272,6 +2278,150 @@
   outline-offset: 2px;
 }
 
+/* Panduan format foto */
+.id-photo-guide-card {
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: var(--off-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.id-photo-guide-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  color: var(--muted);
+}
+
+.id-photo-guide-head svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--red);
+}
+
+.id-photo-guide-head strong {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--black);
+  margin-bottom: 0.15rem;
+}
+
+.id-photo-guide-head span {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+/* Contoh ditampilkan pada rasio aslinya — tanpa crop.
+   Kolom dibagi proporsional terhadap rasio sumber (16:9 webcam,
+   2:3 selfie) sehingga tinggi keduanya sama persis dan keduanya
+   mengisi lebar kartu tanpa bar kosong. */
+.id-photo-guide-examples {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7768fr) minmax(0, 0.6667fr);
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.guide-example {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.guide-example > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.guide-example figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.guide-example-tag {
+  padding: 1px 7px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Checklist - aturan tunggal untuk step ini */
+.id-photo-guide-rules {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.45rem;
+}
+
+@media (min-width: 860px) {
+  .id-photo-guide-rules {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem 1rem;
+  }
+}
+
+.id-photo-guide-rules li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.id-photo-guide-rules li::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  margin-top: 0.42rem;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+}
+
+/* Layar sempit: contoh bertumpuk agar keduanya tetap terbaca,
+   checklist jadi satu kolom. */
+@media (max-width: 560px) {
+  .id-photo-guide-examples {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .guide-example {
+    align-items: center;
+  }
+
+  .guide-example > img {
+    width: auto;
+    max-width: 100%;
+    max-height: 190px;
+  }
+
+  .guide-example figcaption {
+    align-items: center;
+  }
+}
+
 /* Required note */
 .id-photo-required-note {
   display: flex;
@@ -2339,6 +2489,19 @@
 
   .id-photo-type-toggle .type-btn span {
     font-size: 0.78rem;
+  }
+
+  .id-photo-guide-card {
+    padding: 0.85rem;
+  }
+
+  .id-photo-guide-examples {
+    gap: 0.5rem;
+  }
+
+  .guide-example figcaption {
+    font-size: 0.68rem;
+    gap: 0.25rem;
   }
 }
 

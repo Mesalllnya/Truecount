@@ -24,11 +24,52 @@ function useReveal(threshold = 0.12) {
   return [ref, visible]
 }
 
+/* ── Pointer FX ───────────────────────────────────────────
+ * Menulis --mx/--my (posisi kursor, %) dan --rx/--ry (rotasi 3D
+ * halus) ke elemen lewat CSS custom props. Hanya untuk pointer
+ * presisi; nonaktif di touch & reduced-motion. Throttle per frame. */
+let heroFxFrame = 0
+
+function heroPointerMove(e) {
+  if (e.pointerType === 'touch') return
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const el = e.currentTarget
+  const r = el.getBoundingClientRect()
+  const x = (e.clientX - r.left) / r.width
+  const y = (e.clientY - r.top) / r.height
+  cancelAnimationFrame(heroFxFrame)
+  heroFxFrame = requestAnimationFrame(() => {
+    el.style.setProperty('--mx', `${(x * 100).toFixed(2)}%`)
+    el.style.setProperty('--my', `${(y * 100).toFixed(2)}%`)
+    el.style.setProperty('--ry', `${((x - 0.5) * 6).toFixed(2)}deg`)
+    el.style.setProperty('--rx', `${((0.5 - y) * 6).toFixed(2)}deg`)
+  })
+}
+
+function heroPointerLeave(e) {
+  cancelAnimationFrame(heroFxFrame)
+  const el = e.currentTarget
+  el.style.setProperty('--rx', '0deg')
+  el.style.setProperty('--ry', '0deg')
+}
+
+/* ── Cahaya kursor per kartu fitur ─────────────────────── */
+function cardGlowMove(e) {
+  if (e.pointerType === 'touch') return
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const el = e.currentTarget
+  const r = el.getBoundingClientRect()
+  el.style.setProperty('--mx', `${(((e.clientX - r.left) / r.width) * 100).toFixed(2)}%`)
+  el.style.setProperty('--my', `${(((e.clientY - r.top) / r.height) * 100).toFixed(2)}%`)
+}
+
 /* ── Main ────────────────────────────────────────────────── */
 export default function LandingPage() {
   const [stepRef, stepVis] = useReveal()
   const [featRef, featVis] = useReveal()
   const [secRef,  secVis]  = useReveal()
+  const [stepHeadRef, stepHeadVis] = useReveal()
+  const [featHeadRef, featHeadVis] = useReveal()
 
   const features = [
     { icon: 'lock',   title: 'Kata Sandi Argon2id',      body: 'Kata sandi di-hash dengan Argon2id - tahan terhadap serangan GPU dan side-channel.' },
@@ -70,9 +111,13 @@ export default function LandingPage() {
         <div className="hero-text">
           <p className="hero-eyebrow">Platform E-Voting</p>
           <h1>
-            Suara<br />
-            <em>kamu</em><br />
-            terhitung.
+            <span className="hero-line"><span className="hero-line-inner">Suara</span></span>
+            <span className="hero-line" style={{ '--delay': '140ms' }}>
+              <span className="hero-line-inner"><em>kamu</em></span>
+            </span>
+            <span className="hero-line" style={{ '--delay': '280ms' }}>
+              <span className="hero-line-inner">terhitung.</span>
+            </span>
           </h1>
           <p className="hero-sub">
             TrueCount adalah platform e-voting yang aman dan transparan -
@@ -82,7 +127,7 @@ export default function LandingPage() {
           <div className="hero-cta">
             <Link to="/masuk" className="btn-solid btn-lg" onClick={handleMasukClick}>
               <Icon name="login" size={20} />
-              Masuk sekarang <Icon name="arrow" size={16} />
+              Masuk sekarang <Icon name="arrow" size={16} className="btn-arrow" />
             </Link>
             <Link to="/daftar" className="btn-ghost btn-lg">
               <Icon name="clipboard" size={20} />
@@ -111,7 +156,12 @@ export default function LandingPage() {
         </div>
 
         {/* Right - artsy image panel */}
-        <div className="hero-visual" aria-hidden="true">
+        <div
+          className="hero-visual"
+          aria-hidden="true"
+          onPointerMove={heroPointerMove}
+          onPointerLeave={heroPointerLeave}
+        >
           {/* accent bar */}
           <div className="hero-visual-accent" />
           <div className="hero-visual-frame">
@@ -120,6 +170,8 @@ export default function LandingPage() {
               alt="Tangan terangkat - simbol partisipasi demokratis"
               className="hero-img"
             />
+            {/* spotlight mengikuti kursor */}
+            <div className="hero-visual-glow" />
             {/* floating label */}
             <div className="hero-img-tag">
               <Icon name="check" size={12} />
@@ -133,9 +185,17 @@ export default function LandingPage() {
 
       {/* ══ CARA KERJA ═══════════════════════════════════════ */}
       <section id="cara-kerja" className="section">
-        <div className="section-head">
+        <div
+          ref={stepHeadRef}
+          className={`section-head${stepHeadVis ? ' section-head--visible' : ''}`}
+        >
           <p className="section-label">Cara Kerja</p>
-          <h2 className="section-title">Tiga langkah<br />sederhana.</h2>
+          <h2 className="section-title">
+            <span className="title-line"><span className="title-line-inner">Tiga langkah</span></span>
+            <span className="title-line" style={{ '--delay': '110ms' }}>
+              <span className="title-line-inner">sederhana.</span>
+            </span>
+          </h2>
         </div>
         <div
           ref={stepRef}
@@ -158,16 +218,29 @@ export default function LandingPage() {
 
       {/* ══ FITUR ════════════════════════════════════════════ */}
       <section id="fitur" className="section section-dark">
-        <div className="section-head section-head--light">
+        <div
+          ref={featHeadRef}
+          className={`section-head section-head--light${featHeadVis ? ' section-head--visible' : ''}`}
+        >
           <p className="section-label">Fitur Unggulan</p>
-          <h2 className="section-title">Keamanan berlapis,<br />bukan sekadar klaim.</h2>
+          <h2 className="section-title">
+            <span className="title-line"><span className="title-line-inner">Keamanan berlapis,</span></span>
+            <span className="title-line" style={{ '--delay': '110ms' }}>
+              <span className="title-line-inner">bukan sekadar klaim.</span>
+            </span>
+          </h2>
         </div>
         <div
           ref={featRef}
           className={`feature-grid${featVis ? ' feature-grid--visible' : ''}`}
         >
           {features.map((f, i) => (
-            <div className="feature-card" key={f.title} style={{ '--delay': `${i * 80}ms` }}>
+            <div
+              className="feature-card"
+              key={f.title}
+              style={{ '--delay': `${i * 80}ms` }}
+              onPointerMove={cardGlowMove}
+            >
               <div className="feature-icon-wrap"><Icon name={f.icon} size={20} /></div>
               <h3>{f.title}</h3>
               <p>{f.body}</p>
@@ -184,7 +257,12 @@ export default function LandingPage() {
       >
         <div className="security-inner">
           <div className="security-badge"><Icon name="shield" size={24} /></div>
-          <h2>Dirancang aman<br />sejak awal.</h2>
+          <h2>
+            <span className="title-line"><span className="title-line-inner">Dirancang aman</span></span>
+            <span className="title-line" style={{ '--delay': '110ms' }}>
+              <span className="title-line-inner">sejak awal.</span>
+            </span>
+          </h2>
           <p>
             TrueCount adalah simulasi akademik dari sistem e-voting tingkat produksi.
             Setiap keputusan desain - dari anonimitas suara hingga manajemen kunci -
@@ -192,7 +270,7 @@ export default function LandingPage() {
           </p>
           <Link to="/masuk" className="btn-solid btn-lg" onClick={handleMasukClick}>
             <Icon name="login" size={20} />
-            Masuk ke TrueCount <Icon name="arrow" size={16} />
+            Masuk ke TrueCount <Icon name="arrow" size={16} className="btn-arrow" />
           </Link>
         </div>
         <div className="security-visual" aria-hidden="true">

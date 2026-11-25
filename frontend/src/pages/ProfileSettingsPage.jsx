@@ -301,6 +301,7 @@ export default function ProfileSettingsPage() {
   const [usbEditingId, setUsbEditingId] = useState(null)
   const [usbEditLabel, setUsbEditLabel] = useState('')
   const [usbRevokeConfirmCred, setUsbRevokeConfirmCred] = useState(null)
+  const [usbRevokeError, setUsbRevokeError] = useState('')
 
   // Load USB credentials
   const loadUsbCredentials = useCallback(async () => {
@@ -530,26 +531,37 @@ export default function ProfileSettingsPage() {
 
   /* ── USB Revoke ── */
   const handleUsbRevokeConfirm = (cred) => {
-    setUsbRevokingId(cred.id)
+    // Hanya buka modal. Status loading baru di-set saat user menekan tombol.
+    setUsbRevokeError('')
     setUsbRevokeConfirmCred(cred)
   }
 
   const handleUsbRevokeCancel = () => {
+    if (usbRevokingId) return
     setUsbRevokeConfirmCred(null)
+    setUsbRevokeError('')
     setUsbRevokingId(null)
   }
 
   const handleUsbRevokeDelete = async () => {
     const cred = usbRevokeConfirmCred
-    setUsbRevokeConfirmCred(null)
-    const ok = await revokeUsbCredential(cred.id)
-    setUsbRevokingId(null)
-    if (ok) {
-      showToast('USB token dinonaktifkan', 'check')
-      await new Promise(r => setTimeout(r, 300))
-      loadUsbCredentials()
-    } else {
-      showToast('Gagal menonaktifkan token', 'alert')
+    if (!cred || usbRevokingId) return
+
+    setUsbRevokeError('')
+    setUsbRevokingId(cred.id)
+    try {
+      const result = await revokeUsbCredential(cred.id)
+      if (result.ok) {
+        setUsbRevokeConfirmCred(null)
+        showToast('USB token dinonaktifkan', 'check')
+        await loadUsbCredentials()
+      } else {
+        const message = result.error || 'Gagal menonaktifkan token.'
+        setUsbRevokeError(message)
+        showToast(message, 'alert')
+      }
+    } finally {
+      setUsbRevokingId(null)
     }
   }
 
@@ -599,24 +611,40 @@ export default function ProfileSettingsPage() {
 
       {/* ── Confirm Nonaktifkan USB Token Modal ── */}
       {usbRevokeConfirmCred && (
-        <div className="modal-overlay" onClick={handleUsbRevokeCancel}>
+        <div
+          className="modal-overlay"
+          onClick={handleUsbRevokeCancel}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="usb-revoke-title"
+          onKeyDown={(e) => { if (e.key === 'Escape') handleUsbRevokeCancel() }}
+        >
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-icon" style={{ background: '#f13c35' }}>
                 <Icon name="alert" size={28} strokeWidth={2} />
               </div>
-              <h2>Nonaktifkan USB Token?</h2>
+              <h2 id="usb-revoke-title">Nonaktifkan USB Token?</h2>
               <p className="modal-subtitle">Token "{usbRevokeConfirmCred.label ?? 'tanpa label'}" tidak akan bisa dipakai lagi untuk MFA.</p>
             </div>
             <div className="modal-body">
+              {usbRevokeError && (
+                <p className="inline-error" role="alert">{usbRevokeError}</p>
+              )}
               <div className="modal-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button className="btn btn-secondary" onClick={handleUsbRevokeCancel}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleUsbRevokeCancel}
+                  disabled={Boolean(usbRevokingId)}
+                  autoFocus
+                >
                   Batal
                 </button>
                 <button
-                  className="btn btn-danger"
+                  className="btn btn-danger-solid"
                   onClick={handleUsbRevokeDelete}
-                  disabled={usbRevokingId}
+                  disabled={Boolean(usbRevokingId)}
+                  aria-busy={Boolean(usbRevokingId)}
                 >
                   {usbRevokingId ? 'Menonaktifkan…' : 'Nonaktifkan'}
                 </button>

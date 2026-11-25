@@ -9,7 +9,34 @@
 
 USE `truecount_db`;
 
--- Hanya sisakan admin, pemilih1, pemilih2, dev — hapus user dummy lain
+-- Hanya sisakan admin, pemilih1, pemilih2, dev — hapus user dummy lain.
+--
+-- Catatan: beberapa tabel menaruh FK ke users tanpa ON DELETE CASCADE
+-- (invites.created_by/used_by, elections.created_by, voice_messages
+-- sender_id/recipient_id). Baris-baris itu harus dibersihkan dulu,
+-- kalau tidak DELETE users gagal dengan error 1451 (FK constraint).
+
+-- 1. Undangan yang dibuat atau diklaim oleh user yang akan dihapus
+DELETE FROM `invites`
+WHERE `created_by` IN (SELECT `id` FROM `users`
+                       WHERE `username` NOT IN ('admin','pemilih1','pemilih2','dev'))
+   OR `used_by`   IN (SELECT `id` FROM `users`
+                       WHERE `username` NOT IN ('admin','pemilih1','pemilih2','dev'));
+
+-- 2. Pesan suara yang dikirim/diterima user yang akan dihapus
+DELETE FROM `voice_messages`
+WHERE `sender_id`   IN (SELECT `id` FROM `users`
+                        WHERE `username` NOT IN ('admin','pemilih1','pemilih2','dev'))
+   OR `recipient_id` IN (SELECT `id` FROM `users`
+                        WHERE `username` NOT IN ('admin','pemilih1','pemilih2','dev'));
+
+-- 3. Pemilu yang dibuat user yang akan dihapus
+--    (kandidat, pemilih, suara, blok ikut terhapus via ON DELETE CASCADE)
+DELETE FROM `elections`
+WHERE `created_by` IN (SELECT `id` FROM `users`
+                       WHERE `username` NOT IN ('admin','pemilih1','pemilih2','dev'));
+
+-- 4. Sekarang user dummy aman dihapus
 DELETE FROM `users`
 WHERE `username` NOT IN ('admin','pemilih1','pemilih2','dev');
 

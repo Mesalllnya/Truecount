@@ -97,6 +97,8 @@ function VoterOnly({ children }) {
   return user?.role === 'admin' ? <Navigate to="/dasbor" replace /> : children
 }
 
+/* Menu halaman publik: ada "Beranda". Sengaja TIDAK ada di menu user
+   (PROTECTED_LINKS) — di dalam app, ke beranda hanya lewat logo (DefaultBrand). */
 const PUBLIC_LINKS = [
   { href: '/', label: 'Beranda', icon: <Home {...navIcon} /> },
   { href: '/tentang', label: 'Tentang', icon: <Info {...navIcon} /> },
@@ -124,6 +126,7 @@ function AppRoutes() {
     location.pathname.startsWith('/pengaturan') ||
     location.pathname.startsWith('/usb-token-test') ||
     location.pathname.startsWith('/log-keamanan') ||
+    location.pathname.startsWith('/profil') ||
     location.pathname.startsWith('/dev')
 
   const navLinks = isProtected ? PROTECTED_LINKS : PUBLIC_LINKS

@@ -56,6 +56,45 @@ function LockIcon({ size = 22 }) {
 
 const ROLE_LABEL = { voter: 'Pemilih', admin: 'Admin' }
 
+const ACCOUNT_FIELDS = ['username', 'email', 'password', 'confirm']
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Validasi satu field form akun. Dipakai untuk cek saat blur dan saat submit. */
+function validateAccountField(name, values, usernameStatus) {
+  const value = values[name] ?? ''
+
+  switch (name) {
+    case 'username':
+      if (!value.trim()) return 'Username wajib diisi.'
+      if (value.length < 3) return 'Username minimal 3 karakter.'
+      if (!/^[a-z0-9_]+$/.test(value)) return 'Username hanya huruf kecil, angka, dan underscore.'
+      if (usernameStatus === 'taken') return 'Username sudah dipakai. Pilih username lain.'
+      return ''
+
+    case 'email':
+      if (!value.trim()) return 'Email wajib diisi.'
+      if (!EMAIL_PATTERN.test(value.trim())) return 'Format email tidak valid.'
+      return ''
+
+    case 'password':
+      if (!value) return 'Kata sandi wajib diisi.'
+      if (value.length < 8) return 'Kata sandi minimal 8 karakter.'
+      if (!/[0-9]/.test(value)) return 'Kata sandi wajib mengandung minimal 1 angka.'
+      if (!/[^a-zA-Z0-9]/.test(value)) {
+        return 'Kata sandi wajib mengandung minimal 1 karakter khusus (mis. !@#$%^&*).'
+      }
+      return ''
+
+    case 'confirm':
+      if (!value) return 'Konfirmasi kata sandi wajib diisi.'
+      if (value !== values.password) return 'Konfirmasi kata sandi tidak cocok.'
+      return ''
+
+    default:
+      return ''
+  }
+}
+
 export default function RegisterPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -75,6 +114,10 @@ export default function RegisterPage() {
   const [form, setForm]   = useState({ username: '', email: '', password: '', confirm: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Field yang sudah pernah kehilangan fokus → boleh menampilkan pesan validasi.
+  const [touched, setTouched] = useState({
+    username: false, email: false, password: false, confirm: false,
+  })
   // Password field visible by default; confirm field masked by default
   const [showPass, setShowPass] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -161,6 +204,23 @@ export default function RegisterPage() {
     setForm(prev => ({ ...prev, [name]: value }))
     setError('')
   }
+
+  /** Tandai field sebagai touched saat blur → validasi inline mulai tampil. */
+  function handleBlur(e) {
+    const { name } = e.target
+    if (!ACCOUNT_FIELDS.includes(name)) return
+    setTouched(prev => (prev[name] ? prev : { ...prev, [name]: true }))
+  }
+
+  // Pesan error per field hanya muncul setelah field disentuh (blur/submit).
+  const fieldErrors = ACCOUNT_FIELDS.reduce((acc, name) => {
+    acc[name] = touched[name] ? validateAccountField(name, form, usernameStatus) : ''
+    return acc
+  }, {})
+
+  const usernameFeedback = fieldErrors.username
+    || (usernameStatus === 'available' ? usernameMessage : '')
+  const usernameFeedbackError = Boolean(fieldErrors.username)
 
   // ── Debounced username availability check ─────────────────
   function debouncedCheckUsername(username) {
@@ -274,39 +334,24 @@ export default function RegisterPage() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (usernameStatus === 'taken') {
-      setError('Username sudah dipakai. Pilih username lain.')
+
+    // Submit menandai semua field tersentuh → semua pesan validasi tampil.
+    setTouched({ username: true, email: true, password: true, confirm: true })
+
+    const firstInvalid = ACCOUNT_FIELDS
+      .map(name => ({ name, message: validateAccountField(name, form, usernameStatus) }))
+      .find(item => item.message)
+
+    if (firstInvalid) {
+      setError('')
+      // Tunggu render agar pesan error muncul, lalu fokus ke field invalid pertama.
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[name="${firstInvalid.name}"]`)
+        if (el && !el.disabled) el.focus()
+      })
       return
     }
-    if (usernameStatus === 'invalid') {
-      setError('Username hanya huruf kecil, angka, dan underscore.')
-      return
-    }
-    if (form.username.length < 3) {
-      setError('Username minimal 3 karakter.')
-      return
-    }
-    if (!/^[a-z0-9_]+$/.test(form.username)) {
-      setError('Username hanya huruf kecil, angka, dan underscore.')
-      return
-    }
-    if (form.password !== form.confirm) {
-      setError('Konfirmasi kata sandi tidak cocok.')
-      return
-    }
-    if (form.password.length < 8) {
-      setError('Kata sandi minimal 8 karakter.')
-      return
-    }
-    // Validate password complexity (matches backend)
-    if (!/[0-9]/.test(form.password)) {
-      setError('Kata sandi wajib mengandung minimal 1 angka.')
-      return
-    }
-    if (!/[^a-zA-Z0-9]/.test(form.password)) {
-      setError('Kata sandi wajib mengandung minimal 1 karakter khusus (mis. !@#$%^&*).')
-      return
-    }
+
     // ID photo is optional for voters, required for admin (validated on backend)
     // But we should at least warn if missing for admin
     if (invite?.role === 'admin' && !idPhotoData.dataUrl) {
@@ -522,7 +567,16 @@ export default function RegisterPage() {
             placeholder="huruf kecil, tanpa spasi"
             value={form.username}
             onChange={handleChange}
-            className={usernameStatus === 'taken' ? 'input-error' : usernameStatus === 'available' ? 'input-success' : ''}
+            onBlur={handleBlur}
+            aria-invalid={usernameFeedbackError || undefined}
+            aria-describedby={usernameFeedback ? 'username-status-msg' : undefined}
+            className={
+              usernameFeedbackError || usernameStatus === 'taken'
+                ? 'input-error'
+                : usernameStatus === 'available' && !fieldErrors.username
+                  ? 'input-success'
+                  : ''
+            }
             required
           />
           <span className={`username-status ${usernameStatus}`}>
@@ -532,9 +586,13 @@ export default function RegisterPage() {
             {usernameStatus === 'invalid' && '!'}
           </span>
         </div>
-        {usernameMessage && (
-          <p className={`username-status-msg ${usernameStatus}`}>
-            {usernameMessage}
+        {usernameFeedback && (
+          <p
+            id="username-status-msg"
+            className={`username-status-msg ${usernameFeedbackError ? 'taken' : usernameStatus}`}
+            role={usernameFeedbackError ? 'alert' : undefined}
+          >
+            {usernameFeedback}
           </p>
         )}
       </div>
@@ -549,10 +607,17 @@ export default function RegisterPage() {
           placeholder="anda@contoh.com"
           value={form.email}
           onChange={handleChange}
+          onBlur={handleBlur}
           disabled={Boolean(invite?.email)}
           title={invite?.email ? 'Email mengikuti undangan' : undefined}
+          aria-invalid={Boolean(fieldErrors.email) || undefined}
+          aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+          className={fieldErrors.email ? 'input-invalid' : ''}
           required
         />
+        {fieldErrors.email && (
+          <p id="email-error" className="field-inline-error" role="alert">{fieldErrors.email}</p>
+        )}
       </div>
 
       <div className="field">
@@ -566,6 +631,10 @@ export default function RegisterPage() {
             placeholder="Min. 8 karakter, 1 angka, 1 karakter khusus"
             value={form.password}
             onChange={handleChange}
+            onBlur={handleBlur}
+            aria-invalid={Boolean(fieldErrors.password) || undefined}
+            aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+            className={fieldErrors.password ? 'input-invalid' : ''}
             required
           />
           <button
@@ -577,6 +646,9 @@ export default function RegisterPage() {
             {showPass ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
           </button>
         </div>
+        {fieldErrors.password && (
+          <p id="password-error" className="field-inline-error" role="alert">{fieldErrors.password}</p>
+        )}
       </div>
 
       <div className="field">
@@ -590,6 +662,10 @@ export default function RegisterPage() {
             placeholder="Ulangi kata sandi"
             value={form.confirm}
             onChange={handleChange}
+            onBlur={handleBlur}
+            aria-invalid={Boolean(fieldErrors.confirm) || undefined}
+            aria-describedby={fieldErrors.confirm ? 'confirm-error' : undefined}
+            className={fieldErrors.confirm ? 'input-invalid' : ''}
             required
           />
           <button
@@ -601,6 +677,9 @@ export default function RegisterPage() {
             {showConfirm ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
           </button>
         </div>
+        {fieldErrors.confirm && (
+          <p id="confirm-error" className="field-inline-error" role="alert">{fieldErrors.confirm}</p>
+        )}
       </div>
 
       {error && <p className="field-error" role="alert">{error}</p>}

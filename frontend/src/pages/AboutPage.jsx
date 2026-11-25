@@ -97,7 +97,6 @@ export default function AboutPage() {
         className={`about-hero${heroVis ? ' about-hero--visible' : ''}`}
       >
         <div className="hero-content">
-          <p className="hero-eyebrow">Tentang Kami</p>
           <h1>
             Tim <em>TrueCount</em> -<br />
             Mahasiswa yang membangun<br />

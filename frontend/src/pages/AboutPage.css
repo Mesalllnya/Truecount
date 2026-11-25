@@ -153,25 +153,6 @@
 @media (min-width: 1024px) { .about .hero-content { padding: 6rem 4rem 6rem 4rem; } }
 @media (min-width: 1440px) { .about .hero-content { padding: 7rem 5rem 7rem 5rem; } }
 
-.about .hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--red);
-  margin-bottom: 1.25rem;
-}
-.about .hero-eyebrow::before {
-  content: '';
-  display: inline-block;
-  width: 20px; height: 2px;
-  background: var(--red);
-  border-radius: 2px;
-}
-
 .about .hero-content h1 {
   font-size: clamp(2.8rem, 5.5vw, 5.5rem);
   font-weight: 800;

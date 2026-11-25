@@ -1183,6 +1183,24 @@
   color: #b45309;
 }
 
+/* ── Validasi inline per field (RegisterPage) ───────────── */
+.field input.input-invalid {
+  border-color: var(--error);
+}
+
+.field input.input-invalid:focus {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+}
+
+.field-inline-error {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--error);
+  animation: cardReveal 200ms ease-out;
+}
+
 /* ── Footer: teks tanpa tautan (undangan via admin) ─────── */
 .auth-footer-note {
   color: var(--black);

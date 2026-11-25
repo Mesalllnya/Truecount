@@ -190,9 +190,36 @@
 @media (min-width: 1024px) { .landing .hero-text { padding: 6rem 4rem 6rem 4rem; } }
 @media (min-width: 1440px) { .landing .hero-text { padding: 7rem 5rem 7rem 5rem; } }
 
+/* Di layar lebar hero jadi tinggi (100dvh) sementara kontennya lebih pendek →
+   teks menempel ke bawah dan menyisakan ruang kosong besar di atas headline.
+   Turunkan ruang atas saja agar blok teks benar-benar di tengah. */
+@media (min-width: 900px) {
+  .landing .hero-text { padding-top: 3.5rem; }
+}
+
+/* Tablet & sempit: konten sudah cukup tinggi → jaga jarak atas tetap lega. */
+@media (min-width: 900px) and (max-width: 1199px) {
+  .landing .hero-text { padding-top: 4.5rem; }
+}
+
+@media (min-width: 1200px) { .landing .hero-text { padding-top: 2.5rem; } }
+
 @keyframes landing-heroIn {
   from { opacity: 0; transform: translateY(28px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+.landing .hero-text .hero-kicker {
+  margin-bottom: 1.35rem;
+  animation: landing-heroIn 700ms 80ms var(--ease-out) backwards;
+}
+
+.landing .hero-kicker-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .landing .hero-text h1 {
@@ -479,12 +506,23 @@
 @media (min-width: 768px) { .landing .section-head { margin-bottom: 5rem; } }
 
 .landing .section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--red);
   margin-bottom: 0.75rem;
+}
+.landing .section-label::before {
+  content: '';
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  flex-shrink: 0;
 }
 .landing .section-head--light .section-label { color: rgba(241,60,53,0.8); }
 
@@ -1113,6 +1151,7 @@
   .landing .security-inner,
   .landing .security-visual,
   .landing .hero-text,
+  .landing .hero-kicker,
   .landing .hero-text h1,
   .landing .hero-sub,
   .landing .hero-cta,

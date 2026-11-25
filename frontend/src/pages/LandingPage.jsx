@@ -109,6 +109,13 @@ export default function LandingPage() {
 
         {/* Left - text */}
         <div className="hero-text">
+          {/* Eyebrow hero — dipakai untuk menyeimbangkan ruang atas kolom teks
+              pada layar lebar. Memakai kelas .section-label agar konsisten
+              dengan label section lain di halaman ini. */}
+          <p className="section-label hero-kicker">
+            <span className="hero-kicker-dot" aria-hidden="true" />
+            Platform E-Voting Terverifikasi
+          </p>
           <h1>
             <span className="hero-line"><span className="hero-line-inner">Suara</span></span>
             <span className="hero-line" style={{ '--delay': '140ms' }}>

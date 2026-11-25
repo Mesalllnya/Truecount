@@ -17,6 +17,7 @@
 8. [Pesan Suara Admin](#8-pesan-suara-admin)
 9. [Troubleshooting](#9-troubleshooting)
 10. [Log Keamanan (Audit Login)](#10-log-keamanan-audit-login)
+11. [Profil Pengguna & Foto Identitas](#11-profil-pengguna--foto-identitas)
 
 ---
 
@@ -33,6 +34,8 @@ TrueCount adalah aplikasi **e-voting akademik** dengan fitur keamanan berbasis k
 | Enkripsi pesan & file, blockchain | ✅ Sprint 3 |
 | Pesan suara terenkripsi antar-admin (rekam & putar) | ✅ |
 | Keamanan auth (Windows Hello, kamera, failed attempts, log keamanan) | ✅ Sprint 4b |
+| Foto identitas (KTP/SIM) saat registrasi + halaman profil pengguna | ✅ |
+| Pesan teks terenkripsi AES-256-GCM / ChaCha20-Poly1305 / Vigenère | ✅ |
 
 **Prinsip pendaftaran:** Publik **tidak bisa** daftar sendiri. Calon pengguna hanya bisa membuat akun lewat **tautan undangan** yang dibuat admin.
 
@@ -67,6 +70,7 @@ npm run dev:full           # PHP :8000 + Vite :5173
 3. Klik "Masuk" → diarahkan ke dasbor
 4. Setelah masuk, **menu akun di kanan atas navbar** menampilkan avatar inisial, nama, dan peran Anda. Klik untuk membuka menu akun:
    - **Pengaturan** — ganti kata sandi, Windows Hello, kelola USB token
+   - **Profil** — lihat data akun, foto KTP/SIM, dan ajukan perubahan data (lihat [bagian 11](#11-profil-pengguna--foto-identitas))
    - **Log Keamanan Saya** — riwayat percobaan login akun Anda sendiri (khusus akun **Admin**; akun lain tidak melihat item ini karena endpoint log dibatasi admin)
    - **Keluar** — tutup sesi lalu klik **Masuk** lagi untuk ganti akun
 
@@ -93,11 +97,13 @@ Pendaftaran publik ditutup — semua akun baru masuk lewat undangan.
 
 1. Login sebagai **admin** → buka **Dasbor**
 2. Di panel **Undangan**, klik **"+ Buat undangan"**
-3. Isi formulir:
-   - **Email calon** (opsional) — kalau diisi, undangan **hanya bisa dipakai email itu**
-   - **Peran akun** — `Pemilih`, `Admin`, atau `Dev`
-4. Klik **"Buat undangan"**
-5. Tautan undangan muncul → klik **"Salin"** → kirim ke calon pengguna
+3. Pilih mode pembuatan:
+   - **Satu email** — isi email calon (opsional; kalau diisi, undangan **hanya bisa dipakai email itu**)
+   - **Bulk email** — tempel beberapa email sekaligus
+   - **Bulk count** — buat 1–100 link undangan anonim sekaligus
+4. Pilih **Peran akun** — `Pemilih` atau `Admin` (role `Dev` hanya dibuat lewat seed, tidak lewat undangan)
+5. Klik **"Buat undangan"**
+6. Tautan undangan muncul → klik **"Salin"** (atau **Salin Semua Link** untuk bulk) → kirim ke calon pengguna
 
 **Tautan bentuknya:**
 ```
@@ -115,6 +121,15 @@ http://localhost:5173/daftar?undangan=<token>
 - **Sekali pakai** — setelah dipakai mendaftar, status jadi "Diterima"
 - Bisa **dibatalkan** kapan saja selama belum dipakai
 
+**Yang dilakukan calon pengguna setelah membuka undangan:**
+1. **Foto KTP/SIM** lewat kamera (wajib; bisa pilih KTP atau SIM, ganti kamera, dan ambil ulang)
+2. Isi **username, email, password** — validasi langsung per field saat pindah kolom:
+   - Username minimal 3 karakter (huruf kecil, angka, underscore) dan dicek ketersediaan
+   - Password minimal 8 karakter, mengandung minimal 1 angka dan 1 karakter khusus
+3. Klik **Buat akun** → diarahkan ke halaman Masuk
+
+> Foto identitas disimpan **terenkripsi** dan hanya bisa dilihat oleh pemilik akun atau admin lewat halaman **Profil**.
+
 ---
 
 ## 6. Mengelola Undangan
@@ -123,7 +138,7 @@ Di tab **Undangan** dasbor admin tersedia:
 
 | Aksi | Cara |
 | --- | --- |
-| Lihat statistik | Kartu: total / menunggu / diterima / kedaluwarsa / dibatalkan |
+| Lihat statistik | Kartu berwarna + ikon: total (merah), menunggu (kuning), diterima (hijau), kedaluwarsa (merah gelap), dibatalkan (abu-abu) |
 | Cari undangan | Kotak pencarian (email, token, pembuat) |
 | Filter status | Dropdown filter |
 | Salin tautan | Tombol "Salin" di baris undangan |
@@ -277,6 +292,42 @@ Admin dapat melihat riwayat percobaan login setiap pengguna, lengkap dengan foto
 > **Log akun sendiri:** buka **menu akun** di kanan atas navbar → **Log Keamanan Saya** (langsung ke `/log-keamanan/{id}` milik Anda, tanpa lewat dasbor).
 
 > **Catatan:** Foto hanya tersimpan untuk percobaan login yang dilakukan **setelah** fitur kamera aktif. Percobaan lama sebelum fitur ini akan menampilkan placeholder kamera (tanpa gambar).
+
+---
+
+## 11. Profil Pengguna & Foto Identitas
+
+Menu **Profil** di navbar (atau URL `/profil`) menampilkan data akun beserta foto identitas yang diunggah saat mendaftar.
+
+### 11.1. Melihat Profil
+
+1. Buka **menu akun** di kanan atas → **Profil**
+2. Tampil: username, peran (role), email, telepon, alamat, dan tanggal bergabung
+3. **Foto Identitas (KTP/SIM)** ditampilkan dari storage terenkripsi — klik foto untuk memperbesar (lightbox)
+
+### 11.2. Mengubah Data Profil
+
+Data profil **tidak bisa diubah langsung**. Setiap perubahan diajukan sebagai permintaan:
+
+1. Di halaman Profil, isi form **Ajukan Perubahan Data**
+2. Pilih field: **username / email / telepon / alamat**
+3. Isi nilai baru + alasan pengajuan → klik kirim
+4. Permintaan tersimpan di tabel `change_requests` untuk ditinjau admin
+
+> Peninjauan permintaan saat ini **manual lewat database** (belum ada tombol approve/reject di UI). Setelah disetujui, ubah data langsung lewat SQL lalu beri tahu pengguna.
+
+### 11.3. Melihat Profil Pengguna Lain (Admin)
+
+Admin bisa membuka profil user lain lewat URL `/profil/{user_id}` — berguna saat memverifikasi foto identitas atau mencari data pengguna.
+
+### 11.4. Catatan Keamanan
+
+| Aspek | Keterangan |
+| --- | --- |
+| Penyimpanan foto ID | Terenkripsi **AES-256-GCM** di `storage/id_photos/` — file mentah tidak pernah tersimpan |
+| Siapa yang bisa melihat | Hanya pemilik akun dan admin |
+| Jenis identitas | KTP atau SIM (dipilih saat registrasi) |
+| Ganti foto ID | Belum tersedia — foto mengikuti data saat registrasi |
 
 ---
 

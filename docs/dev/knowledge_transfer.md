@@ -90,6 +90,7 @@
 - Kata kunci di h1 hero dibuat *italic* weight 300 warna merah
 - Animasi purposeful: `heroIn` (slide up), `rippleGrow` (easter egg), `tagPop` (spring)
 - Semua section-reveal pakai `IntersectionObserver` dengan threshold 0.12–0.15
+- **Landing page (Nov 2026):** hero memakai animasi bertahap per baris (`landing-lineUp`), wipe pada gambar, dan *pointer FX* (`heroPointerMove` / `cardGlowMove`) yang menulis `--mx`/`--my`/`--rx`/`--ry` untuk spotlight + rotasi 3D halus. FX dimatikan untuk `pointerType === 'touch'` dan `prefers-reduced-motion: reduce`, serta di-throttle per frame (`requestAnimationFrame`).
 
 ### Kursor Kustom (Custom Cursor)
 
@@ -125,6 +126,7 @@ backend/helpers/response.php - jsonResponse() + CORS multi-origin (FRONTEND_ORIG
 backend/helpers/logger.php   - tc_log() file logger → backend/storage/logs/app.log
 backend/helpers/jwt.php      - generateJwt() + verifyJwt() - HS256 manual
 backend/helpers/storage.php  - storageRoot()/storagePath() - satu root storage (backend/storage atau TC_STORAGE_ROOT)
+backend/helpers/auth_photo.php - encryptAuthPhoto()/decryptAuthPhoto() - AES-256-GCM untuk foto auth & foto ID
 backend/config/database.php  - getDB() singleton PDO
 backend/config/app.php       - Konstanta JWT_SECRET, JWT_EXPIRE, ARGON2_*
 backend/config/env.php       - Baca variabel .env (DB_HOST, DB_NAME, JWT_SECRET, ENCRYPTION_KEY_B64, dll.)
@@ -132,7 +134,8 @@ backend/helpers/datetime.php - Helper tanggal/WIB (Asia/Jakarta)
 backend/helpers/webauthn.php - Helper WebAuthn (attestation/verifikasi)
 backend/helpers/election_scheduler.php - Jadwal pemilihan (start/end time)
 backend/middleware/auth.php  - requireAuth() / requireAdmin() → return payload atau exit 401
-backend/api/auth/register.php   - invite-gated (wajib invite_token valid)
+backend/api/auth/register.php   - invite-gated (wajib invite_token valid) + simpan foto ID terenkripsi AES-256-GCM ke storage/id_photos
+backend/api/auth/check_username.php - GET /auth/check-username - cek ketersediaan username
 backend/api/auth/login.php
 backend/api/auth/logout.php
 backend/api/auth/me.php
@@ -180,6 +183,9 @@ backend/api/elections/blockchain-seal.php  - POST /elections/blockchain/seal - s
 backend/api/elections/blockchain-verify.php - GET /elections/blockchain/verify - verifikasi blockchain
 backend/api/users/voters.php    - GET /users/voters - daftar semua voter aktif (admin)
 backend/api/users/search.php    - GET /users/search?q= - cari pengguna (admin)
+backend/api/users/profile.php   - GET /users/profile?id= - profil user + foto ID (sendiri atau admin)
+backend/api/users/show_photo.php - GET /users/photo?id= - foto KTP/SIM terenkripsi (didekripsi saat disajikan)
+backend/api/users/request_change.php - POST /users/request-change - ajukan perubahan username/email/phone/address
 backend/api/voice-messages/admins.php   - GET /voice-messages/admins - daftar admin penerima
 backend/api/voice-messages/create.php   - POST /voice-messages - upload + enkripsi pesan suara
 backend/api/voice-messages/inbox.php    - GET /voice-messages/inbox - pesan suara yang diterima
@@ -213,22 +219,27 @@ frontend/src/pages/
   LandingPage.jsx + .css        - Hero dengan raise_hand.jpg + nav link tengah, tombol Masuk (ikon) di kanan, CTA hero: Masuk sekarang · Daftar dengan undangan (→ /daftar, pintu alur undangan desktop) · Pelajari caranya
   LoginPage.jsx                 - Form login (card center), fetch ke /auth/login + status dongle (DETEKSI USB ASLI via scanForTokens, polling 2 detik) + banner sukses registrasi + **password fallback setelah 5 gagal + kamera wajib untuk Windows Hello + camera auto-off saat pindah halaman** + tombol "Daftar dengan undangan" (→ /daftar) sebagai pintu alur undangan desktop
   UserSecurityLogPage.jsx + .css - **Halaman Log Keamanan Pengguna (/log-keamanan/:id): riwayat percobaan login beserta foto kamera, hanya bisa diakses admin via pencarian user di dasbor**
-  RegisterPage.jsx              - Form register INVITE-ONLY: verifikasi ?undangan=<token> via GET /invites/verify; tanpa token tampil form input link/kode undangan manual (extractInviteToken → replace URL ke ?undangan=<token>) untuk alur desktop
+  RegisterPage.jsx              - Register INVITE-ONLY 2 langkah: verifikasi ?undangan=<token> via GET /invites/verify → **step 1 foto ID (KTP/SIM)** → step 2 form akun. Tanpa token tampil form input link/kode undangan manual (extractInviteToken → replace URL). Validasi inline per field saat blur/submit + cek username debounce 500 ms (GET /auth/check-username)
   SecuritySetupPage.tsx         - **Halaman setup keamanan wajib (/atur-keamanan): user pilih Windows Hello atau Dongle sebelum akses dashboard**
   AuthPage.css                  - Shared CSS untuk Login + Register + SecuritySetup + state panel undangan
   DashboardPage.jsx + .css      - Dasbor + easter egg 5-klik + auth guard; admin lihat tab (Pemilihan, Undangan, Blockchain Audit, Log Keamanan) via `?tab=` query
   VotePage.jsx + .css          - Halaman pemilihan (/pilih): kandidat demo, tombol besar berwarna + ikon SVG + auth guard
   ProfileSettingsPage.jsx + .css - Halaman pengaturan (/pengaturan): change password, Windows Hello, USB token management
+  UserProfilePage.jsx + .css    - Halaman profil (/profil/:userId?): data profil, foto KTP/SIM terenkripsi + lightbox, form permintaan perubahan data ke admin
   UsbTokenTestPage.jsx + .css  - Halaman test USB token (/usb-token-test): deteksi, decrypt, challenge-response
   AboutPage.jsx                - Halaman tentang aplikasi (/tentang): informasi proyek, tim, stack teknologi
+  ClientConfigPage.jsx + .css  - Halaman konfigurasi server desktop (/__server): mode Client/Server/Standalone, tes koneksi, simpan & sambungkan
+  ServerErrorPage.jsx          - Halaman /server-error saat backend/database tidak dapat dihubungi
   ResultsPage.jsx + .css       - Halaman hasil pemilihan (/hasil/:id): tally suara, verifikasi blockchain, statistik partisipasi
   EncryptedMessagesPage.jsx    - Halaman pesan terenkripsi (/pesan-terenkripsi): halaman bertab **Pesan Teks** (enkripsi/dekripsi) + **Pesan Suara** (admin), sinkron dengan `?tab=teks|suara`
-  TextMessagesPanel.jsx        - Panel tab Pesan Teks: enkripsi AES-256-GCM/ChaCha20-Poly1305 & dekripsi via ID pesan
-  VoiceMessagesPanel.jsx + .css - Panel tab Pesan Suara (admin): rekam via MediaRecorder, pratinjau, kirim terenkripsi, inbox + playback
   DevPage.jsx + DevPage.css    - **Halaman Dev (/dev): diagram flow aplikasi + grid algoritma kriptografi, hanya Admin + Dev**
 frontend/src/components/
   HealthMonitor.jsx             - Render null; polling /health di background, error → console (bukan UI)
   Skeleton.jsx + .css           - Komponen loading placeholder
+  IdPhotoCapture.jsx + .css     - Kamera capture foto KTP/SIM saat registrasi: guide frame, ganti kamera, ambil ulang, hasil foto
+  Icon.jsx                      - Kumpulan ikon SVG inline yang dipakai lintas halaman (termasuk ikon kartu statistik undangan)
+  TextMessagesPanel.jsx         - Panel tab Pesan Teks: pilihan algoritma AES-256-GCM/ChaCha20-Poly1305/Vigenère + field key Vigenère, enkripsi & dekripsi via ID pesan
+  VoiceMessagesPanel.jsx + .css - Panel tab Pesan Suara (admin): rekam via MediaRecorder, pratinjau, kirim terenkripsi, inbox + playback
   UsbTokenPanel.jsx + .css      - Panel kelola USB token
   AuthGuard.jsx                 - **Route guard: redirect ke /atur-keamanan jika belum setup Windows Hello/Dongle**
   RoleGuard.jsx                 - **Route guard: hanya izinkan role yang diizinkan (admin/dev untuk /dev)**
@@ -278,19 +289,22 @@ database/migrate.php              - php database/migrate.php [--seed] [--fresh]
 | Path | Komponen | Keterangan |
 | --- | --- | --- |
 | `/` | `LandingPage` | Halaman utama |
+| `/__server` | `ClientConfigPage` | Konfigurasi runtime desktop (Client/Server/Standalone) — juga dibuka via Ctrl+Shift+Alt+S |
 | `/tentang` | `AboutPage` | Halaman tentang aplikasi (proyek, tim, stack) |
 | `/masuk` | `LoginPage` | Login + tombol "Daftar dengan undangan" (→ `/daftar`) untuk alur desktop |
-| `/daftar` | `RegisterPage` | Pendaftaran - invite-only, via query `?undangan=<token>` ATAU tempel link/kode undangan manual di halaman (ekstrak token → replace URL); state "hanya melalui undangan" + form input |
+| `/daftar` | `RegisterPage` | Pendaftaran - invite-only, via query `?undangan=<token>` ATAU tempel link/kode undangan manual. Setelah token valid: **step 1 foto KTP/SIM** (wajib) → **step 2 detail akun** dengan validasi inline + cek username |
 | `/atur-keamanan` | `SecuritySetupPage` | **Setup keamanan wajib (Windows Hello/Dongle) — redirect dari AuthGuard** |
 | `/dasbor` | `DashboardPage` | Dasbor (easter egg 5-klik, tab admin: Pemilihan/Undangan/Blockchain Audit/Log Keamanan via `?tab=`, ada auth guard) |
 | `/pilih` | `VotePage` | Halaman pemilihan - kandidat, tombol besar berwarna (Sprint 2 ✅, ada auth guard) |
 | `/hasil/:id` | `ResultsPage` | Hasil pemilihan + verifikasi blockchain (Sprint 2 ✅, ada auth guard) |
-| `/pengaturan` | `ProfileSettingsPage` | Pengaturan profil: change password, Windows Hello, USB token |
+| `/pengaturan` | `ProfileSettingsPage` | Pengaturan keamanan: change password, Windows Hello, USB token |
+| `/profil/:userId?` | `UserProfilePage` | Profil pengguna + foto KTP/SIM (lightbox) + form permintaan perubahan data; tanpa `userId` = profil sendiri, admin boleh lihat user lain |
+| `/server-error` | `ServerErrorPage` | Halaman error saat backend/database tidak dapat dihubungi |
 | `/usb-token-test` | `UsbTokenTestPage` | Halaman test USB token: deteksi, decrypt, challenge-response (ada auth guard) |
-| `/pesan-terenkripsi` | `EncryptedMessagesPage` | Halaman bertab **Pesan Teks** & **Pesan Suara** (admin), state tab via `?tab=teks|suara` (Sprint 3 ✅, ada auth guard) |
+| `/pesan-terenkripsi` | `EncryptedMessagesPage` | Halaman bertab **Pesan Teks** & **Pesan Suara** (admin), state tab via `?tab=teks\|suara` (Sprint 3 ✅, ada auth guard) |
 | `/pesan-suara` | Redirect → `/pesan-terenkripsi?tab=suara` | Alias lama halaman pesan suara |
 | `/log-keamanan/:id` | `UserSecurityLogPage` | **Riwayat percobaan login + foto kamera (audit admin)** |
-| `/dev` | `DevPage` | **Halaman Dev - diagram flow 2D + grid kriptografi (hanya admin + dev)** |
+| `/dev` | `DevPage` | **Halaman Dev - diagram flow isometrik + grid kriptografi (hanya admin + dev)** |
 | `/login` | Redirect → `/masuk` | Alias lama |
 | `/register` | Redirect → `/daftar` | Alias lama |
 | `/dashboard` | Redirect → `/dasbor` | Alias lama |
@@ -305,7 +319,8 @@ Base URL: `http://localhost:8000`
 | Method | Path | Auth | Request Body | Response |
 | --- | --- | --- | --- | --- |
 | GET | `/health` | - | - | `{status, app, database, ip}` - status `ok`/`degraded`, dipakai indikator status di frontend |
-| POST | `/auth/register` | Invite token | `{username, email, password, invite_token}` | `201 {message, user}` - publik TIDAK bisa daftar bebas |
+| POST | `/auth/register` | Invite token | `{username, email, password, invite_token, id_photo?, id_photo_type?}` | `201 {message, user}` - publik TIDAK bisa daftar bebas. `id_photo` = data URL JPEG/PNG (maks 5 MB), disimpan terenkripsi AES-256-GCM di `storage/id_photos/` |
+| GET | `/auth/check-username?username=` | - | query `username` | `200 {available, message}` - cek ketersediaan username (debounce 500 ms di register) |
 | POST | `/auth/login` | - | `{identifier, password}` | `200 {message, token, user}` |
 | POST | `/auth/logout` | - | - | `200 {message}` |
 | GET | `/auth/me` | Bearer JWT | - | `200 {user}` |
@@ -351,13 +366,16 @@ Base URL: `http://localhost:8000`
 | GET | `/elections/blockchain/verify` | Bearer JWT | - | `200 {valid, blocks}` - verifikasi integritas blockchain |
 | GET | `/users/voters` | Bearer JWT (admin) | - | `200 {voters}` - daftar semua voter aktif di sistem |
 | GET | `/users/search?q=` | Bearer JWT (admin) | - | `200 {users}` - cari pengguna (admin, untuk log keamanan) |
+| GET | `/users/profile?id=` | Bearer JWT | query `id` (opsional) | `200 {user}` - profil + `id_photo_path`/`id_photo_type`; tanpa `id` = profil sendiri, admin boleh lihat user lain |
+| GET | `/users/photo?id=` | Bearer JWT | query `id` = `photo_path` | `image/jpeg` - foto KTP/SIM didekripsi AES-256-GCM saat disajikan |
+| POST | `/users/request-change` | Bearer JWT | `{user_id, field, new_value, reason}` | `200 {message}` - ajukan perubahan `username`/`email`/`phone`/`address`; tersimpan di `change_requests` |
 | GET | `/voice-messages/admins` | Bearer JWT (admin) | - | `200 {admins}` - daftar admin aktif selain akun sendiri |
 | POST | `/voice-messages` | Bearer JWT (admin) | form-data `audio`, `recipient_id`, `duration_seconds` | `201 {message, voice_message}` - audio dienkripsi ChaCha20-Poly1305 |
 | GET | `/voice-messages/inbox` | Bearer JWT (admin) | - | `200 {messages, total}` - pesan suara yang diterima |
 | POST | `/voice-messages/{id}/read` | Bearer JWT (admin) | - | `200 {message}` - tandai pesan sudah dibaca |
 | GET | `/voice-messages/{id}/audio` | Bearer JWT (admin, penerima) | - | `audio/*` - playback audio (`404` jika bukan penerima) |
-| POST | `/encrypted-messages` | Bearer JWT | `{algorithm, ciphertext, iv_nonce?}` | `201 {message}` - buat pesan terenkripsi |
-| GET | `/encrypted-messages/:id` | Bearer JWT | - | `200 {message}` - ambil pesan terenkripsi |
+| POST | `/encrypted-messages` | Bearer JWT | `{message, algorithm, vigenere_key?}` | `201 {success, message, data:{id, algorithm}}` - server yang mengenkripsi. `algorithm`: `aes256gcm` (default) / `chacha20` / `vigenere` (wajib `vigenere_key` huruf A-Z) |
+| GET | `/encrypted-messages/:id` | Bearer JWT | header `X-Vigenere-Key` (untuk pesan Vigenere) | `200 {success, message, data:{id, plaintext}}` - dekripsi pesan milik user sendiri |
 | GET | `/dev/flow` | Bearer JWT (admin/dev) | - | `200 {flow: [...]}` - data alur aplikasi (nodes & edges) untuk halaman dev |
 | GET | `/dev/crypto` | Bearer JWT (admin/dev) | - | `200 {algorithms: [...]}` - data algoritma kriptografi untuk halaman dev |
 
@@ -380,11 +398,11 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
  
 ## 7. Database Schema
  
-16 tabel - `database/migrations/001_init.sql` (10 tabel) + `002_invites.sql` + `003_usb_tokens.sql` + `004_usb_challenges.sql` + `005_webauthn_challenges.sql` + `006_biometric_last_used.sql` + `007_auth_attempts.sql` + `008_sprint2_marker.sql` + `009_add_photo_path_to_auth_attempts.sql` + `010_add_crypto_version.sql` + `011_add_encrypted_files_columns.sql` + `012_add_dev_role.sql` + `013_create_voice_messages.sql`:
+16 tabel inti + `change_requests` - lihat folder `database/migrations/` (migration 001–015, termasuk `014_add_id_photo_to_users.sql` dan `015_add_profile_fields_to_users.sql`). Tabel `change_requests` dibuat otomatis oleh `users/request_change.php` saat permintaan perubahan pertama dikirim.
 
 | Tabel | Sprint | Keterangan |
 | --- | --- | --- |
-| `users` | 1 ✅ | id, username, email, password_hash, role (admin/voter), is_active |
+| `users` | 1 ✅ | id, username, email, password_hash, role (admin/voter/dev), is_active, id_photo_path, id_photo_type (ktp/sim), phone, address |
 | `biometric_credentials` | 4 | WebAuthn/FIDO2 - FK ke users (termasuk last_used_at) |
 | `usb_tokens` | 4 | USB Token (legacy table dari migration 001) |
 | `usb_token_credentials` | 4 | **USB Token (software token di flashdisk) - ECDSA P-256 public key storage** |
@@ -400,6 +418,7 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 | `encrypted_files` | 3 ✅ | File terenkripsi (nonce, auth_tag, file_size, mime_type via migration 011) |
 | `voice_messages` | 3 ✅ | Pesan suara antar-admin - sender_id, recipient_id, file_id (FK encrypted_files), duration_seconds, is_read, read_at (migration 013) |
 | `blocks` | 3 ✅ | Blockchain sederhana (seal & verify hasil pemilihan) |
+| `change_requests` | 5 | Permintaan perubahan profil (username/email/phone/address) — dibuat otomatis oleh endpoint `POST /users/request-change`, status pending/approved/rejected |
 
 **Penting:** `ballots` tidak punya FK ke `users` atau `voters` secara sengaja - suara dan identitas pemilih terpisah.
 
@@ -413,6 +432,12 @@ Semua error menggunakan format: `{ "error": "Pesan error dalam Bahasa Indonesia.
 3. User POST /auth/register dengan invite_token → undangan divalidasi
    (pending + belum kedaluwarsa) → password di-hash Argon2id → simpan ke DB
    → undangan ditandai accepted (UPDATE bersyarat, atomik)
+3a. Sebelum form akun, UI mewajibkan foto KTP/SIM (step 1). Foto dikirim sebagai
+    data URL, divalidasi (JPEG/PNG, maks 5 MB), dienkripsi AES-256-GCM, lalu
+    disimpan di storage/id_photos/. Kolom users.id_photo_path + id_photo_type diisi.
+3b. Form akun memvalidasi inline saat blur & submit: username 3+ (huruf kecil/angka/
+    underscore, cek ketersediaan via GET /auth/check-username), email valid,
+    password min. 8 karakter + 1 angka + 1 karakter khusus, konfirmasi cocok.
 4. User POST /auth/login → verifikasi Argon2id → generate JWT HS256
 5. Frontend simpan token di localStorage key: 'tc_token' + AuthContext
 6. Request ke endpoint protected → kirim header: Authorization: Bearer <token>
@@ -489,8 +514,9 @@ flowchart TD
 flowchart TD
     A["Terima tautan/kode undangan dari admin"] --> B["Buka /daftar?undangan=token<br/>atau tempel link/kode di kolom undangan"]
     B --> C["Cek validitas: GET /invites/verify?token=..."]
-    C --> D["Daftar akun: POST /auth/register + invite_token<br/>password di-hash Argon2id"]
-    D --> E["Login /masuk<br/>Windows Hello → Dongle → Kata Sandi"]
+    C --> D["Step 1: foto KTP/SIM via kamera<br/>dienkripsi AES-256-GCM → storage/id_photos"]
+    D --> D1["Step 2: detail akun + validasi inline<br/>POST /auth/register + invite_token<br/>password di-hash Argon2id"]
+    D1 --> E["Login /masuk<br/>Windows Hello → Dongle → Kata Sandi"]
     E --> F["Kamera diverifikasi aktif<br/>(Windows Hello / Kata Sandi)"]
     F --> G{"Sudah setup keamanan?"}
     G -->|"belum"| H["Redirect /atur-keamanan<br/>wajib Windows Hello atau Dongle"]
@@ -884,7 +910,7 @@ Kriptografi: PBKDF2-HMAC-SHA256 (100k iterasi, PIN → key) → AES-256-GCM (pri
   - **AuthGuard** (`components/AuthGuard.jsx`) — route guard redirect ke `/atur-keamanan` jika user belum setup keamanan
   - **SecuritySetupPage** (`pages/SecuritySetupPage.tsx`) — halaman setup keamanan wajib (Windows Hello/Dongle)
   - **LoginPage Updated** — password fallback logic, camera verification, photo capture (fixed: use captured photo directly, not stale state), **camera auto-off saat pindah halaman**, useAuth login()
-  - **Nav Updated** — menu akun saat authenticated (avatar inisial, username, badge role, dropdown Pengaturan / Log Keamanan Saya — admin saja / Keluar)
+  - **Nav Updated** — menu akun saat authenticated (avatar inisial, username, badge role, dropdown Pengaturan / **Profil** (`/profil`) / Log Keamanan Saya — admin saja / Keluar)
   - **Backend**: `/auth/security-setup`, `/auth/security-status`, `/auth/attempts/log`, `/auth/attempts/reset`, `/auth/attempts/list`, `/auth/attempts/{id}/photo`
   - **Database**: `auth_attempts` table (migration 007 + 009 photo_path)
   - **Camera enforcement**: real-time frame validation via canvas sampling, periodic re-check, Lenovo shutter detection
@@ -988,7 +1014,7 @@ flowchart TD
     L --> P["reset() counter lokal<br/>+ POST /auth/attempts/reset"]
 ```
 
-**Protected Routes** (`/dasbor`, `/pilih`, `/pengaturan`, dll.):
+**Protected Routes** (`/dasbor`, `/pilih`, `/pengaturan`, `/profil`, dll.):
 
 - `AuthGuard` → `GET /auth/security-setup` (pakai JWT).
 - `requires_setup=true` → redirect `/atur-keamanan` (state `returnTo`).
@@ -1029,7 +1055,7 @@ flowchart TD
 
 ### Tujuan
 
-Halaman eksklusif untuk role `admin` dan `dev` di URL `/dev` (alias `/pengembang`). Berisi diagram alur interaktif 2D yang menjelaskan cara kerja aplikasi TrueCount dari awal hingga akhir, serta grid algoritma kriptografi yang diterapkan. Cocok digunakan sebagai dokumentasi teknis untuk tim dan materi presentasi (pitch deck) untuk evaluator.
+Halaman eksklusif untuk role `admin` dan `dev` di URL `/dev`. Berisi diagram alur interaktif bergaya isometrik yang menjelaskan cara kerja aplikasi TrueCount dari awal hingga akhir, serta grid algoritma kriptografi yang diterapkan. Cocok digunakan sebagai dokumentasi teknis untuk tim dan materi presentasi (pitch deck) untuk evaluator.
 
 ### Akses & Middleware
 
@@ -1068,6 +1094,22 @@ SVG untuk panah antar node + positioning CSS (custom property) untuk kartu node:
 - Halaman dev bersifat **read-only**, tidak boleh mengubah data produksi.
 - Diagram tetap ringan (SVG + CSS, tanpa library 3D) agar tidak mengganggu performa halaman lain.
 - Cocok sebagai materi presentasi (pitch deck) saat sidang proyek akhir.
+
+---
+
+## 12.5. Update Pasca-Sprint (22–26 Nov 2026)
+
+Perubahan setelah commit dokumentasi terakhir (`671d4f5`, 22 Nov 2026):
+
+| Fitur/Perbaikan | Detail |
+|---|---|
+| **Vigenère terintegrasi ke Pesan Terenkripsi** | `EncryptedMessageService` mendukung `aes256gcm`, `chacha20`, dan `vigenere`. Vigenere memakai `crypto_version = 0` (tanpa nonce/tag/AAD), key hanya huruf A-Z. `POST /encrypted-messages` menerima plaintext (`message`) dan server yang mengenkripsi; `GET /encrypted-messages/:id` membaca header `X-Vigenere-Key`. UI `TextMessagesPanel` menampilkan pilihan algoritma + field key Vigenère. |
+| **Registrasi 2 langkah + foto ID** | Setelah undangan valid, user wajib mengambil foto KTP/SIM (kamera via `IdPhotoCapture`, bisa ganti kamera/ambil ulang) sebelum mengisi detail akun. Panduan visual webcam/selfie + aturan foto tampil di step ini. Foto dikirim sebagai `id_photo` (data URL) + `id_photo_type`, divalidasi maks 5 MB (JPEG/PNG), dienkripsi AES-256-GCM, disimpan di `storage/id_photos/`, dan dicatat di `users.id_photo_path` / `id_photo_type`. |
+| **Validasi inline register** | Field divalidasi saat blur & submit: username 3+ karakter (huruf kecil/angka/underscore) + cek ketersediaan debounce 500 ms, email format valid, password min. 8 karakter + 1 angka + 1 karakter khusus, konfirmasi cocok. Pesan error per field + fokus otomatis ke field invalid pertama. |
+| **Halaman Profil Pengguna** | Route `/profil/:userId?`: data profil (email, telepon, alamat, tanggal bergabung), foto KTP/SIM terenkripsi dengan lightbox, dan form pengajuan perubahan data. Endpoint `GET /users/profile`, `GET /users/photo`, `POST /users/request-change` (tabel `change_requests`). Admin bisa membuka profil user lain; user biasa hanya profil sendiri. |
+| **Kartu statistik undangan** | 5 kartu (total, menunggu, diterima, kedaluwarsa, dibatalkan) kini punya ikon + warna status: total merah, menunggu kuning, diterima hijau, kedaluwarsa merah gelap, dibatalkan abu-abu. Warna diselaraskan dengan badge tabel undangan. |
+| **Fix modal nonaktifkan USB token** | Modal konfirmasi tidak lagi "stuck disabled" setelah token dinonaktifkan; state modal/loading di-reset dengan benar di `UsbTokenPanel.jsx`, `useUsbToken.ts`, dan `ProfileSettingsPage.jsx`. |
+| **Landing page** | Animasi hero bertahap + pointer spotlight/rotasi halus dan glow kartu fitur; semua FX menghormati `prefers-reduced-motion` dan tidak aktif di perangkat sentuh. |
 
 ---
 
@@ -1190,3 +1232,21 @@ Saat menambahkan endpoint baru, selalu update:
     - **Efek samping uninstaller NSIS:** skrip uninstall Tauri menjalankan `RmDir /r "$APPDATA\${BUNDLEID}"` — dengan identifier baru, data `com.truecount.app` **tidak lagi ikut terhapus** saat uninstall (sebelumnya data ikut terhapus). Uninstall jadi tidak "bersih" dari sisa data, tapi data pemilu/log tidak hilang tanpa sengaja.
     - **`PLUGIN_TIMINGS`** dimatikan via `build.rollupOptions.checks.bundlerTimings: false` di `vite.config.js` (terser memang berat tapi disengaja — lihat poin 8).
     - **Verifikasi:** `npm run desktop:build` sukses tanpa warning; UpgradeCode MSI tetap `925055e1-…` (upgrade dari instalasi lama tetap jalan, registry uninstall memakai product name `TrueCount`, bukan identifier).
+
+31. **Vigenère masuk ke modul Pesan Terenkripsi** (22 Nov 2026) - Sebelumnya `EncryptedMessageService` hanya AES/ChaCha; sekarang `vigenere` didukung penuh. Penting:
+    - `POST /encrypted-messages` menerima **plaintext** (`message`), bukan ciphertext. Server memilih algoritma (`aes256gcm` default / `chacha20` / `vigenere`) dan mengenkripsi sendiri.
+    - Vigenere memakai `crypto_version = 0` dan **tidak** memakai nonce/tag/AAD. Key wajib huruf A-Z (divalidasi di `VigenereCipherService::normalizeKey`). Spasi, angka, dan tanda baca tidak diubah.
+    - Dekripsi Vigenere membaca key dari header `X-Vigenere-Key`; AES/ChaCha tetap memakai AAD user-specific (`crypto_version = 1`).
+    - Jangan mencampur key Vigenere dengan AES/ChaCha — pesan Vigenere tanpa key yang benar akan menghasilkan plaintext salah (bukan error auth seperti AEAD).
+
+32. **Foto ID saat registrasi + halaman profil** (22–24 Nov 2026) - Registrasi kini 2 langkah: foto KTP/SIM → detail akun.
+    - UI mewajibkan foto untuk undangan role `voter` maupun `admin`; backend memvalidasi `id_photo_type` (`ktp`/`sim`), format data URL JPEG/PNG, dan ukuran maks 5 MB.
+    - Foto dienkripsi AES-256-GCM (`encryptAuthPhoto`) sebelum ditulis ke `storage/id_photos/`; `users.id_photo_path` menyimpan path relatif dan `id_photo_type` menyimpan jenisnya.
+    - `GET /users/photo?id=<path>` mendekripsi saat disajikan. Hanya user sendiri atau admin yang boleh melihat profil/foto.
+    - Migrasi baru: `014_add_id_photo_to_users.sql` dan `015_add_profile_fields_to_users.sql` (phone, address). Jalankan `php database/migrate.php` setelah pull.
+    - Permintaan perubahan data disimpan di tabel `change_requests` (dibuat otomatis oleh endpoint). Belum ada UI persetujuan admin — peninjauan masih manual di database.
+
+33. **Perbaikan UI pasca-sprint** (25–26 Nov 2026) - Beberapa perbaikan yang perlu diketahui saat mengubah UI:
+    - Kartu statistik undangan memakai class `stat-card--<key>` + ikon dari `Icon.jsx`; warna status didefinisikan di `DashboardPage.css` dan harus konsisten dengan badge tabel undangan.
+    - Modal nonaktifkan USB token di `UsbTokenPanel.jsx` sekarang menutup & mereset state setelah revoke sukses; jangan mengembalikan `disabled` statis pada tombol konfirmasi.
+    - Landing page memakai pointer FX (`--mx`/`--my`/`--rx`/`--ry`) yang di-throttle `requestAnimationFrame`; pastikan guard `prefers-reduced-motion` dan `pointerType === 'touch'` tetap ada saat menambah animasi.

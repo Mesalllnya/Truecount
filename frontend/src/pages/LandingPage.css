@@ -183,7 +183,7 @@
   flex-direction: column;
   justify-content: center;
   padding: 4rem 2rem 3.5rem;
-  animation: landing-heroIn 800ms var(--ease-out) both;
+  min-width: 0;
 }
 
 @media (min-width: 768px)  { .landing .hero-text { padding: 5rem 3rem; } }
@@ -205,7 +205,7 @@
   text-transform: uppercase;
   color: var(--red);
   margin-bottom: 1.25rem;
-  animation: landing-heroIn 700ms 80ms var(--ease-out) both;
+  animation: landing-heroIn 700ms 80ms var(--ease-out) backwards;
 }
 .landing .hero-eyebrow::before {
   content: '';
@@ -213,6 +213,13 @@
   width: 20px; height: 2px;
   background: var(--red);
   border-radius: 2px;
+  transform-origin: left center;
+  animation: landing-dashIn 520ms 120ms var(--ease-out) backwards;
+}
+
+@keyframes landing-dashIn {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 
 .landing .hero-text h1 {
@@ -222,7 +229,24 @@
   letter-spacing: -0.04em;
   color: var(--black);
   margin-bottom: 1.75rem;
-  animation: landing-heroIn 700ms 150ms var(--ease-out) both;
+}
+
+/* Baris headline: reveal dari mask — momen fokus landing */
+.landing .hero-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.22em;
+  margin-bottom: -0.22em;
+}
+
+.landing .hero-line-inner {
+  display: block;
+  animation: landing-lineUp 900ms var(--ease-out) var(--delay, 0ms) backwards;
+}
+
+@keyframes landing-lineUp {
+  from { opacity: 0; transform: translateY(125%); filter: blur(8px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
 }
 
 /* italic accent word */
@@ -230,6 +254,28 @@
   font-style: italic;
   font-weight: 300;
   color: var(--red);
+  position: relative;
+  display: inline-block;
+  padding: 0 0.05em;
+}
+
+/* Stroke "tally" merah di bawah kata 'kamu' — sapuan pena setelah baris mendarat */
+.landing .hero-text h1 em::after {
+  content: '';
+  position: absolute;
+  left: -0.04em; right: -0.04em;
+  bottom: -0.02em;
+  height: 0.075em;
+  background: var(--red);
+  border-radius: 999px;
+  transform: rotate(-1.1deg) scaleX(0);
+  transform-origin: left center;
+  animation: landing-strokeIn 620ms 1100ms var(--ease-out) both;
+}
+
+@keyframes landing-strokeIn {
+  from { transform: rotate(-1.1deg) scaleX(0); }
+  to   { transform: rotate(-1.1deg) scaleX(1); }
 }
 
 .landing .hero-sub {
@@ -239,7 +285,7 @@
   line-height: 1.7;
   margin-bottom: 2.5rem;
   max-width: 46ch;
-  animation: landing-heroIn 700ms 240ms var(--ease-out) both;
+  animation: landing-heroIn 700ms 620ms var(--ease-out) backwards;
 }
 
 .landing .hero-cta {
@@ -247,7 +293,7 @@
   gap: 0.75rem;
   flex-wrap: wrap;
   margin-bottom: 3.5rem;
-  animation: landing-heroIn 700ms 320ms var(--ease-out) both;
+  animation: landing-heroIn 700ms 780ms var(--ease-out) backwards;
 }
 
 @media (max-width: 480px) {
@@ -255,12 +301,22 @@
   .landing .hero-cta > * { width: 100%; justify-content: center; }
 }
 
+/* Layar sempit: baris stat melipat agar tidak memaksa lebar grid */
+@media (max-width: 520px) {
+  .landing .hero-stats {
+    flex-wrap: wrap;
+    gap: 0.9rem 1.5rem;
+  }
+  .landing .hero-stat { padding-right: 0; }
+  .landing .hero-stat-divider { display: none; }
+}
+
 /* ── Hero stats ─────────────────────────────────────────── */
 .landing .hero-stats {
   display: flex;
   align-items: center;
   gap: 0;
-  animation: landing-heroIn 700ms 420ms var(--ease-out) both;
+  animation: landing-heroIn 700ms 920ms var(--ease-out) backwards;
 }
 
 .landing .hero-stat {
@@ -303,14 +359,14 @@
   display: flex;
   align-items: stretch;
   min-height: 56vw;
-  animation: landing-heroVisualIn 1000ms 200ms var(--ease-out) both;
+  animation: landing-visualWipe 1050ms 150ms var(--ease-out) backwards;
 }
 
 @media (min-width: 900px)  { .landing .hero-visual { min-height: unset; } }
 
-@keyframes landing-heroVisualIn {
-  from { opacity: 0; transform: translateX(32px); }
-  to   { opacity: 1; transform: translateX(0); }
+@keyframes landing-visualWipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
 }
 
 /* Vertical red accent bar */
@@ -320,6 +376,18 @@
   width: 5px;
   background: var(--red);
   z-index: 2;
+  transform-origin: left top;
+  animation: landing-barGrow 800ms 350ms var(--ease-out) backwards;
+  transition: transform 420ms var(--ease-out);
+}
+
+@keyframes landing-barGrow {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+.landing .hero-visual:hover .hero-visual-accent {
+  transform: scaleX(1.8);
 }
 
 /* Image frame */
@@ -336,10 +404,39 @@
   object-position: center top;
   display: block;
   filter: contrast(1.05);
-  transform: scale(1.02);
-  transition: transform 6s ease;
+  scale: 1.08;
+  transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 600ms var(--ease-out), scale 6s var(--ease-out);
+  animation: landing-imgSettle 1600ms 150ms var(--ease-out) backwards;
 }
-.landing .hero-visual:hover .landing .hero-img { transform: scale(1.05); }
+
+@keyframes landing-imgSettle {
+  from { scale: 1.28; }
+  to   { scale: 1.08; }
+}
+
+.landing .hero-visual:hover .hero-img {
+  scale: 1.15;
+  transition: transform 140ms linear, scale 6s var(--ease-out);
+  will-change: transform;
+}
+
+/* Spotlight mengikuti kursor di panel foto */
+.landing .hero-visual-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 40%),
+    rgba(255, 255, 255, 0.16),
+    rgba(241, 60, 53, 0.10) 40%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 420ms var(--ease-out);
+  pointer-events: none;
+}
+
+.landing .hero-visual:hover .hero-visual-glow { opacity: 1; }
 
 /* Floating verification tag */
 .landing .hero-img-tag {
@@ -357,7 +454,13 @@
   letter-spacing: 0.04em;
   border-radius: 4px;
   box-shadow: 0 4px 16px rgba(241,60,53,0.4);
-  animation: landing-tagPop 500ms 1200ms var(--ease-spring) both;
+  animation: landing-tagPop 500ms 1400ms var(--ease-spring) backwards;
+  transition: translate 300ms var(--ease-spring), box-shadow 300ms var(--ease-out);
+}
+
+.landing .hero-img-tag:hover {
+  translate: 0 -3px;
+  box-shadow: 0 12px 28px rgba(241,60,53,0.55);
 }
 
 @keyframes landing-tagPop {
@@ -378,6 +481,12 @@
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   user-select: none;
+  transition: letter-spacing 520ms var(--ease-out), color 520ms var(--ease-out);
+}
+
+.landing .hero-visual:hover .hero-deco-text {
+  letter-spacing: 0.34em;
+  color: rgba(255,255,255,0.38);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -386,6 +495,9 @@
 .landing .section { padding: 5rem 2rem; }
 @media (min-width: 768px)  { .landing .section { padding: 7rem 4rem; } }
 @media (min-width: 1440px) { .landing .section { padding: 9rem 5rem; } }
+
+/* Lompat anchor tidak tertutup nav sticky */
+.landing section[id] { scroll-margin-top: 92px; }
 
 .landing .section-dark  { background: var(--black); }
 
@@ -452,7 +564,7 @@
   background: var(--white);
   transition: background 200ms, border-color 200ms, color 200ms;
 }
-.landing .step:hover .landing .step-icon-wrap {
+.landing .step:hover .step-icon-wrap {
   background: var(--red);
   border-color: var(--red);
   color: var(--white);
@@ -526,7 +638,7 @@
   margin-bottom: 1.25rem;
   transition: background 200ms, border-color 200ms, color 200ms;
 }
-.landing .feature-card:hover .landing .feature-icon-wrap {
+.landing .feature-card:hover .feature-icon-wrap {
   background: var(--red);
   border-color: var(--red);
   color: var(--white);
@@ -541,7 +653,7 @@
 }
 .landing .feature-card p {
   font-size: 0.95rem;
-  color: rgba(255,255,255,0.42);
+  color: rgba(255,255,255,0.52);
   line-height: 1.7;
 }
 
@@ -601,6 +713,9 @@
   margin-bottom: 2.25rem;
   max-width: 48ch;
 }
+
+/* CTA di kolom flex: rapat ke kiri, bukan melar selebar kolom */
+.landing .security-inner .btn-solid { align-self: flex-start; }
 
 /* Security image panel */
 .landing .security-visual {
@@ -670,3 +785,408 @@
 
 /* ── Text selection ─────────────────────────────────────── */
 .landing ::selection { background: var(--red); color: var(--white); }
+
+/* ══════════════════════════════════════════════════════════
+   MOTION & HOVER
+   Bahasa gerak: tanah = transform/opacity, aksen = sapuan
+   (stroke, kilau, cahaya kursor) dengan ease-out eksponensial.
+   Hover memakai properti independen (translate/scale/rotate)
+   agar tidak bertabrakan dengan animasi masuk.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Tombol solid: angkat + sapuan kilau + panah meluncur ── */
+.landing .btn-solid {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    background 200ms, border-color 200ms,
+    translate 320ms var(--ease-out),
+    box-shadow 320ms var(--ease-out),
+    transform 100ms;
+}
+
+.landing .btn-solid::before {
+  content: '';
+  position: absolute;
+  top: -30%; bottom: -30%; left: -15%; right: -15%;
+  background: linear-gradient(
+    100deg,
+    transparent 25%,
+    rgba(255,255,255,0.42) 50%,
+    transparent 75%
+  );
+  transform: translateX(-80%) skewX(-14deg);
+  transition: transform 620ms var(--ease-out);
+  pointer-events: none;
+}
+
+.landing .btn-solid:hover::before,
+.landing .btn-solid:focus-visible::before {
+  transform: translateX(80%) skewX(-14deg);
+}
+
+.landing .btn-solid:hover,
+.landing .btn-solid:focus-visible {
+  background: var(--red-dark);
+  border-color: var(--red-dark);
+  translate: 0 -2px;
+  box-shadow: 0 14px 30px -10px rgba(241, 60, 53, 0.55);
+}
+
+.landing .btn-solid:active {
+  transform: scale(0.98);
+  translate: 0 0;
+  transition-duration: 90ms;
+}
+
+.landing .btn-solid .btn-arrow {
+  transition: translate 300ms var(--ease-spring);
+}
+.landing .btn-solid:hover .btn-arrow,
+.landing .btn-solid:focus-visible .btn-arrow { translate: 5px 0; }
+
+.landing .btn-solid svg:first-child {
+  transition: translate 300ms var(--ease-spring);
+}
+.landing .btn-solid:hover svg:first-child { translate: 0 -1px; }
+
+/* ── Tombol ghost: isi hitam menyapu dari kiri ───────────── */
+.landing .btn-ghost {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    color 220ms, border-color 220ms,
+    translate 320ms var(--ease-out),
+    box-shadow 320ms var(--ease-out),
+    transform 100ms;
+}
+
+.landing .btn-ghost::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--black);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 340ms var(--ease-out);
+  z-index: -1;
+}
+
+.landing .btn-ghost:hover::before,
+.landing .btn-ghost:focus-visible::before { transform: scaleX(1); }
+
+.landing .btn-ghost:hover,
+.landing .btn-ghost:focus-visible {
+  background: transparent;
+  color: var(--cream);
+  border-color: var(--black);
+  translate: 0 -2px;
+  box-shadow: 0 14px 28px -12px rgba(13, 13, 13, 0.4);
+}
+
+.landing .btn-ghost:active {
+  transform: scale(0.98);
+  translate: 0 0;
+  transition-duration: 90ms;
+}
+
+.landing .btn-ghost svg {
+  transition: translate 300ms var(--ease-spring);
+}
+.landing .btn-ghost:hover svg,
+.landing .btn-ghost:focus-visible svg { translate: 3px 0; }
+
+/* ── Hero stats: angka menyala, divider memanjang ────────── */
+.landing .hero-stat {
+  cursor: default;
+  transition: translate 340ms var(--ease-spring);
+}
+.landing .hero-stat:hover { translate: 0 -3px; }
+
+.landing .hero-stat-num {
+  display: inline-block;
+  transition: color 240ms var(--ease-out), scale 340ms var(--ease-spring);
+}
+.landing .hero-stat:hover .hero-stat-num {
+  color: var(--red);
+  scale: 1.07;
+}
+
+.landing .hero-stat-label { transition: color 240ms var(--ease-out); }
+.landing .hero-stat:hover .hero-stat-label { color: var(--black); }
+
+.landing .hero-stat-divider {
+  transform-origin: center;
+  transition: transform 340ms var(--ease-out), background 340ms var(--ease-out);
+}
+.landing .hero-stat:hover + .hero-stat-divider {
+  transform: scaleY(1.4);
+  background: var(--red);
+}
+
+/* ── Judul section: reveal per baris dari mask ───────────── */
+.landing .title-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
+}
+
+.landing .title-line-inner {
+  display: block;
+  opacity: 0;
+  transform: translateY(112%);
+  transition:
+    opacity  560ms var(--ease-out) var(--delay, 0ms),
+    transform 720ms var(--ease-out) var(--delay, 0ms);
+}
+
+.landing .section-head--visible .title-line-inner,
+.landing .security-strip--visible .title-line-inner {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Steps: angkat + nomor bergaris + ikon memantul ──────── */
+.landing .step {
+  transition:
+    opacity  520ms var(--ease-out) var(--delay, 0ms),
+    transform 520ms var(--ease-out) var(--delay, 0ms),
+    translate 320ms var(--ease-out);
+}
+.landing .steps--visible .step:hover { translate: 0 -6px; }
+
+.landing .step-num {
+  position: relative;
+  display: inline-block;
+}
+.landing .step-num::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -3px;
+  height: 2px;
+  background: var(--red);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 320ms var(--ease-out);
+}
+.landing .step:hover .step-num::after { transform: scaleX(1); }
+
+.landing .step-icon-wrap {
+  transition:
+    background 200ms, border-color 200ms, color 200ms,
+    box-shadow 320ms var(--ease-out);
+}
+.landing .step:hover .step-icon-wrap {
+  box-shadow: 0 12px 24px -8px rgba(241, 60, 53, 0.5);
+}
+
+.landing .step-icon-wrap svg {
+  transition: rotate 380ms var(--ease-spring), scale 380ms var(--ease-spring);
+}
+.landing .step:hover .step-icon-wrap svg {
+  rotate: -6deg;
+  scale: 1.14;
+}
+
+.landing .step h3 { transition: color 240ms var(--ease-out); }
+.landing .step:hover h3 { color: var(--red-dark); }
+
+/* ── Feature cards (gelap): cahaya kursor + ikon memantul ── */
+.landing .feature-card {
+  position: relative;
+  isolation: isolate;
+  transition:
+    opacity  480ms var(--ease-out) var(--delay, 0ms),
+    transform 480ms var(--ease-out) var(--delay, 0ms),
+    background 320ms var(--ease-out);
+}
+
+.landing .feature-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    300px circle at var(--mx, 50%) var(--my, 30%),
+    rgba(241, 60, 53, 0.22),
+    transparent 72%
+  );
+  opacity: 0;
+  transition: opacity 360ms var(--ease-out);
+  pointer-events: none;
+  z-index: -1;
+}
+.landing .feature-card:hover::before { opacity: 1; }
+
+.landing .feature-icon-wrap {
+  transition:
+    background 200ms, border-color 200ms, color 200ms,
+    box-shadow 320ms var(--ease-out);
+}
+.landing .feature-card:hover .feature-icon-wrap {
+  box-shadow: 0 12px 26px -8px rgba(241, 60, 53, 0.55);
+}
+
+.landing .feature-icon-wrap svg {
+  transition: rotate 380ms var(--ease-spring), scale 380ms var(--ease-spring);
+}
+.landing .feature-card:hover .feature-icon-wrap svg {
+  rotate: -7deg;
+  scale: 1.12;
+}
+
+.landing .feature-card h3 { transition: color 240ms var(--ease-out); }
+.landing .feature-card p  { transition: color 320ms var(--ease-out); }
+.landing .feature-card:hover p { color: rgba(255,255,255,0.66); }
+
+/* ── Security strip: badge memantul + foto terhapus (wipe) ─ */
+.landing .security-strip--visible .security-badge {
+  animation: landing-tagPop 600ms 350ms var(--ease-spring) backwards;
+}
+
+.landing .security-badge {
+  transition:
+    background 300ms var(--ease-out),
+    border-color 300ms var(--ease-out),
+    box-shadow 300ms var(--ease-out);
+}
+.landing .security-badge svg {
+  transition: rotate 380ms var(--ease-spring), scale 380ms var(--ease-spring);
+}
+.landing .security-badge:hover {
+  background: var(--red-pale);
+  border-color: var(--red);
+  box-shadow: 0 10px 24px -10px rgba(241, 60, 53, 0.35);
+}
+.landing .security-badge:hover svg { rotate: -6deg; scale: 1.1; }
+
+.landing .security-img {
+  transition: scale 900ms var(--ease-out), filter 900ms var(--ease-out);
+}
+.landing .security-strip--visible .security-img {
+  animation: landing-imgWipe 900ms 220ms var(--ease-out) backwards;
+}
+
+@keyframes landing-imgWipe {
+  from { clip-path: inset(0 0 0 100%); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+.landing .security-strip:hover .security-img {
+  scale: 1.04;
+  filter: grayscale(0%) contrast(1.04);
+}
+
+/* ── Footer: logo mengangkat, link bergaris ──────────────── */
+.landing .footer .nav-brand img {
+  transition: translate 320ms var(--ease-spring), filter 320ms var(--ease-out);
+}
+.landing .footer .nav-brand:hover img,
+.landing .footer .nav-brand:focus-visible img {
+  translate: 0 -2px;
+  filter: drop-shadow(0 8px 16px rgba(241, 60, 53, 0.25));
+}
+
+.landing .footer-links a {
+  position: relative;
+}
+.landing .footer-links a::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -3px;
+  height: 2px;
+  background: var(--red);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 300ms var(--ease-out);
+}
+.landing .footer-links a:hover::after,
+.landing .footer-links a:focus-visible::after { transform: scaleX(1); }
+
+/* ── Focus keyboard: satu bahasa dengan hover ────────────── */
+.landing .btn-solid:focus-visible,
+.landing .btn-ghost:focus-visible,
+.landing .footer-links a:focus-visible,
+.landing .footer .nav-brand:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 3px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   REDUCED MOTION
+   Gerak spatial dihilangkan; umpan balik warna/opacity tetap.
+   ══════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
+    transition-duration: 120ms !important;
+  }
+
+  /* entrance: tanpa gerak spatial, konten langsung utuh */
+  .landing .hero-line-inner,
+  .landing .title-line-inner,
+  .landing .step,
+  .landing .feature-card,
+  .landing .security-inner,
+  .landing .security-visual,
+  .landing .hero-text,
+  .landing .hero-eyebrow,
+  .landing .hero-text h1,
+  .landing .hero-sub,
+  .landing .hero-cta,
+  .landing .hero-stats,
+  .landing .hero-visual,
+  .landing .hero-visual-accent,
+  .landing .hero-img,
+  .landing .hero-img-tag,
+  .landing .security-badge,
+  .landing .security-img {
+    transform: none;
+    animation: none;
+  }
+
+  .landing .hero-img { scale: 1.08; transition: none; }
+  .landing .hero-text h1 em::after {
+    transform: rotate(-1.1deg) scaleX(1);
+    animation: none;
+  }
+  .landing .hero-eyebrow::before { transform: scaleX(1); animation: none; }
+
+  /* hover: umpan balik warna tetap, gerak & efek mahal dimatikan */
+  .landing .step:hover,
+  .landing .hero-stat:hover,
+  .landing .btn-solid:hover,
+  .landing .btn-ghost:hover,
+  .landing .hero-img-tag:hover,
+  .landing .footer .nav-brand:hover img {
+    translate: 0 0;
+  }
+  .landing .btn-solid:hover,
+  .landing .btn-ghost:hover { transform: none; }
+  .landing .btn-solid:active,
+  .landing .btn-ghost:active { transform: none; }
+  .landing .hero-stat:hover .hero-stat-num { scale: 1; }
+  .landing .step:hover .step-icon-wrap svg,
+  .landing .feature-card:hover .feature-icon-wrap svg { rotate: 0deg; scale: 1; }
+  .landing .security-badge:hover svg { rotate: 0deg; scale: 1; }
+  .landing .hero-stat:hover + .hero-stat-divider { transform: none; }
+  .landing .security-strip:hover .security-img { scale: 1; }
+  .landing .hero-visual:hover .hero-deco-text { letter-spacing: 0.2em; }
+
+  .landing .btn-solid::before,
+  .landing .hero-visual-glow,
+  .landing .feature-card::before,
+  .landing .btn-ghost::before {
+    display: none;
+  }
+}

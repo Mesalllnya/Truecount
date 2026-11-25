@@ -108,7 +108,7 @@
   font-weight: 600;
 }
 
-.nav-link--active::after {
+.nav-link::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -117,7 +117,15 @@
   height: 2.5px;
   background: var(--red);
   border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 260ms var(--ease-out);
 }
+
+.nav-link:hover::after,
+.nav-link:focus-visible::after { transform: scaleX(1); }
+
+.nav-link--active::after { transform: scaleX(1); }
 
 /* Ikon navbar - outline merah aksen (tengah kosong, tidak solid) */
 .nav-link svg {
@@ -411,7 +419,7 @@
 
   .nav-link { padding: 0.75rem 1rem; font-size: 1.15rem; }
   .nav-link--active { background: var(--gray-100); border-bottom: none; }
-  .nav-link--active::after { display: none; }
+  .nav-link::after { display: none; }
 
   .nav-actions {
     flex-direction: column;

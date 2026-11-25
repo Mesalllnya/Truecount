@@ -392,20 +392,40 @@ export async function fetchUsbCredentials(): Promise<UsbCredential[] | null> {
   }
 }
 
+/** Hasil revoke USB token */
+export interface UsbRevokeResult {
+  ok: boolean
+  error?: string
+}
+
 /** Revoke (nonaktifkan) USB token */
-export async function revokeUsbCredential(id: number): Promise<boolean> {
+export async function revokeUsbCredential(id: number): Promise<UsbRevokeResult> {
+  const token = localStorage.getItem('tc_token')
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 15000)
+
   try {
-    const token = localStorage.getItem('tc_token')
     const res = await fetch(apiUrl(`/mfa/usb/${id}/revoke`), {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Gagal menonaktifkan token.')
-    return true
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      return { ok: false, error: data?.error || 'Gagal menonaktifkan token.' }
+    }
+    return { ok: true }
   } catch (err) {
     console.error('[TrueCount] revokeUsbCredential error:', err)
-    return false
+    const timedOut = err instanceof Error && err.name === 'AbortError'
+    return {
+      ok: false,
+      error: timedOut
+        ? 'Server tidak merespons. Coba lagi.'
+        : 'Gagal menonaktifkan token. Periksa koneksi Anda.',
+    }
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 

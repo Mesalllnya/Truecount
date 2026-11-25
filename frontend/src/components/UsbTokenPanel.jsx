@@ -353,10 +353,10 @@ export default function UsbTokenPanel() {
       return
     }
     setRevokingId(cred.id)
-    const ok = await revokeUsbCredential(cred.id)
+    const result = await revokeUsbCredential(cred.id)
     setRevokingId(null)
-    if (ok) loadCredentials()
-    else alert('Gagal menonaktifkan token.')
+    if (result.ok) loadCredentials()
+    else alert(result.error || 'Gagal menonaktifkan token.')
   }
 
   /* ── Edit Label ────────────────────────────────────────── */

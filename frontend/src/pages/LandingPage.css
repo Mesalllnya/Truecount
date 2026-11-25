@@ -209,19 +209,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.landing .hero-text .hero-kicker {
-  margin-bottom: 1.35rem;
-  animation: landing-heroIn 700ms 80ms var(--ease-out) backwards;
-}
-
-.landing .hero-kicker-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  flex-shrink: 0;
-}
-
 .landing .hero-text h1 {
   font-size: clamp(3.2rem, 6.5vw, 7rem);
   font-weight: 800;
@@ -231,7 +218,7 @@
   margin-bottom: 1.75rem;
 }
 
-/* Baris headline: reveal dari mask — momen fokus landing */
+/* Baris headline: reveal dari mask, momen fokus landing */
 .landing .hero-line {
   display: block;
   overflow: hidden;
@@ -259,7 +246,7 @@
   padding: 0 0.05em;
 }
 
-/* Stroke "tally" merah di bawah kata 'kamu' — sapuan pena setelah baris mendarat */
+/* Stroke "tally" merah di bawah kata 'kamu', sapuan pena setelah baris mendarat */
 .landing .hero-text h1 em::after {
   content: '';
   position: absolute;
@@ -506,23 +493,12 @@
 @media (min-width: 768px) { .landing .section-head { margin-bottom: 5rem; } }
 
 .landing .section-label {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--red);
   margin-bottom: 0.75rem;
-}
-.landing .section-label::before {
-  content: '';
-  width: 18px;
-  height: 2px;
-  border-radius: 2px;
-  background: currentColor;
-  flex-shrink: 0;
 }
 .landing .section-head--light .section-label { color: rgba(241,60,53,0.8); }
 
@@ -1151,7 +1127,6 @@
   .landing .security-inner,
   .landing .security-visual,
   .landing .hero-text,
-  .landing .hero-kicker,
   .landing .hero-text h1,
   .landing .hero-sub,
   .landing .hero-cta,

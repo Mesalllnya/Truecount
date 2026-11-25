@@ -195,33 +195,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.landing .hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--red);
-  margin-bottom: 1.25rem;
-  animation: landing-heroIn 700ms 80ms var(--ease-out) backwards;
-}
-.landing .hero-eyebrow::before {
-  content: '';
-  display: inline-block;
-  width: 20px; height: 2px;
-  background: var(--red);
-  border-radius: 2px;
-  transform-origin: left center;
-  animation: landing-dashIn 520ms 120ms var(--ease-out) backwards;
-}
-
-@keyframes landing-dashIn {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
-}
-
 .landing .hero-text h1 {
   font-size: clamp(3.2rem, 6.5vw, 7rem);
   font-weight: 800;
@@ -1140,7 +1113,6 @@
   .landing .security-inner,
   .landing .security-visual,
   .landing .hero-text,
-  .landing .hero-eyebrow,
   .landing .hero-text h1,
   .landing .hero-sub,
   .landing .hero-cta,
@@ -1160,7 +1132,6 @@
     transform: rotate(-1.1deg) scaleX(1);
     animation: none;
   }
-  .landing .hero-eyebrow::before { transform: scaleX(1); animation: none; }
 
   /* hover: umpan balik warna tetap, gerak & efek mahal dimatikan */
   .landing .step:hover,

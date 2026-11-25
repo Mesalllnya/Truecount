@@ -109,7 +109,6 @@ export default function LandingPage() {
 
         {/* Left - text */}
         <div className="hero-text">
-          <p className="hero-eyebrow">Platform E-Voting</p>
           <h1>
             <span className="hero-line"><span className="hero-line-inner">Suara</span></span>
             <span className="hero-line" style={{ '--delay': '140ms' }}>

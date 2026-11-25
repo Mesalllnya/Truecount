@@ -9,13 +9,6 @@
   margin-bottom: 2rem;
 }
 
-.encrypted-eyebrow {
-  color: var(--red);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
 .encrypted-heading h1 {
   margin: 0.5rem 0;
   font-size: clamp(1.8rem, 4vw, 2.5rem);

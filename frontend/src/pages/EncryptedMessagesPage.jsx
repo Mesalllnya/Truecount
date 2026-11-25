@@ -79,7 +79,6 @@ export default function EncryptedMessagesPage() {
     <div className="dash-shell">
       <main className="encrypted-page">
         <header className="encrypted-heading">
-          <span className="encrypted-eyebrow">TRUECOUNT SECURITY</span>
           <h1>Pesan Terenkripsi</h1>
           <p>
             {isAdmin

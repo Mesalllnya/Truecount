@@ -2188,7 +2188,7 @@
 /* Progress indicator */
 .register-progress {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 0.5rem;
   margin: 1rem 0 1.5rem;
@@ -2245,7 +2245,9 @@
   max-width: 80px;
   height: 2px;
   background: var(--border);
-  margin-top: 4px;
+  /* Sejajarkan garis ke pusat lingkaran step (28px / 2 - 1px). */
+  align-self: flex-start;
+  margin-top: 13px;
 }
 
 .progress-step.active ~ .progress-separator {
@@ -2498,6 +2500,8 @@
 
   .progress-separator {
     max-width: 50px;
+    /* Lingkaran mobile 24px → pusat 12px. */
+    margin-top: 11px;
   }
 
   .id-photo-type-toggle .type-btn {

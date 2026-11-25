@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './AuthPage.css'
 import { SkeletonText, SkeletonCircle } from '../components/ui/Skeleton'
@@ -133,6 +134,34 @@ export default function RegisterPage() {
   const [idPhotoStep, setIdPhotoStep] = useState('idle')
   const [idPhotoData, setIdPhotoData] = useState({ dataUrl: null, type: 'ktp' }) // type: 'ktp' | 'sim'
   const [idPhotoError, setIdPhotoError] = useState('')
+  // Lightbox pratinjau foto ID (step Detail Akun)
+  const [idPhotoPreviewOpen, setIdPhotoPreviewOpen] = useState(false)
+  const idPhotoThumbRef = useRef(null)
+  const idPhotoLightboxCloseRef = useRef(null)
+
+  // Lightbox pratinjau foto ID: kunci scroll, tutup dengan Esc, kelola fokus.
+  useEffect(() => {
+    if (!idPhotoPreviewOpen || !idPhotoData.dataUrl || idPhotoStep !== 'account') return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIdPhotoPreviewOpen(false)
+        requestAnimationFrame(() => idPhotoThumbRef.current?.focus())
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    const focusFrame = requestAnimationFrame(() => idPhotoLightboxCloseRef.current?.focus())
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+      cancelAnimationFrame(focusFrame)
+    }
+  }, [idPhotoPreviewOpen, idPhotoData.dataUrl, idPhotoStep])
 
   // Determine if ID photo is required based on invite role
   // Admin invites also need KTP (per issue #32: "Admin juga perlu foto KTP")
@@ -532,19 +561,35 @@ export default function RegisterPage() {
   }
 
   // ── State: undangan valid → step 1: foto ID (jika diperlukan), step 2: form akun ─────────────
+  function closeIdPhotoPreview() {
+    setIdPhotoPreviewOpen(false)
+    requestAnimationFrame(() => idPhotoThumbRef.current?.focus())
+  }
+
   const renderAccountForm = () => (
     <>
       {/* ID Photo Preview + Back Button */}
       {idPhotoData.dataUrl && (
         <div className="id-photo-preview-card">
-          <div className="id-photo-preview-thumb">
+          <button
+            type="button"
+            ref={idPhotoThumbRef}
+            className="id-photo-preview-thumb"
+            onClick={() => setIdPhotoPreviewOpen(true)}
+            aria-label={`Perbesar foto ${idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'}`}
+            title="Klik untuk memperbesar"
+          >
             <img src={idPhotoData.dataUrl} alt={`Foto ${idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'}`} />
             <span className="id-photo-preview-badge">{idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'} ✓</span>
-          </div>
+            <span className="id-photo-preview-zoom" aria-hidden="true">
+              <Icon name="eye" size={14} />
+            </span>
+          </button>
           <button
             type="button"
             className="btn-submit--secondary btn-small"
             onClick={() => {
+              setIdPhotoPreviewOpen(false)
               setIdPhotoStep('capturing')
               setIdPhotoData(prev => ({ ...prev, dataUrl: null }))
             }}
@@ -690,6 +735,39 @@ export default function RegisterPage() {
           : 'Buat akun'}
       </button>
       </form>
+
+      {idPhotoPreviewOpen && idPhotoData.dataUrl && createPortal(
+        <div
+          className="id-photo-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Pratinjau foto ${idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'}`}
+          onClick={closeIdPhotoPreview}
+          onKeyDown={(e) => {
+            // Hanya tombol tutup yang fokusabel → tahan Tab di dalam dialog.
+            if (e.key === 'Tab') {
+              e.preventDefault()
+              idPhotoLightboxCloseRef.current?.focus()
+            }
+          }}
+        >
+          <button
+            type="button"
+            ref={idPhotoLightboxCloseRef}
+            className="id-photo-lightbox-close"
+            onClick={(e) => { e.stopPropagation(); closeIdPhotoPreview() }}
+            aria-label="Tutup pratinjau foto"
+          >
+            <Icon name="close" size={22} />
+          </button>
+          <img
+            src={idPhotoData.dataUrl}
+            alt={`Foto ${idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'} diperbesar`}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>,
+        document.body
+      )}
     </>
   )
 

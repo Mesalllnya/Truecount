@@ -581,13 +581,14 @@ export default function RegisterPage() {
           >
             <img src={idPhotoData.dataUrl} alt={`Foto ${idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'}`} />
             <span className="id-photo-preview-badge">{idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'} ✓</span>
-            <span className="id-photo-preview-zoom" aria-hidden="true">
-              <Icon name="eye" size={14} />
-            </span>
           </button>
+          <div className="id-photo-preview-meta">
+            <strong>Foto {idPhotoData.type === 'ktp' ? 'KTP' : 'SIM'} siap</strong>
+            <span>Klik foto untuk memeriksa detailnya sebelum membuat akun.</span>
+          </div>
           <button
             type="button"
-            className="btn-submit--secondary btn-small"
+            className="btn-submit--secondary btn-small id-photo-preview-change"
             onClick={() => {
               setIdPhotoPreviewOpen(false)
               setIdPhotoStep('capturing')

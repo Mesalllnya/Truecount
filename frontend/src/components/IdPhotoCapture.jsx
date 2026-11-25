@@ -159,10 +159,10 @@ export default function IdPhotoCapture({ onCapture, onCancel, type = 'ktp' }) {
         {isCameraReady && (
           <div className="id-photo-guide" aria-hidden="true">
             <div className="guide-frame">
-              <div className="guide-label">
-                <Icon name="camera" size={16} />
-                Sejajarkan wajah &amp; {label}
-              </div>
+              <span className="guide-corner guide-corner--tl" />
+              <span className="guide-corner guide-corner--tr" />
+              <span className="guide-corner guide-corner--bl" />
+              <span className="guide-corner guide-corner--br" />
             </div>
           </div>
         )}
@@ -175,6 +175,14 @@ export default function IdPhotoCapture({ onCapture, onCancel, type = 'ktp' }) {
           </div>
         )}
       </div>
+
+      {/* Instruksi penempatan — di luar viewport agar tidak menutupi guide frame */}
+      {isCameraReady && (
+        <p className="id-photo-guide-hint">
+          <Icon name="camera" size={14} aria-hidden="true" />
+          Sejajarkan wajah &amp; {label} di dalam bingkai
+        </p>
+      )}
 
       {/* Panduan foto (contoh + aturan) dimiliki oleh RegisterPage,
           tepat di atas kamera — satu sumber kebenaran untuk step ini. */}

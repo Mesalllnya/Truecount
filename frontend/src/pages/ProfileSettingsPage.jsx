@@ -641,7 +641,7 @@ export default function ProfileSettingsPage() {
                   Batal
                 </button>
                 <button
-                  className="btn btn-danger-solid"
+                  className="btn btn-danger"
                   onClick={handleUsbRevokeDelete}
                   disabled={Boolean(usbRevokingId)}
                   aria-busy={Boolean(usbRevokingId)}

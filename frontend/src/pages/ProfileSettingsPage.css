@@ -449,26 +449,6 @@
   color: var(--white);
 }
 
-/* Aksi destruktif utama: solid agar jelas ini tombol yang dieksekusi. */
-.btn-danger-solid {
-  background: var(--red);
-  color: var(--white);
-  border-color: var(--red);
-}
-
-.btn-danger-solid:hover:not(:disabled) {
-  background: var(--rd-dk);
-  border-color: var(--rd-dk);
-  color: var(--white);
-}
-
-.btn-danger-solid:disabled,
-.btn-danger:disabled,
-.btn-secondary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .btn-icon {
   padding: 0.55rem;
   min-width: 40px;

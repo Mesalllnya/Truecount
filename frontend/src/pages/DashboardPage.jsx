@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { SkeletonRow } from '../components/ui/Skeleton'
 import { CandidatesModal, VotersModal, CandidatePhoto } from '../components/ElectionModals'
+import Icon from '../components/Icon'
 import { apiUrl } from '../lib/appConfig'
 import { useAuth } from '../hooks/useAuthSession'
 import './DashboardPage.css'
@@ -354,11 +355,11 @@ function InvitesPanel() {
   }
 
   const statCards = [
-    { key: 'total',       label: 'Total undangan' },
-    { key: 'menunggu',    label: 'Menunggu' },
-    { key: 'diterima',    label: 'Diterima' },
-    { key: 'kedaluwarsa', label: 'Kedaluwarsa' },
-    { key: 'dibatalkan',  label: 'Dibatalkan' },
+    { key: 'total',       label: 'Total undangan', icon: 'clipboard' },
+    { key: 'menunggu',    label: 'Menunggu',       icon: 'clock' },
+    { key: 'diterima',    label: 'Diterima',       icon: 'circle-check' },
+    { key: 'kedaluwarsa', label: 'Kedaluwarsa',    icon: 'alert' },
+    { key: 'dibatalkan',  label: 'Dibatalkan',     icon: 'circle-slash' },
   ]
 
   const statusOptions = [
@@ -533,7 +534,12 @@ function InvitesPanel() {
       {stats && (
         <div className="stat-grid">
           {statCards.map(s => (
-            <div className={`stat-card${s.key === 'total' ? ' stat-card--total' : ''}`} key={s.key}>
+            <div className={`stat-card stat-card--${s.key}`} key={s.key}>
+              <div className="stat-head">
+                <span className="stat-icon">
+                  <Icon name={s.icon} size={16} strokeWidth={1.8} />
+                </span>
+              </div>
               <span className="stat-num">{stats[s.key] ?? 0}</span>
               <span className="stat-label">{s.label}</span>
             </div>

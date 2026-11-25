@@ -611,13 +611,34 @@
   background: var(--white);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1rem 1.25rem;
+  padding: 0.9rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
+  min-width: 0;
 }
-.stat-card--total { border-color: #f2b7b4; }
-.stat-card--total .stat-num { color: var(--red); }
+
+/* Kepala kartu: ikon status. Warna ikon = warna status agar kartu
+   bisa dibedakan sekilas tanpa menghafal label. */
+.stat-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--cream);
+  color: var(--muted);
+}
+
 .stat-num {
   font-size: 1.7rem;
   font-weight: 800;
@@ -626,7 +647,30 @@
   color: var(--black);
   font-variant-numeric: tabular-nums;
 }
-.stat-label { font-size: 0.8rem; color: var(--muted); }
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Warna per status, diselaraskan dengan badge di tabel undangan. */
+.stat-card--total       { border-color: #f2b7b4; }
+.stat-card--total       .stat-num { color: var(--red); }
+.stat-card--total       .stat-icon { background: #fde8e7; color: var(--red); }
+
+.stat-card--menunggu    .stat-icon { background: #faf3dd; color: #8a6d1f; }
+.stat-card--menunggu    .stat-num  { color: #8a6d1f; }
+
+.stat-card--diterima    .stat-icon { background: #e9f4ec; color: #2a7a3b; }
+.stat-card--diterima    .stat-num  { color: #2a7a3b; }
+
+.stat-card--kedaluwarsa .stat-icon { background: #fdeceb; color: #c0392b; }
+.stat-card--kedaluwarsa .stat-num  { color: #c0392b; }
+
+.stat-card--dibatalkan  .stat-icon { background: #f1f1ee; color: #6a6a67; }
+.stat-card--dibatalkan  .stat-num  { color: #6a6a67; }
 
 /* ── Daftar undangan ────────────────────────────────────── */
 .invite-card {

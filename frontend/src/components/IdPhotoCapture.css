@@ -26,7 +26,7 @@
 .id-photo-viewport {
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 3;
   max-height: 420px;
   background: var(--tc-text);
   border-radius: var(--tc-radius);
@@ -233,18 +233,19 @@
 .result-frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 3 / 4;
-  max-width: 320px;
+  aspect-ratio: 4 / 3;
+  max-width: 420px;
   max-height: 380px;
   border-radius: var(--tc-radius);
   overflow: hidden;
+  background: var(--tc-surface-dim);
   box-shadow: 0 8px 24px rgba(13, 13, 13, 0.12);
 }
 
 .result-frame img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .result-badge {
@@ -337,18 +338,36 @@
 
 .id-photo-preview-thumb {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 96px;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  padding: 0;
   border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
   border: 2px solid var(--red, #F13C35);
+  background: var(--off-white, #fafaf8);
+  cursor: zoom-in;
+  appearance: none;
+  transition: transform 160ms var(--tc-ease), box-shadow 160ms var(--tc-ease);
+}
+
+.id-photo-preview-thumb:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(13, 13, 13, 0.14);
+}
+
+.id-photo-preview-thumb:focus-visible {
+  outline: 2px solid var(--black, #0d0d0d);
+  outline-offset: 2px;
 }
 
 .id-photo-preview-thumb img {
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #f4f4f1;
 }
 
 .id-photo-preview-badge {
@@ -362,6 +381,86 @@
   font-weight: 700;
   border-radius: 4px;
   letter-spacing: 0.03em;
+}
+
+.id-photo-preview-zoom {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(13, 13, 13, 0.6);
+  color: white;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 160ms var(--tc-ease);
+}
+
+.id-photo-preview-thumb:hover .id-photo-preview-zoom,
+.id-photo-preview-thumb:focus-visible .id-photo-preview-zoom {
+  opacity: 1;
+}
+
+/* ── Lightbox pratinjau foto ID ──────────────────────────── */
+.id-photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(13, 13, 13, 0.88);
+  backdrop-filter: blur(6px);
+  animation: idPhotoLightboxIn 180ms ease-out;
+}
+
+@keyframes idPhotoLightboxIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.id-photo-lightbox img {
+  max-width: min(90vw, 1100px);
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--tc-radius);
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.id-photo-lightbox-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  cursor: pointer;
+  transition: background 160ms, transform 100ms;
+}
+
+.id-photo-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.24);
+  transform: scale(1.05);
+}
+
+.id-photo-lightbox-close:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
 }
 
 .btn-small {

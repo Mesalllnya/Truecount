@@ -8,7 +8,7 @@
 Secure e-voting system untuk pemilihan akademik. Tersedia sebagai aplikasi web dan desktop (Tauri) dengan backend PHP native.
 
 - [x] Enkripsi ujung-ke-ujung (AES-256-GCM, ChaCha20-Poly1305)
-- [x] Autentikasi multi-faktor (WebAuthn / Windows Hello, token USB)
+- [x] Autentikasi multi-faktor (WebAuthn / Windows Hello, token USB — token USB khusus role admin)
 - [x] Audit blockchain untuk integritas suara
 - [x] Kamera aman untuk verifikasi identitas saat login
 - [x] Mode server / standalone untuk demo jaringan lokal

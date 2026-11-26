@@ -10,7 +10,7 @@
  *   Authorization: Bearer <token>
  *
  * Response 200:
- *   { "has_webauthn": true, "has_dongle": false, "requires_setup": false }
+ *   { "has_webauthn": true, "has_dongle": false, "requires_setup": false, "dongle_allowed": true }
  */
 
 require_once __DIR__ . '/../../helpers/response.php';
@@ -23,6 +23,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 $authUser = requireAuth();
 $userId = $authUser['sub'];
+
+// Kebijakan: dongle hanya untuk role admin. Untuk non-admin, dongle
+// TIDAK dihitung sebagai metode keamanan (agar mereka tetap dipaksa
+// setup Windows Hello, dan UI tidak menampilkan opsi mati).
+$dongleAllowed = ($authUser['role'] ?? '') === 'admin';
 
 $db = getDB();
 
@@ -41,12 +46,13 @@ $stmt->execute([$userId]);
 $dongleCount = (int)$stmt->fetchColumn();
 
 $hasWebAuthn = $webauthnCount > 0;
-$hasDongle = $dongleCount > 0;
+$hasDongle = $dongleAllowed && $dongleCount > 0;
 $requiresSetup = !$hasWebAuthn && !$hasDongle;
 
 jsonResponse([
-    'has_webauthn' => $hasWebAuthn,
-    'has_dongle'   => $hasDongle,
-    'requires_setup' => $requiresSetup,
-    'user_id'      => $userId,
+    'has_webauthn'    => $hasWebAuthn,
+    'has_dongle'      => $hasDongle,
+    'requires_setup'  => $requiresSetup,
+    'dongle_allowed'  => $dongleAllowed,
+    'user_id'         => $userId,
 ]);

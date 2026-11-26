@@ -30,3 +30,6 @@ frontend/src-tauri/WixTools/
 
 # ── Private encrypted storage ──────────────────────────
 backend/storage/private/
+
+# ── Token USB tes (berisi kunci terenkripsi — jangan commit) ──
+.truecount_token

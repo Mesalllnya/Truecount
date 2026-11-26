@@ -23,11 +23,32 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $authUser = requireAuth();
 
+// ── Dongle hanya untuk role admin ─────────────────────────────
+if (($authUser['role'] ?? '') !== 'admin') {
+    jsonResponse(['error' => 'Dongle keamanan hanya tersedia untuk akun admin.'], 403);
+}
+
+$db = getDB();
+
+// ── Maksimal 1 dongle aktif per admin ─────────────────────────
+// Dicheck di sini (bukan hanya di verify) supaya user langsung
+// dapat pesan jelas sebelum repot colok USB + isi PIN.
+$stmt = $db->prepare(
+    'SELECT COUNT(*) FROM usb_token_credentials
+      WHERE user_id = ? AND revoked_at IS NULL'
+);
+$stmt->execute([$authUser['sub']]);
+if ((int)$stmt->fetchColumn() > 0) {
+    jsonResponse([
+        'error' => 'Anda sudah memiliki 1 dongle aktif. Hapus (revoke) dongle lama '
+                 . 'di halaman Pengaturan sebelum mendaftarkan dongle baru.',
+    ], 409);
+}
+
 // Generate random 32-byte challenge
 $challenge = random_bytes(32);
 
 // Simpan ke DB dengan TTL 5 menit
-$db = getDB();
 $stmt = $db->prepare(
     'INSERT INTO usb_challenges (user_id, challenge, challenge_type, status, expires_at)
      VALUES (?, ?, ?, ?, ?)'

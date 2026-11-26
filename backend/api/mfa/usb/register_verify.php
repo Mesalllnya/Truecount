@@ -30,6 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $authUser = requireAuth();
 
+// ── Dongle hanya untuk role admin ─────────────────────────────
+if (($authUser['role'] ?? '') !== 'admin') {
+    jsonResponse(['error' => 'Dongle keamanan hanya tersedia untuk akun admin.'], 403);
+}
+
 $body = json_decode(file_get_contents('php://input') ?: '{}', true);
 $challengeId = (int)($body['challenge_id'] ?? 0);
 $signatureB64 = (string)($body['signature'] ?? '');
@@ -111,20 +116,44 @@ if ($verified !== 1) {
 // ── 5. Hitung credential_id = SHA-256(public key) ───────────
 $credentialId = hash('sha256', $publicKeyDer, true);
 
-// ── 6. Cek duplikat ─────────────────────────────────────────
+// ── 6. Cek aturan dongle: unik antar admin + maksimal 1 aktif ─
+// credential_id = SHA-256(public key) → satu dongle fisik selalu
+// menghasilkan credential_id yang sama, di mana pun didaftarkan.
 $stmt = $db->prepare(
-    'SELECT id, revoked_at FROM usb_token_credentials
-      WHERE user_id = ? AND credential_id = ?
+    'SELECT id, user_id, revoked_at FROM usb_token_credentials
+      WHERE credential_id = ?
       LIMIT 1'
 );
-$stmt->execute([$authUser['sub'], $credentialId]);
+$stmt->execute([$credentialId]);
 $existing = $stmt->fetch();
+
+$activeCountStmt = $db->prepare(
+    'SELECT COUNT(*) FROM usb_token_credentials
+      WHERE user_id = ? AND revoked_at IS NULL'
+);
+
+if ($existing && (int)$existing['user_id'] !== (int)$authUser['sub']) {
+    // Credential ini sudah terdaftar pada user lain (admin lain).
+    jsonResponse([
+        'error' => 'Dongle ini sudah terdaftar pada admin lain. '
+                 . 'Setiap dongle hanya boleh dipakai oleh satu admin.',
+    ], 409);
+}
 
 if ($existing) {
     if ($existing['revoked_at'] === null) {
         jsonResponse(['error' => 'Token ini sudah terdaftar.'], 409);
     }
-    // Reactivate revoked token
+
+    // Reactivate revoked token — asalkan belum ada credential aktif lain.
+    $activeCountStmt->execute([$authUser['sub']]);
+    if ((int)$activeCountStmt->fetchColumn() > 0) {
+        jsonResponse([
+            'error' => 'Anda sudah memiliki 1 dongle aktif. Hapus (revoke) dongle lama '
+                     . 'di halaman Pengaturan sebelum mendaftarkan dongle baru.',
+        ], 409);
+    }
+
     $db->prepare(
         'UPDATE usb_token_credentials
             SET label = ?, revoked_at = NULL, last_used_at = NULL
@@ -132,6 +161,15 @@ if ($existing) {
     )->execute([$label !== '' ? $label : null, $existing['id']]);
     $newId = (int)$existing['id'];
 } else {
+    // Satu admin hanya boleh punya 1 dongle aktif.
+    $activeCountStmt->execute([$authUser['sub']]);
+    if ((int)$activeCountStmt->fetchColumn() > 0) {
+        jsonResponse([
+            'error' => 'Anda sudah memiliki 1 dongle aktif. Hapus (revoke) dongle lama '
+                     . 'di halaman Pengaturan sebelum mendaftarkan dongle baru.',
+        ], 409);
+    }
+
     // Simpan credential baru
     $stmt = $db->prepare(
         'INSERT INTO usb_token_credentials (user_id, credential_id, public_key, label)

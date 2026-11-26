@@ -193,6 +193,14 @@ if (!$user || !(bool)$user['is_active']) {
     jsonResponse(['error' => 'Akun tidak aktif.'], 403);
 }
 
+// ── Dongle hanya untuk role admin ─────────────────────────────
+// Dicheck sebelum JWT diterbitkan (defense in depth — authenticate_start
+// sudah menolak, tapi challenge bisa saja dibuat sebelum aturan berubah).
+if ($user['role'] !== 'admin') {
+    $logAttempt($user['username'], 'dongle', false, 'Dongle ditolak: role bukan admin');
+    jsonResponse(['error' => 'Dongle keamanan hanya tersedia untuk akun admin.'], 403);
+}
+
 // ── 6. Log successful attempt with photo ───────────────────────────
 $logAttempt($user['username'], 'dongle', true, null);
 

@@ -231,6 +231,9 @@ export default function LoginPage() {
   const showPasswordFallback = attemptsState.count >= 5
   // User tidak ditemukan di database saat dicek security-status
   const [userNotFound, setUserNotFound] = useState(false)
+  // Role user dari /auth/security-status — dongle hanya untuk admin,
+  // jadi opsi & deteksi USB hanya aktif saat identifier adalah admin.
+  const [identifierIsAdmin, setIdentifierIsAdmin] = useState(false)
 
   // Reset hitungan percobaan gagal saat username/email diganti (per-identifier).
   // `syncServer=false` agar log keamanan di server tidak ikut terhapus saat mengetik.
@@ -388,9 +391,9 @@ export default function LoginPage() {
     formatValid: null,
   })
 
-  // Poll USB token status every 2 seconds (only in Tauri)
+  // Poll USB token status every 2 seconds (only in Tauri, hanya admin)
   useEffect(() => {
-    if (!isTauri) return
+    if (!isTauri || !identifierIsAdmin) return
     let cancelled = false
     const poll = async () => {
       const tokens = await scanForTokens()
@@ -413,7 +416,7 @@ export default function LoginPage() {
       cancelled = true
       window.clearInterval(intervalId)
     }
-  }, [scanForTokens, isTauri])
+  }, [scanForTokens, isTauri, identifierIsAdmin])
 
   // ── USB Token Auth (MFA Login) ───────────────────────────────
   const {
@@ -621,6 +624,7 @@ export default function LoginPage() {
       setIdentifierNeedsSetup(false)
       setIdentifierChecked(false)
       setUserNotFound(false)
+      setIdentifierIsAdmin(false)
       setError('')
       return
     }
@@ -636,6 +640,7 @@ export default function LoginPage() {
           setIdentifierNeedsSetup(data.requires_setup === true)
           setIdentifierChecked(true)
           setUserNotFound(false)
+          setIdentifierIsAdmin(data.role === 'admin')
           setError('')
         } else if (res.status >= 500) {
           // Server hidup tapi database mati (atau error server lain)
@@ -644,6 +649,7 @@ export default function LoginPage() {
           setIdentifierNeedsSetup(false)
           setIdentifierChecked(true)
           setUserNotFound(true)
+          setIdentifierIsAdmin(false)
           setError('Pengguna tidak ditemukan. Silakan coba username atau email yang lain.')
         }
       } catch {
@@ -842,8 +848,8 @@ export default function LoginPage() {
           requireCamera: true,
         })
       }
-      // Dongle (jika di Tauri desktop)
-      if (isTauri) {
+      // Dongle (hanya admin, hanya di Tauri desktop)
+      if (identifierIsAdmin && isTauri) {
         methods.push({
           id: 'dongle',
           label: 'Dongle Keamanan',
@@ -866,25 +872,25 @@ export default function LoginPage() {
     }
 
     return methods
-  }, [passwordAvailable, identifierChecked, userNotFound, webauthnSupported, webauthnPlatformAvailable, cameraPermission, isTauri])
+  }, [passwordAvailable, identifierChecked, userNotFound, identifierIsAdmin, webauthnSupported, webauthnPlatformAvailable, cameraPermission, isTauri])
 
   // Determine default method:
   // - identifierNeedsSetup (onboarding) atau showPasswordFallback (5x gagal) → Kata Sandi
-  // - Lainnya → WebHello jika tersedia, kalau tidak Dongle
+  // - Lainnya → WebHello jika tersedia, kalau tidak Dongle (dongle hanya admin)
   useEffect(() => {
     if (!identifierChecked) return
     if (passwordAvailable) {
       setSelectedMethod('password')
     } else if ((webauthnSupported && webauthnPlatformAvailable) && cameraPermission !== false) {
       setSelectedMethod('webauthn')
-    } else if (isTauri) {
+    } else if (identifierIsAdmin && isTauri) {
       setSelectedMethod('dongle')
     } else if (authMethods.length > 0) {
       setSelectedMethod(authMethods[0].id)
     } else {
       setSelectedMethod('password')
     }
-  }, [identifierChecked, passwordAvailable, webauthnSupported, webauthnPlatformAvailable, cameraPermission, isTauri, authMethods])
+  }, [identifierChecked, passwordAvailable, identifierIsAdmin, webauthnSupported, webauthnPlatformAvailable, cameraPermission, isTauri, authMethods])
 
   return (
     <div className="auth-shell">

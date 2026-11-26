@@ -671,7 +671,10 @@ export default function ProfileSettingsPage() {
 
       <main className="settings-main">
         <nav className="settings-tabs" role="tablist" aria-label="Pengaturan profil">
-          {TABS.map(tab => (
+          {TABS
+            // Kebijakan: dongle/USB token hanya untuk role admin.
+            .filter(tab => tab.id !== 'usb' || user?.role === 'admin')
+            .map(tab => (
             <button
               key={tab.id}
               role="tab"

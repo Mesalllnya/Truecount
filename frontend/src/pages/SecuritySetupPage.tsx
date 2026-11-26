@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useWebAuthnRegister } from '../hooks/useWebAuthn';
 import { useUsbToken, createTokenFile, listUsbDrives, startUsbRegister, verifyUsbRegister } from '../hooks/useUsbToken';
+import { useAuth } from '../hooks/useAuthSession';
 import navLogoLight from '/logo/TrueCount_navLogo_lightmode.svg';
 import './AuthPage.css';
 
@@ -83,6 +84,9 @@ export default function SecuritySetupPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = location.state?.returnTo || '/dasbor';
+  const { user } = useAuth();
+  // Kebijakan: dongle hanya untuk role admin — non-admin hanya melihat Windows Hello.
+  const dongleAllowed = user?.role === 'admin';
 
   // ── State ─────────────────────────────────────────────────────
   const [activeStep, setActiveStep] = useState<'choose' | 'webauthn' | 'dongle' | 'complete'>('choose');
@@ -363,6 +367,7 @@ export default function SecuritySetupPage() {
               <span className="setup-method-require">Wajib: Kamera</span>
             </button>
 
+            {dongleAllowed && (
             <button
               type="button"
               className="setup-method-btn"
@@ -372,11 +377,12 @@ export default function SecuritySetupPage() {
               <span className="setup-method-icon"><KeyIcon /></span>
               <div className="setup-method-info">
                 <span className="setup-method-label">Dongle Keamanan</span>
-                <span className="setup-method-desc">USB token fisik (TrueCount Token)</span>
+                <span className="setup-method-desc">USB token fisik (TrueCount Token, khusus admin)</span>
               </div>
               <ChevronRightIcon />
               <span className="setup-method-require">Wajib: Aplikasi Desktop</span>
             </button>
+            )}
 
             <p className="setup-note">
               <AlertIcon /> Anda harus mengkonfigurasi <strong>minimal satu</strong> metode untuk masuk ke TrueCount.
@@ -431,8 +437,8 @@ export default function SecuritySetupPage() {
           </form>
         )}
 
-        {/* ── Step: Dongle ────────────────────────────────────── */}
-        {activeStep === 'dongle' && (
+        {/* ── Step: Dongle (hanya admin) ───────────────────────── */}
+        {dongleAllowed && activeStep === 'dongle' && (
           <div className="dongle-setup">
             {dongleStep === 'select-drive' && (
               <>

@@ -11,7 +11,9 @@
  * 5. Verify di backend → harus 201
  */
 
-$base = 'http://localhost:8000';
+// Base URL bisa dioverride: TC_TEST_BASE=http://127.0.0.1:8010
+// (mis. backend lokal `php -S` yang menjalankan kode terbaru).
+$base = getenv('TC_TEST_BASE') ?: 'http://localhost:8000';
 $tokenFile = __DIR__ . '/../.truecount_token';
 $pin = '123456';
 
@@ -57,6 +59,19 @@ echo "[1] Login admin...\n";
 if ($code !== 200) { echo "[✗] Login gagal: " . json_encode($login) . "\n"; exit(1); }
 $jwt = $login['token'];
 echo "    OK - user: {$login['user']['username']} (id={$login['user']['id']})\n";
+
+// ── 1b. Bersihkan dongle aktif lama ──────────────────────────
+// Aturan baru: 1 admin = maksimal 1 dongle aktif (dan credential
+// unik antar admin). Tanpa pembersihan ini, run berikutnya gagal
+// di [2] dengan 409 "Anda sudah memiliki 1 dongle aktif".
+echo "[1b] Bersihkan dongle aktif lama (kalau ada)...\n";
+[$oldList, $code] = getJson("$base/mfa/usb/list", $jwt);
+foreach ($oldList['credentials'] ?? [] as $cred) {
+    if (!empty($cred['is_active'])) {
+        [$res, $c] = postJson("$base/mfa/usb/{$cred['id']}/revoke", [], $jwt);
+        echo "    Revoke credential lama id={$cred['id']}: HTTP $c " . json_encode($res, JSON_UNESCAPED_UNICODE) . "\n";
+    }
+}
 
 // ── 2. Start register ──────────────────────────────────────
 echo "[2] Start register...\n";

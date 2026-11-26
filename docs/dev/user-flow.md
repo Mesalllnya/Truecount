@@ -79,7 +79,7 @@ Halaman login menampilkan **3 metode auth**, tersedia sesuai kondisi perangkat d
 | Metode | Ikon | Keterangan | Kapan tersedia |
 |--------|------|------------|----------------|
 | **Windows Hello** | 👆 Sidik jari | Sidik jari, wajah, atau PIN Windows (kamera wajib aktif) | Default, jika kamera aktif & WebAuthn supported |
-| **Dongle USB** | 🔑 Kunci | USB token fisik (TrueCount Token), ECDSA P-256, kamera wajib aktif | Hanya di app desktop (Tauri) |
+| **Dongle USB** | 🔑 Kunci | USB token fisik (TrueCount Token), ECDSA P-256, kamera wajib aktif | Hanya di app desktop (Tauri) · **khusus role admin** (maks 1 per admin, unik antar admin) |
 | **Kata Sandi** | 🔒 Kunci | Username/email + password, kamera wajib aktif | Saat onboarding, setelah 5x gagal, atau kamera tidak tersedia |
 
 ### Detail proses login:
@@ -94,7 +94,7 @@ flowchart TD
     E -->|"sudah"| G["Pilih metode"]
     F --> G
     G --> H["Windows Hello"]
-    G --> I["Dongle USB (Tauri only)"]
+    G --> I["Dongle USB (Tauri only, khusus admin)"]
     G --> J["Kata Sandi"]
     H --> H1["Verifikasi kamera<br/>canvas sampling, frame tidak gelap/shutter<br/>ambil foto auth_photo"]
     H1 --> H2["loginWithWindowsHello(identifier, photo)"]

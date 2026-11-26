@@ -55,6 +55,14 @@ if (!$user || !(bool)$user['is_active']) {
     jsonResponse(['error' => 'User tidak ditemukan atau akun nonaktif.'], 404);
 }
 
+// ── Dongle hanya untuk role admin ─────────────────────────────
+// Login via dongle ditolak untuk non-admin (kebijakan: dongle
+// hanya untuk admin). Response eksplisit karena halaman login
+// sudah menyembunyikan opsi dongle untuk non-admin.
+if ($user['role'] !== 'admin') {
+    jsonResponse(['error' => 'Dongle keamanan hanya tersedia untuk akun admin.'], 403);
+}
+
 // Ambil USB token credentials user yang AKTIF (revoked_at IS NULL)
 $stmt = $db->prepare(
     'SELECT id, credential_id, public_key, sign_count

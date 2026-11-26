@@ -10,7 +10,7 @@ async function readJson(res) {
 }
 
 
-export function CandidatePhoto({ candidate, electionId, token, style, fallbackSize = '1.2rem' }) {
+export function CandidatePhoto({ candidate, electionId, token, style, fallbackSize = '1.2rem', onPhotoClick, clickTitle }) {
   const [photoUrl, setPhotoUrl] = useState('');
 
   const photoPath = candidate.photo_path || '';
@@ -96,6 +96,10 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
     ...style,
   };
 
+  // Foto hanya bisa diklik kalau pemanggil menyediakan handler
+  // (dipakai admin untuk membuka info steganografi).
+  const clickable = typeof onPhotoClick === 'function';
+
   if (!photoUrl) {
     return (
       <div style={{
@@ -105,7 +109,19 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
         alignItems: 'center',
         justifyContent: 'center',
         color: '#9ca3af',
-      }}>
+        cursor: clickable ? 'pointer' : undefined,
+      }}
+        onClick={clickable ? onPhotoClick : undefined}
+        title={clickable ? clickTitle : undefined}
+        role={clickable ? 'button' : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        onKeyDown={clickable ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onPhotoClick();
+          }
+        } : undefined}
+      >
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
@@ -118,7 +134,20 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
     <img
       src={photoUrl}
       alt={candidate.name}
-      style={defaultStyle}
+      style={{
+        ...defaultStyle,
+        cursor: clickable ? 'pointer' : undefined,
+      }}
+      onClick={clickable ? onPhotoClick : undefined}
+      title={clickable ? clickTitle : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onPhotoClick();
+        }
+      } : undefined}
       onError={(e) => {
         e.target.style.display = 'none';
         if (e.target.parentElement) {
@@ -155,6 +184,9 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
 
   const token = localStorage.getItem('tc_token')
 
+  // Kandidat yang fotonya diklik admin untuk melihat info steganografi
+  const [stegoTarget, setStegoTarget] = useState(null)
+
   const loadCandidates = useCallback(async () => {
     setLoading(true)
     setError('')
@@ -173,6 +205,10 @@ export function CandidatesModal({ election, onClose, onRefreshElection }) {
   }, [election.id, token])
 
   useEffect(() => { loadCandidates() }, [loadCandidates])
+
+  // ── Buka info steganografi saat foto paslon diklik (admin) ──
+  const openStegoInfo = useCallback((c) => setStegoTarget(c), [])
+  const closeStegoInfo = useCallback(() => setStegoTarget(null), [])
 
   
 async function handleAddCandidate(e) {
@@ -577,6 +613,8 @@ async function handleUpdateCandidate(e) {
                           candidate={c}
                           electionId={election.id}
                           token={token}
+                          onPhotoClick={() => openStegoInfo(c)}
+                          clickTitle="Klik untuk melihat info steganografi foto"
                         />
 
                         <div>
@@ -708,6 +746,206 @@ async function handleUpdateCandidate(e) {
           </div>
         </div>
       </div>
+
+      {/* ── Sub-modal: Info Steganografi Foto Paslon ─────────── */}
+      {stegoTarget && (
+        <StegoInfoModal
+          candidate={stegoTarget}
+          electionId={election.id}
+          token={token}
+          onClose={closeStegoInfo}
+        />
+      )}
+    </div>
+  )
+}
+
+
+/**
+ * Modal info steganografi foto paslon (khusus admin).
+ *
+ * Mengambil metadata dari endpoint /photo/metadata lalu menampilkannya.
+ * Dipakai di CandidatesModal dan dashboard admin — komponen ini berdiri
+ * sendiri (fetch sendiri), jadi pemanggil cukup memberi kandidat + penutup.
+ */
+export function StegoInfoModal({ candidate, electionId, token, onClose }) {
+  const [state, setState] = useState({ loading: true, error: '', data: null })
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setState({ loading: true, error: '', data: null })
+
+      try {
+        const authToken = token || localStorage.getItem('tc_token')
+        const res = await fetch(
+          apiUrl(`/elections/${electionId}/candidates/${candidate.id}/photo/metadata`),
+          { headers: { Authorization: `Bearer ${authToken}` } }
+        )
+        const data = await readJson(res)
+
+        if (cancelled) return
+
+        if (!res.ok) {
+          setState({
+            loading: false,
+            error: data.error || 'Gagal membaca metadata steganografi.',
+            data: null,
+          })
+          return
+        }
+
+        setState({ loading: false, error: '', data })
+      } catch (err) {
+        if (cancelled) return
+        setState({
+          loading: false,
+          error: err?.message || 'Gagal menghubungi server untuk membaca metadata.',
+          data: null,
+        })
+      }
+    }
+
+    load()
+
+    return () => { cancelled = true }
+  }, [candidate.id, electionId, token])
+
+  // Tutup dengan Escape
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="modal-overlay"
+      style={{ zIndex: 1100 }}
+      onClick={e => { e.stopPropagation(); onClose() }}
+    >
+      <div
+        className="modal-content"
+        style={{ maxWidth: '560px' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="modal-header">
+          <h2>Info Steganografi: {candidate.name}</h2>
+          <button className="modal-close-btn" onClick={onClose} aria-label="Tutup">✕</button>
+        </div>
+
+        <div className="modal-body">
+          {state.loading && (
+            <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+              Membaca metadata dari dalam foto…
+            </p>
+          )}
+
+          {!state.loading && state.error && (
+            <p className="invite-error" role="alert">{state.error}</p>
+          )}
+
+          {!state.loading && !state.error && state.data && (
+            <StegoInfoContent data={state.data} />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Isi panel info steganografi ─────────────────────────── */
+function StegoInfoContent({ data }) {
+  const stego = data.steganography || {}
+  const meta  = stego.metadata || {}
+
+  // Urutan tampil: identitas paslon dulu, lalu pemilu, lalu teknis.
+  const fields = [
+    ['candidate_name',  'Nama Paslon'],
+    ['election_title',  'Judul Pemilihan'],
+    ['vision',          'Visi'],
+    ['mission',         'Misi'],
+    ['election_id',     'ID Pemilihan'],
+    ['candidate_id',    'ID Kandidat'],
+    ['uploaded_by',     'Diunggah oleh (user ID)'],
+    ['uploaded_at',     'Waktu Unggah (UTC)'],
+    ['application',     'Aplikasi'],
+    ['version',         'Versi Metadata'],
+  ].filter(([key]) => meta[key] !== undefined && meta[key] !== '')
+
+  return (
+    <div style={{ fontSize: '0.85rem' }}>
+      {/* Status validitas metadata */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        padding: '0.7rem 0.9rem',
+        borderRadius: '10px',
+        marginBottom: '0.9rem',
+        border: '1px solid',
+        background: stego.found && stego.verified ? '#e9f4ec' : '#fef9c3',
+        borderColor: stego.found && stego.verified ? '#c3e0cb' : '#fde68a',
+        color: stego.found && stego.verified ? '#2a7a3b' : '#854d0e',
+        fontWeight: 600,
+        lineHeight: 1.5,
+      }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+          {stego.found && stego.verified ? (
+            <polyline points="20 6 9 17 4 12" />
+          ) : (
+            <>
+              <path d="M12 9v4" />
+              <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+            </>
+          )}
+        </svg>
+        {!stego.found
+          ? (stego.message || 'Tidak ada metadata steganografi di foto ini.')
+          : stego.verified
+            ? 'Metadata terverifikasi — cocok dengan data kandidat di database.'
+            : 'Metadata ditemukan, tetapi tidak cocok dengan data kandidat di database.'}
+      </div>
+
+      {/* Daftar field metadata */}
+      {fields.length > 0 && (
+        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.4rem 1rem', margin: 0 }}>
+          {fields.map(([key, label]) => (
+            <div key={key} style={{ display: 'contents' }}>
+              <dt style={{ color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {label}
+              </dt>
+              <dd style={{ margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
+                {String(meta[key])}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {/* Info file */}
+      {data.image && (
+        <div style={{
+          marginTop: '1rem',
+          paddingTop: '0.8rem',
+          borderTop: '1px solid var(--border)',
+          fontSize: '0.78rem',
+          color: 'var(--muted)',
+          lineHeight: 1.6,
+        }}>
+          <div><strong>File:</strong> <code style={{ wordBreak: 'break-all' }}>{data.photo_path}</code></div>
+          <div><strong>Dimensi:</strong> {data.image.width} × {data.image.height} px</div>
+          <div><strong>Ukuran:</strong> {(data.image.size / 1024).toFixed(1)} KB</div>
+          <div>
+            <strong>Cara baca manual:</strong> foto ini adalah PNG biasa; metadata disimpan
+            terenkripsi di piksel (LSB) dan hanya bisa diekstrak lewat{' '}
+            <code>SteganographyService::extractMessage()</code>.
+          </div>
+        </div>
+      )}
     </div>
   )
 }

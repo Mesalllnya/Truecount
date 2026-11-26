@@ -81,6 +81,7 @@ $allowedMimeTypes = [
     'audio/wav',
     'audio/x-wav',
     'audio/mp4',
+    'video/mp4',   // finfo mendeteksi MP4 audio sebagai video/mp4
     'audio/aac',
     'audio/flac'
 ];
@@ -115,11 +116,12 @@ if ($ciphertext === false) {
     jsonResponse(['error' => 'Gagal mengenkripsi audio untuk pengiriman.'], 500);
 }
 
-// WebM yang direkam sebagai audio tetap dikirim dengan MIME audio/webm
-// agar frontend tahu codec yang digunakan setelah dekripsi.
-$responseMimeType = $audio['mime_type'] === 'video/webm'
-    ? 'audio/webm'
-    : $audio['mime_type'];
+// video/mp4 dan video/webm dari finfo → normalkan ke audio/* untuk browser.
+$responseMimeType = match ($audio['mime_type']) {
+    'video/webm' => 'audio/webm',
+    'video/mp4'  => 'audio/mp4',
+    default      => $audio['mime_type'],
+};
 
 // Encode semua nilai biner ke Base64 (tanpa spasi ekstra).
 $b64Key   = base64_encode($sessionKey);

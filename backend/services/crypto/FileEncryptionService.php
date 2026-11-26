@@ -147,6 +147,9 @@ class FileEncryptionService
             'audio/wav'   => 'wav',
             'audio/x-wav' => 'wav',
             'audio/mp4'   => 'm4a',
+            // finfo mendeteksi MP4 audio dari browser sebagai video/mp4
+            // (bukan audio/mp4) — tanpa ini ekstensi jatuh ke fallback 'enc'.
+            'video/mp4'   => 'm4a',
             'audio/aac'   => 'aac',
             'audio/flac'  => 'flac',
         ];

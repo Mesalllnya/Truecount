@@ -87,8 +87,8 @@ if ($isAdmin) {
         "SELECT e.id, e.title, e.description, e.start_time, e.end_time,
                 e.status, e.created_by, e.created_at,
                 COUNT(DISTINCT c.id) AS candidate_count,
-                v.id AS voter_record_id,
-                v.has_voted
+                MAX(v.id) AS voter_record_id,
+                MAX(v.has_voted) AS has_voted
            FROM elections e
            LEFT JOIN candidates c ON c.election_id = e.id
            LEFT JOIN voters v ON v.election_id = e.id AND v.user_id = ?

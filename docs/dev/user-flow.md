@@ -31,10 +31,11 @@ flowchart TD
     B --> C["Bagikan ke calon pengguna"]
     C --> D["Calon pengguna buka tautan undangan"]
     D --> E{"GET /invites/verify<br/>token valid?"}
-    E -->|"valid"| F["Tampilkan form pendaftaran"]
+    E -->|"valid"| F["Step 1 — Verifikasi Identitas<br/>ambil foto KTP/SIM via kamera"]
     E -->|"invalid / kedaluwarsa"| G["Error: Undangan tidak berlaku"]
-    F --> H["Isi username, email, password"]
-    H --> I["POST /auth/register + invite_token"]
+    F --> F1["Step 2 — Detail Akun<br/>username, email, password + validasi inline"]
+    F1 --> H["Cek username (debounce 500 ms)<br/>GET /auth/check-username"]
+    H --> I["POST /auth/register + invite_token + id_photo"]
     I --> J["Redirect /masuk<br/>notifikasi Akun berhasil dibuat"]
     J --> K["Login via /masuk (bagian 3)"]
 ```
@@ -43,13 +44,30 @@ flowchart TD
 
 | Kondisi | Tampilan |
 |---------|----------|
-| Belum ada token `?undangan=` | State "Pendaftaran hanya melalui undangan" + tombol Masuk |
+| Belum ada token `?undangan=` | State "Punya undangan?" + kolom **Link atau kode undangan** (tombol Tempel) + tombol Masuk |
 | Token sedang dicek | Skeleton loading |
-| Token tidak valid / kedaluwarsa | Error "Undangan tidak berlaku" + tombol Masuk |
-| Token valid | Form pendaftaran (username, email, password, konfirmasi) |
+| Token tidak valid / kedaluwarsa | Error "Undangan tidak berlaku" + tombol Masuk + "Masukkan kode undangan lain" |
+| Token valid | **Step 1 Foto ID** → **Step 2 Detail Akun** dengan progress indicator |
 
+**Step 1 — Verifikasi Identitas (foto ID):**
+
+- Pilih jenis identitas: **KTP** atau **SIM**
+- Panduan visual dua format: **Webcam** (kamera laptop/PC) dan **Selfie** (kamera depan ponsel)
+- Aturan foto: wajah & ID jelas/tidak buram, keduanya muat satu frame, cahaya cukup
+- Kamera: guide frame, tombol **Ganti Kamera** (jika ada >1 kamera), **Ambil Foto**, dan **Ambil Ulang**
+- Tombol **Lanjutkan ke Detail Akun** aktif setelah foto terekam
+
+**Step 2 — Detail Akun:**
+
+- Field: username, email, password, konfirmasi password
+- Validasi inline muncul saat field kehilangan fokus (blur) dan saat submit:
+  - Username minimal 3 karakter, hanya huruf kecil/angka/underscore, dicek ketersediaan otomatis (debounce 500 ms)
+  - Email harus format valid
+  - Password minimal 8 karakter, wajib mengandung minimal 1 angka dan 1 karakter khusus
+  - Konfirmasi harus sama dengan password
+- Submit menandai semua field tersentuh → pesan error tampil dan fokus pindah ke field invalid pertama
+- Foto ID bisa diperiksa lewat thumbnail → klik untuk lightbox, atau **Ubah Foto ID**
 - Email otomatis diisi dan dikunci jika undangan terikat email
-- Password minimal 8 karakter
 - Role akun mengikuti role di undangan (`voter` default, admin bisa undang admin)
 
 ---
@@ -148,6 +166,18 @@ flowchart TD
     E -.-> F["Kedaluwarsa otomatis 7 hari<br/>INVITE_EXPIRE_DAYS di .env"]
 ```
 
+Kartu statistik di panel undangan memakai warna + ikon status:
+
+| Kartu | Warna | Ikon |
+|-------|-------|------|
+| Total undangan | Merah | clipboard |
+| Menunggu | Kuning | clock |
+| Diterima | Hijau | circle-check |
+| Kedaluwarsa | Merah gelap | alert |
+| Dibatalkan | Abu-abu | circle-slash |
+
+Admin juga bisa membuat undangan sekaligus banyak: **satu email**, **bulk email** (tempel beberapa email), atau **bulk count** (1–100 link anonim). Semua link bisa disalin sekaligus lewat **Salin Semua Link**.
+
 ### B. Panel Manajemen Pemilihan (Election Management)
 
 ```mermaid
@@ -224,7 +254,9 @@ flowchart TD
 
 ---
 
-## 7. Alur Pengaturan Akun (`/pengaturan`)
+## 7. Alur Halaman Akun (`/pengaturan`, `/profil`, `/pesan-terenkripsi`)
+
+### 7.0 Pengaturan Akun (`/pengaturan`)
 
 Terdapat 3 tab:
 
@@ -241,6 +273,31 @@ Terdapat 3 tab:
 - **Buat Token di USB baru:** pilih drive flashdisk, buat PIN, file token dibuat di flashdisk
 - **Daftarkan USB Baru:** scan flashdisk → input PIN → sign challenge → ikat ke akun
 - Ubah label token / Nonaktifkan token
+- Modal nonaktifkan token menutup otomatis setelah berhasil dan tidak tertinggal dalam state disabled
+
+### 7.1 Profil Pengguna (`/profil` atau `/profil/:userId`)
+
+- Menampilkan username, role, email, telepon, alamat, tanggal bergabung
+- **Foto Identitas (KTP/SIM)** ditampilkan dari storage terenkripsi; klik foto untuk memperbesar (lightbox)
+- Data profil **tidak bisa diubah langsung**. User mengajukan perubahan lewat form:
+  - Pilih field: username / email / telepon / alamat
+  - Isi nilai baru + alasan → `POST /users/request-change`
+  - Permintaan tersimpan di tabel `change_requests` untuk ditinjau admin
+- Tanpa `userId` di URL = profil sendiri. Admin bisa membuka `/profil/:userId` milik user lain.
+
+### 7.2 Pesan Terenkripsi (`/pesan-terenkripsi`)
+
+Tab **Pesan Teks** mendukung 3 algoritma:
+
+| Algoritma | Key | Catatan |
+|-----------|-----|---------|
+| AES-256-GCM | otomatis (server) | Default, AEAD dengan AAD user |
+| ChaCha20-Poly1305 | otomatis (server) | AEAD dengan AAD user |
+| Vigenère | user memasukkan key huruf A-Z | Cipher klasik untuk demonstrasi; tanpa nonce/tag |
+
+Alur: tulis pesan → pilih algoritma → (khusus Vigenère) isi key → **Enkripsi** → server menyimpan ciphertext dan mengembalikan ID pesan. Untuk membaca, masukkan ID pesan + key Vigenère (jika perlu) → **Dekripsi**.
+
+Tab **Pesan Suara** khusus admin (rekam, kirim, inbox, playback terenkripsi ChaCha20-Poly1305).
 
 ---
 
@@ -259,16 +316,19 @@ Terdapat 3 tab:
 | `/` | Semua | Landing page |
 | `/tentang` | Semua | Info proyek & tim |
 | `/masuk` | Semua | Login (3 metode auth) |
-| `/daftar?undangan=...` | Punya undangan | Register invite-only |
+| `/daftar?undangan=...` | Punya undangan | Register invite-only: step foto KTP/SIM → detail akun |
 | `/atur-keamanan` | Belum setup | Setup Windows Hello / Dongle wajib |
 | `/dasbor` | Login + setup | Dashboard (admin atau voter) |
 | `/pilih` | Login + setup | Halaman voting |
 | `/hasil/:id` | Login + setup | Lihat hasil pemilihan |
 | `/pengaturan` | Login + setup | Kelola password, WebAuthn, USB token |
+| `/profil/:userId?` | Login + setup | Profil + foto ID; admin boleh lihat user lain |
+| `/server-error` | Semua | Halaman saat server/database tidak terhubung |
+| `/__server` | Desktop | Konfigurasi Client/Server/Standalone |
 | `/usb-token-test` | Login + setup | Test USB token |
-| `/pesan-terenkripsi` | Login + setup | Buat/lihat pesan terenkripsi |
+| `/pesan-terenkripsi` | Login + setup | Pesan teks (AES/ChaCha/Vigenère) & pesan suara (admin) |
 | `/log-keamanan/:id` | Admin only | Audit log login + foto kamera |
-| `/dev` | Admin + Dev | Halaman dev - visualisasi flow & kriptografi (3D isometrik) |
+| `/dev` | Admin + Dev | Halaman dev - visualisasi flow isometrik & kriptografi |
 
 Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis ke path baru.
 
@@ -282,6 +342,7 @@ Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis ke path baru.
 | Setup keamanan wajib | Tidak bisa masuk dashboard sebelum pasang Windows Hello atau Dongle |
 | Kamera hanya nyala di halaman Masuk | Kamera hanya aktif di `/masuk` dan **wajib online untuk SEMUA metode masuk** (Windows Hello, Dongle, Kata Sandi) — login diblokir bila kamera tertutup/gelap; dipaksa mati otomatis di halaman lain (landing, dasbor, dll.); frame diverifikasi tidak gelap/shutter tertutup |
 | Foto kamera sebagai audit | Ditangkap sebelum setiap percobaan login, disimpan di `auth_attempts.photo_path` |
+| Foto ID terenkripsi | Foto KTP/SIM saat registrasi dienkripsi AES-256-GCM dan hanya bisa dilihat pemilik akun atau admin |
 | Lockout 15 menit | Setelah 5x percobaan gagal, kata sandi muncul sebagai emergency fallback |
 | Suara anonIM | `ballots` tidak punya FK ke `users` (privasi by design) |
 | Blockchain seal/verify | Integritas hasil pemilihan |
@@ -291,14 +352,14 @@ Alias lama (`/login`, `/register`, `/dashboard`) redirect otomatis ke path baru.
 
 ## 11. Halaman Dev (`/dev`) — Admin + Developer
 
-Halaman dev eksklusif untuk role `admin` dan `dev`, berisi visualisasi 3D isometrik interaktif sebagai dokumentasi teknis dan materi pitch deck.
+Halaman dev eksklusif untuk role `admin` dan `dev`, berisi visualisasi alur aplikasi bergaya isometrik dan grid algoritma kriptografi sebagai dokumentasi teknis dan materi pitch deck.
 
 ### Akses
 - URL: `/dev` (diakses setelah login + setup keamanan)
 - Role yang diizinkan: `admin`, `dev` (dicek oleh `RoleGuard` di frontend dan `requireDevOrAdmin()` di backend middleware)
 - User dev default: `dev` / `Dev@1234` (seed `003_dev_user.sql`)
 
-### Dua Section Visualisasi 3D Isometrik
+### Dua Section Visualisasi Isometrik
 
 #### A. Flow Aplikasi
 Menampilkan alur lengkap aplikasi dari awal hingga akhir sebagai blok 3D isometrik:
@@ -362,9 +423,10 @@ flowchart TD
     H --> H3[Lihat Hasil /hasil/:id]
 
     F --> P[Pengaturan /pengaturan]
+    F --> Q[Profil /profil]
 
     B --> R[Daftar /daftar?undangan=]
-    R -->|Invite valid| B
+    R -->|Invite valid + foto ID| B
 
     style F fill:#e1f5e1,stroke:#2a7a3b
     style G fill:#fff4e1,stroke:#b45309
@@ -379,12 +441,13 @@ flowchart TD
     B --> C[Calon pengguna buka tautan]
     C --> D{Token valid?}
     D -- Tidak --> E[Tampilkan error "Undangan tidak berlaku"]
-    D -- Ya --> F[Tampilkan form pendaftaran]
-    F --> G[Isi username, email, password]
+    D -- Ya --> F[Step 1: Verifikasi Identitas]
+    F --> F1[Step 2: Detail Akun]
+    F1 --> G[Isi username, email, password<br/>+ foto ID wajib]
     G --> H[Klik Buat akun]
-    H --> I[POST /auth/register + invite_token]
+    H --> I[POST /auth/register + invite_token + id_photo]
     I --> J{Berhasil?}
-    J -- Tidak --> K[Tampilkan error]
+    J -- Tidak --> K[Tampilkan error per field]
     K --> G
     J -- Ya --> L[Redirect ke /masuk + notifikasi sukses]
     L --> M[Login]
@@ -581,7 +644,7 @@ flowchart LR
     end
 
     subgraph voter["Pemilih"]
-        V1["Undangan"] --> V2["Daftar"] --> V3["Login"] --> V4["Setup Keamanan"] --> V5["Lihat Pemilihan"] --> V6["Pilih Kandidat"] --> V7["Input Suara"] --> V8["Lihat Hasil"]
+        V1["Undangan"] --> V2["Daftar<br/>(foto KTP/SIM)"] --> V3["Login"] --> V4["Setup Keamanan"] --> V5["Lihat Pemilihan"] --> V6["Pilih Kandidat"] --> V7["Input Suara"] --> V8["Lihat Hasil"]
     end
 ```
 

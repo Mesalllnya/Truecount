@@ -324,16 +324,35 @@ export default function LoginPage() {
 
   useEffect(() => {
     return () => {
-      stopCamera() // paksa matikan semua track + interval dari hook
+      // Setiap langkah dibungkus try/catch TERPISAH (issue #54): bila satu
+      // langkah melempar error, langkah berikutnya tetap jalan — kalau tidak,
+      // stream kamera bisa bocor dan LED tetap menyala setelah pindah halaman.
+      try {
+        stopCamera() // paksa matikan semua track + interval dari hook
+      } catch (cleanupErr) {
+        console.warn('[Login] stopCamera saat unmount gagal:', cleanupErr)
+      }
       const { stream: s, previewVideoElement: p, videoEl: v } = unmountCleanupRef.current
-      if (s) {
-        s.getTracks().forEach((track) => track.stop())
+      try {
+        if (s) {
+          s.getTracks().forEach((track) => track.stop())
+        }
+      } catch (cleanupErr) {
+        console.warn('[Login] Gagal menghentikan track saat unmount:', cleanupErr)
       }
-      if (p) {
-        p.srcObject = null
+      try {
+        if (p) {
+          p.srcObject = null
+        }
+      } catch (cleanupErr) {
+        console.warn('[Login] Gagal melepas preview stream saat unmount:', cleanupErr)
       }
-      if (v) {
-        v.srcObject = null
+      try {
+        if (v) {
+          v.srcObject = null
+        }
+      } catch (cleanupErr) {
+        console.warn('[Login] Gagal melepas video stream saat unmount:', cleanupErr)
       }
     }
   }, [stopCamera]) // dependency: stopCamera agar cleanup selalu pakai versi terbaru

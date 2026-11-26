@@ -63,6 +63,13 @@ FRONTEND_ORIGIN=http://localhost:5173
 
 JWT_SECRET=ganti-ini-dengan-string-acak-minimal-32-karakter
 JWT_EXPIRE=3600
+
+# Kunci enkripsi (wajib untuk pesan terenkripsi & foto identitas)
+ENCRYPTION_KEY_B64=GENERATE_DULU   # php -r "echo base64_encode(random_bytes(32));"
+CHACHA20_KEY_B64=GENERATE_DULU     # php -r "echo base64_encode(random_bytes(32));"
+
+# Masa berlaku undangan pendaftaran (hari)
+INVITE_EXPIRE_DAYS=7
 ```
 
 > **⚠️ `DB_HOST` harus `127.0.0.1`, jangan `localhost`.** Di Windows, `localhost` di-resolve ke IPv6 (`::1`) lebih dulu sehingga setiap koneksi MySQL mundur **±2 detik** sebelum fallback ke IPv4. Efeknya `/health` dan semua request jadi lambat, dan aplikasi desktop terus-menerus dinyatakan "tidak dapat terhubung" karena check timeout (lihat `docs/dev/knowledge_transfer.md` poin 25).
@@ -207,7 +214,14 @@ DB_USER=truecount_user   # buat user khusus, jangan pakai root
 DB_PASS=password-kuat-disini
 
 JWT_SECRET=string-acak-minimal-64-karakter-untuk-production
+
+# Kunci enkripsi — WAJIB diganti & disimpan aman.
+# Kalau hilang/berubah, foto ID & pesan terenkripsi lama tidak bisa dibuka.
+ENCRYPTION_KEY_B64=<base64 32 byte acak>
+CHACHA20_KEY_B64=<base64 32 byte acak>
 ```
+
+> Buat nilai acak dengan `php -r "echo base64_encode(random_bytes(32));"` (jalankan dua kali, satu untuk tiap variabel). Jangan pakai nilai contoh dari `.env.example`.
 
 ### 2.4 Buat User MySQL Khusus
 
@@ -313,12 +327,12 @@ Certbot otomatis mengupdate konfigurasi Nginx dan menjadwalkan renewal.
 # Backend tidak boleh diakses langsung dari web
 sudo chown -R www-data:www-data /var/www/truecount/backend
 sudo chmod -R 755 /var/www/truecount/backend
-sudo chmod -R 700 /var/www/truecount/backend/storage
 
-# Folder auth_photos (foto kamera percobaan login) harus bisa ditulis PHP
-sudo mkdir -p /var/www/truecount/storage/auth_photos
-sudo chown -R www-data:www-data /var/www/truecount/storage/auth_photos
-sudo chmod -R 755 /var/www/truecount/storage/auth_photos
+# Storage root: foto auth, foto ID (KTP/SIM), file & pesan terenkripsi, log.
+# Default di <backend>/storage — atau lokasi TC_STORAGE_ROOT kalau di-set di .env.
+sudo mkdir -p /var/www/truecount/backend/storage/{auth_photos,id_photos,logs,private/encrypted-files}
+sudo chown -R www-data:www-data /var/www/truecount/backend/storage
+sudo chmod -R 750 /var/www/truecount/backend/storage
 
 # Frontend dist bisa dibaca oleh Nginx
 sudo chown -R www-data:www-data /var/www/truecount/frontend/dist
@@ -435,13 +449,16 @@ Server `/health` mengembalikan `server_id`, `server_label`, dan `time`, sehingga
 - [ ] File `.env` **tidak** ikut ter-commit ke Git
 - [ ] Akun admin default sudah diganti password-nya
 - [ ] Akses ke `.env`, `.git`, `database/` diblokir di web server
+- [ ] Folder `backend/storage/` (atau `TC_STORAGE_ROOT`) **tidak** bisa diakses langsung dari web
 - [ ] HTTPS sudah aktif
 
 ### Fungsionalitas
 
 - [ ] Migration berhasil - semua tabel terbuat (cek `php database/migrate.php` tanpa error)
 - [ ] Health check `GET /health` mengembalikan `200 OK`
-- [ ] Register akun baru berhasil
+- [ ] `ENCRYPTION_KEY_B64` dan `CHACHA20_KEY_B64` sudah diisi nilai acak (bukan `GENERATE_DULU`)
+- [ ] Registrasi lewat undangan berhasil (termasuk **foto KTP/SIM**) — pendaftaran publik memang ditutup
+- [ ] Foto ID bisa dibuka lagi di halaman **Profil** setelah akun dibuat
 - [ ] Login berhasil dan mendapatkan JWT
 - [ ] Frontend bisa berkomunikasi dengan backend (tidak ada error CORS)
 - [ ] Halaman Dashboard hanya bisa diakses setelah login
@@ -479,7 +496,7 @@ Server `/health` mengembalikan `server_id`, `server_label`, dan `time`, sehingga
 | Variable          | Default                        | Keterangan                                    |
 |-------------------|--------------------------------|-----------------------------------------------|
 | `DB_HOST`         | `127.0.0.1`                    | Host MySQL — **pakai `127.0.0.1`, bukan `localhost`** (di Windows `localhost` di-resolve ke IPv6 lebih dulu → delay ±2 detik per koneksi) |
-| `TC_STORAGE_ROOT` | *(kosong = `backend/storage`)* | Lokasi folder storage foto/log. **Harus path absolut** di `.env` agar sama di Tauri dan `deploy-server.ps1`. Contoh Windows: `D:/proyek/truecount/backend/storage` |
+| `TC_STORAGE_ROOT` | *(kosong = `backend/storage`)* | Lokasi folder storage: foto auth, foto ID (KTP/SIM), file terenkripsi (`private/encrypted-files`), dan log. **Harus path absolut** di `.env` agar sama di Tauri dan `deploy-server.ps1`. Contoh Windows: `D:/proyek/truecount/backend/storage` |
 | `DB_PORT`         | `3306`                         | Port MySQL                                    |
 | `DB_NAME`         | `truecount_db`                 | Nama database                                 |
 | `DB_USER`         | `root`                         | User MySQL                                    |
@@ -488,6 +505,15 @@ Server `/health` mengembalikan `server_id`, `server_label`, dan `time`, sehingga
 | `FRONTEND_ORIGIN` | `http://localhost:5173`        | Origin yang diizinkan CORS                    |
 | `JWT_SECRET`      | *(wajib diganti)*              | Secret key untuk signing JWT                  |
 | `JWT_EXPIRE`      | `3600`                         | Durasi token JWT dalam detik                  |
+| `INVITE_EXPIRE_DAYS` | `7`                         | Masa berlaku link undangan pendaftaran (hari) |
+| `ENCRYPTION_KEY_B64` | *(wajib diganti)*           | Kunci AES-256-GCM (base64 32 byte) untuk foto auth/ID & pesan AES |
+| `CHACHA20_KEY_B64` | *(wajib diganti)*             | Kunci ChaCha20-Poly1305 (base64 32 byte) untuk file/pesan suara |
+| `SERVER_ID`       | *(dibuat script)*              | Identitas server demo, dipakai client memastikan server benar |
+| `SERVER_LABEL`    | `Laptop Demo`                  | Label server yang ditampilkan di client           |
+| `WEBAUTHN_RP_ID`  | `localhost`                    | Relying Party ID WebAuthn (domain saat production) |
+| `WEBAUTHN_ORIGIN` | `http://localhost:8000`        | Origin WebAuthn (samakan dengan URL aplikasi)     |
+
+> **Catatan kunci enkripsi:** `ENCRYPTION_KEY_B64` dan `CHACHA20_KEY_B64` harus dibuat dengan `php -r "echo base64_encode(random_bytes(32));"`. Kalau nilainya berubah setelah data ada, foto ID dan pesan/file terenkripsi lama **tidak bisa didekripsi**. Simpan di tempat aman dan jangan commit `.env`.
 
 ## 6. Deploy Desktop (Tauri)
 

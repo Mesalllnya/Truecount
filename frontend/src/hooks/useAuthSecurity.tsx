@@ -170,6 +170,12 @@ const activeCameraStreams = new Set<MediaStream>();
 
 /** Paksa matikan SEMUA stream kamera yang masih hidup di seluruh aplikasi. */
 export function stopAllCameraStreams(): void {
+  // Catat jumlah stream yang dimatikan (issue #54): jejak leak kamera harus
+  // terlihat di log — kalau angkanya terus bertambah tiap ganti akun, ada
+  // stream yang tidak pernah dilepas.
+  if (activeCameraStreams.size > 0) {
+    logCamera('INFO', `stopAllCameraStreams: mematikan ${activeCameraStreams.size} stream aktif`);
+  }
   activeCameraStreams.forEach((s) => {
     try {
       s.getTracks().forEach((t) => t.stop());

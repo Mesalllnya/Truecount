@@ -18,7 +18,7 @@ flowchart LR
     subgraph host["Docker host"]
         backend["backend<br/>php:8.3-apache<br/>:80 → host :8000"]
         db[("db<br/>mysql:8.0<br/>volume: db_data")]
-        storage[("Volume backend_storage<br/>+ backend_uploads<br/>foto auth, file terenkripsi,<br/>log, foto kandidat")]
+        storage[("Volume backend_storage<br/>+ backend_uploads<br/>foto auth, foto ID,<br/>file terenkripsi, log, foto kandidat")]
 
         backend -->|"SQL :3306"| db
         storage -.->|"mount"| backend

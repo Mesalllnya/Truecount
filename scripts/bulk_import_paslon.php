@@ -280,10 +280,12 @@ function processCandidatePhoto(
         SteganographyService::embedMessage($metadata, $carrierPath, $stegoPath, $adminUserId);
 
         // Enkripsi seluruh stego image dan simpan di encrypted_files.
+        // Foto paslon disimpan di folder terpisah: storage/private/candidate-photos/
         $fileId = FileEncryptionService::encryptAndStore(
             $adminUserId,
             $stegoPath,
-            'candidate_' . $candidateId . '.png'
+            'candidate_' . $candidateId . '.png',
+            'candidate-photos'
         );
 
         return (int)$fileId;

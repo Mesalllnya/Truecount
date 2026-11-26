@@ -18,12 +18,31 @@ class FileEncryptionService
     private const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
     /**
+     * Folder default di bawah storage/private/.
+     * Dipakai untuk file yang tidak punya kategori (mis. voice message).
+     */
+    private const DEFAULT_SUBDIR = 'encrypted-files';
+
+    /**
+     * Nama subfolder yang diizinkan (huruf kecil, angka, strip, underscore).
+     * Dipakai untuk membatasi storage_dir agar tidak bisa jadi path traversal.
+     */
+    private const SUBDIR_PATTERN = '/^[a-z0-9][a-z0-9_-]{0,63}$/';
+
+    /**
      * Direktori penyimpanan di luar public backend.
      * Root bisa dioverride lewat env TC_STORAGE_ROOT.
+     *
+     * @param string $subdir Subfolder di bawah storage/private/
+     *                       (mis. 'candidate-photos' untuk foto paslon).
      */
-    private static function getStorageDirectory(): string
+    private static function getStorageDirectory(string $subdir = self::DEFAULT_SUBDIR): string
     {
-        return storagePath('private', 'encrypted-files');
+        if (!preg_match(self::SUBDIR_PATTERN, $subdir)) {
+            throw new InvalidArgumentException('Lokasi penyimpanan file tidak valid.');
+        }
+
+        return storagePath('private', $subdir);
     }
 
     /**
@@ -36,15 +55,22 @@ class FileEncryptionService
 
     /**
      * Enkripsi file dan simpan metadata ke database.
+     *
+     * @param string $subdir Subfolder di bawah storage/private/
+     *                       (mis. 'candidate-photos' untuk foto paslon).
      */
     public static function encryptAndStore(
         int $userId,
         string $tmpPath,
-        string $originalName
+        string $originalName,
+        string $subdir = self::DEFAULT_SUBDIR
     ): int {
         if ($userId <= 0) {
             throw new InvalidArgumentException('User ID tidak valid.');
         }
+
+        // Validasi subfolder lebih dulu (melempar exception sebelum ada file ditulis).
+        $storageDirectory = self::getStorageDirectory($subdir);
 
         if (!is_file($tmpPath) || !is_readable($tmpPath)) {
             throw new InvalidArgumentException(
@@ -121,8 +147,6 @@ class FileEncryptionService
         // SHA-256 dari ciphertext untuk pemeriksaan integritas storage.
         $fileHash = hash('sha256', $cipherRaw);
 
-        $storageDirectory = self::getStorageDirectory();
-
         if (
             !is_dir($storageDirectory) &&
             !mkdir($storageDirectory, 0700, true) &&
@@ -156,6 +180,7 @@ class FileEncryptionService
                         user_id,
                         original_name,
                         stored_path,
+                        storage_dir,
                         algorithm,
                         nonce,
                         auth_tag,
@@ -166,6 +191,7 @@ class FileEncryptionService
                         :user_id,
                         :original_name,
                         :stored_path,
+                        :storage_dir,
                         :algorithm,
                         :nonce,
                         :auth_tag,
@@ -180,6 +206,7 @@ class FileEncryptionService
                 ':user_id'       => $userId,
                 ':original_name' => $originalName,
                 ':stored_path'   => $storedName,
+                ':storage_dir'   => $subdir,
                 ':algorithm'     => self::ALGORITHM,
                 ':nonce'         => $encrypted['nonce'],
                 ':auth_tag'      => $encrypted['tag'],
@@ -216,6 +243,7 @@ class FileEncryptionService
         $sql = "SELECT
                     original_name,
                     stored_path,
+                    storage_dir,
                     algorithm,
                     nonce,
                     auth_tag,
@@ -268,7 +296,14 @@ class FileEncryptionService
             );
         }
 
-        $storedPath = self::getStorageDirectory()
+        // Lokasi folder dari database; baris lama (sebelum migration 016)
+        // tidak punya storage_dir → pakai folder default.
+        $storageDir = $file['storage_dir'] ?? self::DEFAULT_SUBDIR;
+        if (!is_string($storageDir) || $storageDir === '') {
+            $storageDir = self::DEFAULT_SUBDIR;
+        }
+
+        $storedPath = self::getStorageDirectory($storageDir)
             . DIRECTORY_SEPARATOR . $file['stored_path'];
 
         if (!is_file($storedPath) || !is_readable($storedPath)) {

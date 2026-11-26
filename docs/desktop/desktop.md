@@ -284,7 +284,8 @@ Semua file upload disatukan di **satu root**: `<backend>/storage/`
 | --- | --- |
 | Foto login/auth | `<backend>/storage/auth_photos/` |
 | Foto identitas KTP/SIM (registrasi) | `<backend>/storage/id_photos/` |
-| File terenkripsi (foto kandidat, voice) | `<backend>/storage/private/encrypted-files/` |
+| File terenkripsi (voice, dsb) | `<backend>/storage/private/encrypted-files/` |
+| Foto paslon terenkripsi | `<backend>/storage/private/candidate-photos/` |
 | Log aplikasi | `<backend>/storage/logs/` |
 | Upload publik (legacy) | `<backend>/uploads/candidates/` |
 

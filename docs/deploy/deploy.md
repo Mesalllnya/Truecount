@@ -330,7 +330,7 @@ sudo chmod -R 755 /var/www/truecount/backend
 
 # Storage root: foto auth, foto ID (KTP/SIM), file & pesan terenkripsi, log.
 # Default di <backend>/storage — atau lokasi TC_STORAGE_ROOT kalau di-set di .env.
-sudo mkdir -p /var/www/truecount/backend/storage/{auth_photos,id_photos,logs,private/encrypted-files}
+sudo mkdir -p /var/www/truecount/backend/storage/{auth_photos,id_photos,logs,private/encrypted-files,private/candidate-photos}
 sudo chown -R www-data:www-data /var/www/truecount/backend/storage
 sudo chmod -R 750 /var/www/truecount/backend/storage
 

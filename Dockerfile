@@ -51,6 +51,8 @@ RUN chmod +x /usr/local/bin/truecount-entrypoint \
         backend/storage/id_photos \
         backend/storage/encrypted \
         backend/storage/private \
+        backend/storage/private/encrypted-files \
+        backend/storage/private/candidate-photos \
         backend/storage/temp \
         backend/uploads/candidates \
     && chown -R www-data:www-data backend/storage backend/uploads

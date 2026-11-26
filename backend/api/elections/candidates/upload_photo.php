@@ -148,10 +148,12 @@ try {
     );
 
     // File Encryption: enkripsi seluruh stego image
+    // Foto paslon disimpan di folder terpisah: storage/private/candidate-photos/
     $encryptedFileId = FileEncryptionService::encryptAndStore(
         $adminId,
         $stegoPath,
-        'candidate_' . $candidateId . '.png'
+        'candidate_' . $candidateId . '.png',
+        'candidate-photos'
     );
 
     // Ambil path foto lama untuk dibersihkan setelah update berhasil

@@ -10,10 +10,9 @@
  * Pemrosesan foto mengikuti alaman yang sama dengan
  * backend/api/elections/candidates/upload_photo.php:
  *   1. Gambar dikonversi ke PNG via GD.
- *   2. Metadata disisipkan ke gambar lewat SteganographyService (LSB).
- *   3. Gambar stego dienkripsi lewat FileEncryptionService (ChaCha20-Poly1305)
- *      dan disimpan di encrypted_files.
- *   4. ID file terenkripsi disimpan ke candidates.photo_file_id.
+ *   2. Metadata pemilu + identitas paslon disisipkan lewat SteganographyService (LSB).
+ *   3. Hasilnya disimpan sebagai PNG biasa di storage/private/candidate-photos/
+ *      (masih bisa dibuka langsung dari disk), path dicatat ke candidates.photo_path.
  *
  * Penggunaan:
  *   php scripts/bulk_import_paslon.php <path-ke-folder-template>
@@ -129,6 +128,11 @@ if ($electionId > 0) {
     echo "Pemilihan baru dibuat: id #$electionId - $title\n";
 }
 
+// Judul pemilihan untuk metadata steganografi foto paslon.
+$stmt = $db->prepare('SELECT title FROM elections WHERE id = ? LIMIT 1');
+$stmt->execute([$electionId]);
+$electionTitle = (string) ($stmt->fetchColumn() ?: '');
+
 // ── Proses setiap calon ───────────────────────────────────────────────────
 $imported = 0;
 $skipped  = 0;
@@ -176,14 +180,24 @@ foreach ($candidates as $index => $c) {
         }
 
         try {
-            $photoFileId = processCandidatePhoto($db, $imagePath, $electionId, $candidateId, $adminUserId);
+            $photoPathValue = processCandidatePhoto(
+                $db,
+                $imagePath,
+                $electionId,
+                $candidateId,
+                $adminUserId,
+                $electionTitle,
+                $name,
+                $vision,
+                $mission
+            );
 
             $stmt = $db->prepare(
-                'UPDATE candidates SET photo_file_id = ? WHERE id = ? AND election_id = ?'
+                'UPDATE candidates SET photo_path = ?, photo_file_id = NULL WHERE id = ? AND election_id = ?'
             );
-            $stmt->execute([$photoFileId, $candidateId, $electionId]);
+            $stmt->execute([$photoPathValue, $candidateId, $electionId]);
 
-            echo "       Foto diproses (photo_file_id #$photoFileId)\n";
+            echo "       Foto disimpan (steganografi): $photoPathValue\n";
         } catch (Throwable $e) {
             $errors[] = "Calon #$candidateId ($name): gagal proses foto - " . $e->getMessage();
         }
@@ -205,22 +219,26 @@ exit(count($errors) > 0 ? 1 : 0);
 
 /**
  * Proses foto paslon melalui pipeline yang sama dengan upload_photo.php:
- * GD → PNG → steganografi embed → enkripsi file → simpan ke encrypted_files.
+ * GD → PNG → steganografi embed (metadata nama paslon dll) → simpan PNG biasa
+ * di storage/private/candidate-photos/ sehingga masih bisa dibuka dari disk.
  *
- * @return int ID baris di encrypted_files.
+ * @return string Path relatif terhadap storage root.
  */
 function processCandidatePhoto(
     PDO $db,
     string $imagePath,
     int $electionId,
     int $candidateId,
-    int $adminUserId
-): int {
+    int $adminUserId,
+    string $electionTitle,
+    string $name,
+    string $vision,
+    string $mission
+): string {
     $finfo    = new finfo(FILEINFO_MIME_TYPE);
     $mimeType = $finfo->file($imagePath);
 
     $allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    $extMap  = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
 
     if (!in_array($mimeType, $allowed, true)) {
         throw new RuntimeException('Format foto tidak didukung (JPEG/PNG/WebP).');
@@ -269,26 +287,41 @@ function processCandidatePhoto(
 
         // Metadata yang disisipkan lewat steganografi.
         $metadata = json_encode([
-            'application'  => 'TrueCount',
-            'version'      => 1,
-            'election_id'  => $electionId,
-            'candidate_id' => $candidateId,
-            'uploaded_by'  => $adminUserId,
-            'uploaded_at'  => gmdate('c'),
+            'application'    => 'TrueCount',
+            'version'        => 1,
+            'election_id'    => $electionId,
+            'election_title' => $electionTitle,
+            'candidate_id'   => $candidateId,
+            'candidate_name' => $name,
+            'vision'         => $vision,
+            'mission'        => $mission,
+            'uploaded_by'    => $adminUserId,
+            'uploaded_at'    => gmdate('c'),
         ], JSON_THROW_ON_ERROR);
 
         SteganographyService::embedMessage($metadata, $carrierPath, $stegoPath, $adminUserId);
 
-        // Enkripsi seluruh stego image dan simpan di encrypted_files.
-        // Foto paslon disimpan di folder terpisah: storage/private/candidate-photos/
-        $fileId = FileEncryptionService::encryptAndStore(
-            $adminUserId,
-            $stegoPath,
-            'candidate_' . $candidateId . '.png',
-            'candidate-photos'
-        );
+        // Simpan hasil stego sebagai PNG biasa (bukan file terenkripsi).
+        $photoDir = storagePath('private', 'candidate-photos');
 
-        return (int)$fileId;
+        if (
+            !is_dir($photoDir) &&
+            !mkdir($photoDir, 0700, true) &&
+            !is_dir($photoDir)
+        ) {
+            throw new RuntimeException('Gagal membuat folder foto paslon.');
+        }
+
+        $storedName = bin2hex(random_bytes(16)) . '.png';
+        $finalPath  = $photoDir . DIRECTORY_SEPARATOR . $storedName;
+
+        if (!copy($stegoPath, $finalPath)) {
+            throw new RuntimeException('Gagal menyimpan foto paslon.');
+        }
+
+        @chmod($finalPath, 0644);
+
+        return 'private/candidate-photos/' . $storedName;
     } finally {
         if ($image) {
             imagedestroy($image);

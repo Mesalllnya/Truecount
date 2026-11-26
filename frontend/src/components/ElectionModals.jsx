@@ -13,14 +13,21 @@ async function readJson(res) {
 export function CandidatePhoto({ candidate, electionId, token, style, fallbackSize = '1.2rem' }) {
   const [photoUrl, setPhotoUrl] = useState('');
 
+  const photoPath = candidate.photo_path || '';
+  // Jalur baru: photo_path menunjuk file di storage privat (bukan URL publik),
+  // jadi harus diambil lewat endpoint foto (sama seperti foto terenkripsi lama).
+  const isPrivateStoragePath = photoPath.startsWith('private/');
+  const hasEncryptedPhoto = Boolean(candidate.photo_file_id);
+  const hasPhoto = hasEncryptedPhoto || Boolean(photoPath);
+
   useEffect(() => {
     let cancelled = false;
     let objectUrl = null;
 
-    // Foto lama masih menggunakan public path
-    if (!candidate.photo_file_id) {
+    // Foto lama (path publik /uploads/...) masih diambil langsung
+    if (!hasPhoto || (!hasEncryptedPhoto && !isPrivateStoragePath)) {
       setPhotoUrl(
-        candidate.photo_path ? apiUrl(candidate.photo_path) : ''
+        photoPath && !isPrivateStoragePath ? apiUrl(photoPath) : ''
       );
 
       return () => {
@@ -28,7 +35,7 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
       };
     }
 
-    // Foto terenkripsi diambil melalui endpoint dekripsi
+    // Foto steganografi / terenkripsi diambil melalui endpoint
     setPhotoUrl('');
 
     const authToken = token || localStorage.getItem('tc_token');
@@ -71,8 +78,10 @@ export function CandidatePhoto({ candidate, electionId, token, style, fallbackSi
     };
   }, [
     candidate.id,
-    candidate.photo_file_id,
-    candidate.photo_path,
+    hasEncryptedPhoto,
+    hasPhoto,
+    isPrivateStoragePath,
+    photoPath,
     electionId,
     token,
   ]);

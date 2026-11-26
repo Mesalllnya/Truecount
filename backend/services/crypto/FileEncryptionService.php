@@ -158,7 +158,21 @@ class FileEncryptionService
         }
 
         // Nama acak agar nama asli file tidak terlihat di storage.
-        $storedName = bin2hex(random_bytes(16)) . '.enc';
+        // Ekstensi diambil dari MIME type agar file terlihat seperti audio biasa
+        // di file explorer, namun isinya tetap ciphertext (tidak bisa diputar).
+        $mimeToExt = [
+            'audio/webm'  => 'webm',
+            'video/webm'  => 'webm',
+            'audio/ogg'   => 'ogg',
+            'audio/mpeg'  => 'mp3',
+            'audio/wav'   => 'wav',
+            'audio/x-wav' => 'wav',
+            'audio/mp4'   => 'm4a',
+            'audio/aac'   => 'aac',
+            'audio/flac'  => 'flac',
+        ];
+        $ext = $mimeToExt[$mimeType] ?? 'enc';
+        $storedName = bin2hex(random_bytes(16)) . '.' . $ext;
         $storedPath = $storageDirectory
             . DIRECTORY_SEPARATOR . $storedName;
 
@@ -287,9 +301,10 @@ class FileEncryptionService
         }
 
         // Hanya izinkan nama file acak dengan format yang kita buat.
+        // Format: 32 hex chars + ekstensi audio yang diizinkan (atau .enc lama).
         if (
             !is_string($file['stored_path']) ||
-            !preg_match('/^[a-f0-9]{32}\.enc$/', $file['stored_path'])
+            !preg_match('/^[a-f0-9]{32}\.(enc|webm|ogg|mp3|wav|m4a|aac|flac)$/', $file['stored_path'])
         ) {
             throw new RuntimeException(
                 'Lokasi file tidak valid.'

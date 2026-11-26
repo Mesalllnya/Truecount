@@ -77,102 +77,6 @@ function getFileExtension(mimeType) {
   return 'webm'
 }
 
-/**
- * Inject durasi ke dalam EBML header WebM agar player bisa memutar
- * seluruh rekaman (bukan hanya sebagian).
- *
- * MediaRecorder menghasilkan WebM tanpa elemen Duration di Segment Info,
- * sehingga banyak player hanya memutar beberapa detik pertama atau tidak
- * bisa seek. Fungsi ini menulis elemen EBML Duration (0x4489) ke dalam
- * header yang sudah ada.
- *
- * Kalau format bukan WebM atau parsing gagal, blob asli dikembalikan.
- */
-async function injectWebmDuration(blob, durationSeconds) {
-  try {
-    const buf  = await blob.arrayBuffer()
-    const data = new Uint8Array(buf)
-
-    // Cari elemen Segment Info (0x1549A966) lalu sisipkan Duration di dalamnya.
-    // Format EBML: ID (variable-width) + Size (variable-width) + Data.
-    // Kita cari byte sequence untuk Duration element ID: 0x44 0x89
-    // yang diikuti ukuran 0x88 (8 byte float64).
-
-    // Cari posisi Segment (0x18538067) untuk pastikan ini WebM/Matroska.
-    let segmentPos = -1
-    for (let i = 0; i < Math.min(data.length - 4, 1024); i++) {
-      if (
-        data[i]   === 0x18 && data[i+1] === 0x53 &&
-        data[i+2] === 0x80 && data[i+3] === 0x67
-      ) {
-        segmentPos = i
-        break
-      }
-    }
-    if (segmentPos === -1) return blob // bukan WebM
-
-    // Cari Segment Info (0x1549A966) dalam 8KB pertama setelah Segment.
-    let infoPos = -1
-    const searchEnd = Math.min(data.length - 4, segmentPos + 8192)
-    for (let i = segmentPos; i < searchEnd; i++) {
-      if (
-        data[i]   === 0x15 && data[i+1] === 0x49 &&
-        data[i+2] === 0xA9 && data[i+3] === 0x66
-      ) {
-        infoPos = i
-        break
-      }
-    }
-    if (infoPos === -1) return blob // tidak ada Segment Info
-
-    // Cari elemen Duration (0x4489) dalam Segment Info.
-    // Kalau sudah ada, update nilainya langsung.
-    const infoEnd = Math.min(data.length - 10, infoPos + 512)
-    for (let i = infoPos + 8; i < infoEnd; i++) {
-      if (data[i] === 0x44 && data[i+1] === 0x89) {
-        // Ukuran elemen: byte berikutnya (harus 0x88 = 8 byte float64)
-        if (data[i+2] === 0x88) {
-          // Tulis durasi sebagai IEEE 754 double (milidetik untuk WebM)
-          const view = new DataView(data.buffer)
-          view.setFloat64(i + 3, durationSeconds * 1000, false) // big-endian
-          return new Blob([data], { type: blob.type })
-        }
-        break
-      }
-    }
-
-    // Duration belum ada — sisipkan di awal konten Segment Info.
-    // Hitung posisi setelah header Segment Info (ID 4 byte + size variable).
-    let infoDataStart = infoPos + 4
-    // Baca ukuran Segment Info (EBML variable-length integer).
-    const sizeByte = data[infoDataStart]
-    let headerBytes = 1
-    if      ((sizeByte & 0x80) !== 0) headerBytes = 1
-    else if ((sizeByte & 0x40) !== 0) headerBytes = 2
-    else if ((sizeByte & 0x20) !== 0) headerBytes = 3
-    else if ((sizeByte & 0x10) !== 0) headerBytes = 4
-    infoDataStart += headerBytes
-
-    // Buat elemen Duration: ID 0x4489, size 0x88, value float64 (ms).
-    const durationEl = new Uint8Array(11)
-    durationEl[0] = 0x44; durationEl[1] = 0x89  // ID
-    durationEl[2] = 0x88                          // size = 8 byte
-    const dv = new DataView(durationEl.buffer)
-    dv.setFloat64(3, durationSeconds * 1000, false)
-
-    // Gabungkan: bytes sebelum infoDataStart + durationEl + sisa.
-    const result = new Uint8Array(data.length + durationEl.length)
-    result.set(data.subarray(0, infoDataStart))
-    result.set(durationEl, infoDataStart)
-    result.set(data.subarray(infoDataStart), infoDataStart + durationEl.length)
-
-    return new Blob([result], { type: blob.type })
-  } catch {
-    // Kalau parsing gagal, kembalikan blob asli — lebih aman daripada error.
-    return blob
-  }
-}
-
 export default function VoiceMessagesPanel() {
   const { token } = useAuth()
 
@@ -406,19 +310,14 @@ export default function VoiceMessagesPanel() {
           return
         }
 
-        // WebM dari MediaRecorder tidak menyertakan metadata durasi sehingga
-        // player hanya memutar sebagian kecil. Inject durasi ke EBML header
-        // agar seluruh audio bisa diputar penuh.
-        injectWebmDuration(blob, duration).then(fixedBlob => {
-          setRecordedBlob(fixedBlob)
-          setRecordedDuration(duration)
+        setRecordedBlob(blob)
+        setRecordedDuration(duration)
 
-          clearPreviewUrl()
+        clearPreviewUrl()
 
-          const url = URL.createObjectURL(fixedBlob)
-          previewUrlRef.current = url
-          setPreviewUrl(url)
-        })
+        const url = URL.createObjectURL(blob)
+        previewUrlRef.current = url
+        setPreviewUrl(url)
       }
 
       startTimeRef.current = Date.now()

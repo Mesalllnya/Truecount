@@ -5,21 +5,23 @@
  * TrueCount - Cryptography Module
  *
  * Menyimpan file audio dalam bentuk yang tetap dapat dibuka oleh media
- * player (header format dipertahankan), namun audio samples-nya di-XOR
- * dengan keystream sehingga suara yang keluar berupa noise/distorsi.
+ * player (header format audio dipertahankan), namun audio samples-nya
+ * di-XOR dengan repeating key sehingga suara yang keluar berupa noise.
  *
- * Ketika dibuka melalui aplikasi TrueCount, dekripsi membalik XOR sehingga
- * suara asli dapat didengar.
+ * Ketika dibuka melalui aplikasi TrueCount, de-obfuscation membalik XOR
+ * sehingga suara asli dapat didengar kembali.
  *
- * Format yang didukung dan offset header yang dipertahankan:
- *   WAV         - 44 byte (RIFF header + fmt chunk + data chunk header)
- *   WebM        - 512 byte (EBML header)
- *   OGG         - 512 byte (Ogg page headers)
- *   MP3         - 512 byte (ID3v2 header + beberapa frame awal)
- *   M4A/AAC/FLAC- 512 byte (container/codec header)
+ * Strategi per format:
+ *   WAV         - Skip 44 byte RIFF/fmt/data header, XOR sisa (sample data)
+ *   WebM        - Skip 4 byte EBML signature, XOR sisa
+ *   OGG         - Skip 4 byte "OggS" signature, XOR sisa
+ *   MP3         - Skip 3 byte ID3/frame signature, XOR sisa
+ *   M4A/AAC/FLAC- Skip 8 byte container signature, XOR sisa
  *
- * Keystream di-derive dari CHACHA20_KEY_B64 + nonce menggunakan SHA-256
- * berulang (stream cipher sederhana tanpa library tambahan).
+ * Key repeating = HMAC-SHA256(CHACHA20_KEY, nonce) — 32 byte, diulang
+ * sepanjang data audio agar seluruh samples ter-obfuscate.
+ *
+ * Nonce (32 hex chars) di-prefix ke awal file yang disimpan di storage.
  */
 
 require_once __DIR__ . '/../../config/env.php';
@@ -27,23 +29,26 @@ require_once __DIR__ . '/../../config/env.php';
 class AudioObfuscationService
 {
     /**
-     * Offset (byte) yang dipertahankan apa adanya per MIME type.
-     * Bytes setelah offset ini yang di-XOR.
+     * Offset (byte) header yang dipertahankan apa adanya per MIME type.
+     * Bytes setelah offset ini yang di-XOR dengan repeating key.
+     *
+     * Offset dipilih cukup kecil agar hanya signature/magic bytes yang
+     * dilewati — selebihnya (audio data) di-XOR.
      */
     private const HEADER_OFFSETS = [
-        'audio/wav'   => 44,
+        'audio/wav'   => 44,   // RIFF + fmt chunk + data chunk header
         'audio/x-wav' => 44,
-        'audio/webm'  => 512,
-        'video/webm'  => 512,
-        'audio/ogg'   => 512,
-        'audio/mpeg'  => 512,
-        'audio/mp4'   => 512,
-        'audio/aac'   => 512,
-        'audio/flac'  => 512,
+        'audio/webm'  => 4,    // EBML signature (1A 45 DF A3)
+        'video/webm'  => 4,
+        'audio/ogg'   => 4,    // OggS capture pattern
+        'audio/mpeg'  => 3,    // ID3 marker atau sync frame
+        'audio/mp4'   => 8,    // ftyp box signature
+        'audio/aac'   => 2,    // ADTS sync word
+        'audio/flac'  => 4,    // fLaC marker
     ];
 
-    private const DEFAULT_OFFSET = 512;
-    private const NONCE_LENGTH   = 16;
+    private const DEFAULT_OFFSET = 4;
+    private const NONCE_LENGTH   = 16; // bytes → 32 hex chars saat disimpan
 
     // ------------------------------------------------------------------ //
     //  Public API                                                          //
@@ -52,29 +57,22 @@ class AudioObfuscationService
     /**
      * Obfuscate audio bytes.
      *
-     * Header dipertahankan; bytes setelahnya di-XOR dengan keystream.
-     *
      * @param  string $audioBytes  Plaintext audio (raw bytes)
-     * @param  string $mimeType    MIME type audio (mis. 'audio/webm')
+     * @param  string $mimeType    MIME type (mis. 'audio/webm')
      * @return array{data: string, nonce: string}
      *         data  = bytes siap simpan (header asli + samples ter-XOR)
-     *         nonce = hex string 32 karakter, simpan di database
+     *         nonce = 32 hex chars, sisipkan sebagai prefix di file storage
      */
     public static function obfuscate(string $audioBytes, string $mimeType): array
     {
-        $key    = self::getKey();
         $nonce  = bin2hex(random_bytes(self::NONCE_LENGTH)); // 32 hex chars
         $offset = self::getOffset($mimeType);
+        $key    = self::deriveKey($nonce);
 
         $header  = substr($audioBytes, 0, $offset);
-        $payload = substr($audioBytes, $offset);
+        $payload = (string) substr($audioBytes, $offset);
 
-        // Kalau file lebih pendek dari offset, XOR seluruh file.
-        if ($payload === false || $payload === '') {
-            $payload = '';
-        }
-
-        $obfuscated = $header . self::xorWithKeystream($payload, $key, $nonce);
+        $obfuscated = $header . self::xorRepeating($payload, $key);
 
         return [
             'data'  => $obfuscated,
@@ -83,11 +81,11 @@ class AudioObfuscationService
     }
 
     /**
-     * Kembalikan audio ke bentuk asli.
+     * Kembalikan audio ke bentuk asli (XOR simetris).
      *
-     * @param  string $obfuscatedBytes  Bytes yang tersimpan di storage
+     * @param  string $obfuscatedBytes  Bytes audio yang ter-obfuscate
      * @param  string $mimeType         MIME type audio
-     * @param  string $nonce            Nonce hex yang tersimpan di database
+     * @param  string $nonce            32 hex chars nonce
      * @return string Plaintext audio asli
      */
     public static function deobfuscate(
@@ -95,20 +93,14 @@ class AudioObfuscationService
         string $mimeType,
         string $nonce
     ): string {
-        $key    = self::getKey();
         $offset = self::getOffset($mimeType);
+        $key    = self::deriveKey($nonce);
 
         $header  = substr($obfuscatedBytes, 0, $offset);
-        $payload = substr($obfuscatedBytes, $offset);
+        $payload = (string) substr($obfuscatedBytes, $offset);
 
-        if ($payload === false || $payload === '') {
-            $payload = '';
-        }
-
-        // XOR simetris: XOR ulang dengan keystream yang sama → plaintext.
-        $plain = $header . self::xorWithKeystream($payload, $key, $nonce);
-
-        return $plain;
+        // XOR simetris: operasi yang sama menghasilkan plaintext kembali.
+        return $header . self::xorRepeating($payload, $key);
     }
 
     /**
@@ -146,34 +138,32 @@ class AudioObfuscationService
     }
 
     /**
-     * XOR $data dengan keystream yang di-derive dari $key + $nonce.
-     *
-     * Keystream dihasilkan dengan SHA-256($key . $nonce . $blockIndex)
-     * berulang per 32-byte block sehingga panjang keystream = panjang data.
-     *
-     * Ini adalah stream cipher sederhana yang deterministik — cukup untuk
-     * tujuan obfuscation audio tanpa memerlukan ekstensi PHP tambahan.
+     * Derive 32-byte repeating XOR key dari master key + nonce.
+     * HMAC-SHA256 menghasilkan output deterministik yang berbeda per nonce.
      */
-    private static function xorWithKeystream(
-        string $data,
-        string $key,
-        string $nonce
-    ): string {
-        $length = strlen($data);
+    private static function deriveKey(string $nonce): string
+    {
+        return hash_hmac('sha256', $nonce, self::getKey(), true);
+    }
 
-        if ($length === 0) {
-            return '';
+    /**
+     * XOR $data dengan repeating $key (key diulang sepanjang data).
+     * Operasi ini simetris: XOR dua kali dengan key yang sama = data asli.
+     */
+    private static function xorRepeating(string $data, string $key): string
+    {
+        $dataLen = strlen($data);
+        $keyLen  = strlen($key);
+
+        if ($dataLen === 0 || $keyLen === 0) {
+            return $data;
         }
 
-        $keystream = '';
-        $block     = 0;
-
-        while (strlen($keystream) < $length) {
-            $keystream .= hash('sha256', $key . $nonce . pack('N', $block), true);
-            $block++;
+        $result = '';
+        for ($i = 0; $i < $dataLen; $i++) {
+            $result .= $data[$i] ^ $key[$i % $keyLen];
         }
 
-        // Potong keystream sesuai panjang data lalu XOR.
-        return $data ^ substr($keystream, 0, $length);
+        return $result;
     }
 }

@@ -1250,7 +1250,7 @@ Saat menambahkan endpoint baru, selalu update:
     - Kartu statistik undangan memakai class `stat-card--<key>` + ikon dari `Icon.jsx`; warna status didefinisikan di `DashboardPage.css` dan harus konsisten dengan badge tabel undangan.
     - Modal nonaktifkan USB token di `UsbTokenPanel.jsx` sekarang menutup & mereset state setelah revoke sukses; jangan mengembalikan `disabled` statis pada tombol konfirmasi.
     - Landing page memakai pointer FX (`--mx`/`--my`/`--rx`/`--ry`) yang di-throttle `requestAnimationFrame`; pastikan guard `prefers-reduced-motion` dan `pointerType === 'touch'` tetap ada saat menambah animasi.
-
+<<
 34. **Fix: `GET /elections` 500 untuk pemilih (`only_full_group_by`)** (26 Nov 2026) - Jalur voter di `backend/api/elections/list.php` memilih `v.id`/`v.has_voted` tanpa agregat padahal query-nya `GROUP BY e.id`. MySQL 8 (baik Docker maupun `sql_mode` default lain) menolaknya dengan error 1055 → exception handler balikin "Terjadi kesalahan pada server". Jalur admin tidak terpengaruh (query beda), sehingga gejalanya khas: **admin lihat paslon, pemilih dapat error**.
     - **Fix:** bungkus jadi `MAX(v.id) AS voter_record_id`, `MAX(v.has_voted) AS has_voted`.
     - **Bonus:** 7 file PHP punya baris kosong sebelum `<?php` → warning `headers already sent` sehingga `http_response_code()` gagal dan **status 4xx/5xx tidak pernah terkirim** (error balik jadi 200). Baris awal dipotong: `candidates/create.php`, `vote.php`, `results.php`, `blockchain-verify.php`, `encrypted-messages/create.php`, `encrypted-messages/get.php`, `EncryptedMessageService.php`.

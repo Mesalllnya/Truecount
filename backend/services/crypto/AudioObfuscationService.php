@@ -43,6 +43,7 @@ class AudioObfuscationService
         'audio/ogg'   => 4,    // OggS capture pattern
         'audio/mpeg'  => 3,    // ID3 marker atau sync frame
         'audio/mp4'   => 8,    // ftyp box signature
+        'video/mp4'   => 8,    // finfo mendeteksi MP4 audio sebagai video/mp4
         'audio/aac'   => 2,    // ADTS sync word
         'audio/flac'  => 4,    // fLaC marker
     ];

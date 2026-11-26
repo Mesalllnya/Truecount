@@ -57,10 +57,11 @@ function getSupportedMimeType() {
   }
 
   const types = [
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/mp4',
     'audio/webm;codecs=opus',
     'audio/webm',
     'audio/ogg;codecs=opus',
-    'audio/mp4',
   ]
 
   return (
@@ -467,14 +468,60 @@ export default function VoiceMessagesPanel() {
       )
 
       if (!response.ok) {
+        // Server mungkin masih mengirim JSON error
         const data = await readJson(response)
-
-        throw new Error(
-          data.error || 'Gagal memuat audio.'
-        )
+        throw new Error(data.error || 'Gagal memuat audio.')
       }
 
-      const blob = await response.blob()
+      // Ambil parameter dekripsi dari header sesi
+      const b64Key   = response.headers.get('X-Audio-Key')
+      const b64Nonce = response.headers.get('X-Audio-Nonce')
+      const b64Tag   = response.headers.get('X-Audio-Tag')
+      const mimeType = (response.headers.get('X-Audio-Mime') || 'audio/webm').trim()
+
+      if (!b64Key || !b64Nonce || !b64Tag) {
+        throw new Error('Header enkripsi audio tidak lengkap.')
+      }
+
+      // Decode Base64 → Uint8Array
+      const fromB64 = (str) =>
+        Uint8Array.from(atob(str.trim()), (c) => c.charCodeAt(0))
+
+      const keyBytes   = fromB64(b64Key)
+      const nonceBytes = fromB64(b64Nonce)
+      const tagBytes   = fromB64(b64Tag)
+
+      // Baca ciphertext dari body
+      const cipherBytes = new Uint8Array(await response.arrayBuffer())
+
+      // Gabungkan ciphertext + tag (format yang diharapkan Web Crypto AES-GCM)
+      const cipherWithTag = new Uint8Array(cipherBytes.length + tagBytes.length)
+      cipherWithTag.set(cipherBytes)
+      cipherWithTag.set(tagBytes, cipherBytes.length)
+
+      // Import key ke Web Crypto API
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw',
+        keyBytes,
+        { name: 'AES-GCM' },
+        false,
+        ['decrypt']
+      )
+
+      // Dekripsi — gagal jika tag tidak cocok (audio dimodifikasi)
+      let plainBuffer
+      try {
+        plainBuffer = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: nonceBytes, tagLength: 128 },
+          cryptoKey,
+          cipherWithTag
+        )
+      } catch {
+        throw new Error('Gagal mendekripsi audio: data tidak valid atau telah dimodifikasi.')
+      }
+
+      // Buat Blob URL sementara dari plaintext audio
+      const blob = new Blob([plainBuffer], { type: mimeType })
       const url = URL.createObjectURL(blob)
 
       audioUrlRef.current = url
@@ -710,7 +757,7 @@ export default function VoiceMessagesPanel() {
 
           <p className="voice-hint">
             <ShieldCheck size={14} />
-            Audio dienkripsi di server menggunakan ChaCha20-Poly1305.
+            Audio dienkripsi ganda: ChaCha20-Poly1305 di server + AES-256-GCM sesi saat pengiriman. Hanya bisa diputar di dalam aplikasi.
           </p>
         </div>
       </section>

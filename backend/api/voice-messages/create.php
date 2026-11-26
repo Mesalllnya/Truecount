@@ -100,6 +100,7 @@ $allowedAudioTypes = [
     'audio/wav'   => 'wav',
     'audio/x-wav' => 'wav',
     'audio/mp4'   => 'm4a',
+    'video/mp4'   => 'm4a',  // finfo mendeteksi MP4 audio sebagai video/mp4
     'audio/aac'   => 'aac',
     'audio/flac'  => 'flac'
 ];
@@ -108,16 +109,21 @@ $browserMime = strtolower(
     trim(explode(';', $audio['type'] ?? '')[0])
 );
 
+// video/mp4 dari finfo diterima hanya kalau browser melaporkan audio/mp4.
+$isMp4Audio =
+    $mimeType === 'video/mp4' &&
+    ($browserMime === 'audio/mp4' || $browserMime === 'video/mp4');
+
+// video/webm dari finfo diterima hanya kalau browser melaporkan audio/webm.
 $isWebmAudio =
     $mimeType === 'video/webm' &&
     $browserMime === 'audio/webm';
 
 if (
     !is_string($mimeType) ||
-    (
-        !isset($allowedAudioTypes[$mimeType]) ||
-        ($mimeType === 'video/webm' && !$isWebmAudio)
-    )
+    !isset($allowedAudioTypes[$mimeType]) ||
+    ($mimeType === 'video/webm' && !$isWebmAudio) ||
+    ($mimeType === 'video/mp4'  && !$isMp4Audio)
 ) {
     jsonResponse([
         'error' => 'Format audio tidak didukung.',

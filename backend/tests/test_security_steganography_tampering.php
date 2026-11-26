@@ -1,48 +1,81 @@
 <?php
 
-require_once __DIR__ . '/../services/crypto/FileEncryptionService.php';
+/**
+ * TrueCount - Steganography Tampering Test (jalur foto paslon baru)
+ *
+ * Foto paslon kini berupa PNG biasa di disk yang sudah disisipi metadata.
+ * Test ini memastikan modifikasi satu bit pada payload membuat ekstraksi
+ * metadata GAGAL (autentikasi AEAD menolak), sehingga integritas metadata
+ * terjaga walau file tidak dienkripsi.
+ */
+
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../helpers/storage.php';
 require_once __DIR__ . '/../services/crypto/SteganographyService.php';
 
 echo "=== STEGANOGRAPHY TAMPERING TEST ===\n\n";
 
-$fileId = 5;
-$userId = 1;
+$db = getDB();
 
-$tempPath = null;
+// Ambil satu kandidat berfoto jalur baru.
+$candidate = $db->query(
+    'SELECT id, name, photo_path
+       FROM candidates
+      WHERE photo_path IS NOT NULL AND photo_path <> ""
+      ORDER BY id ASC
+      LIMIT 1'
+)->fetch(PDO::FETCH_ASSOC);
+
+if (!$candidate) {
+    echo "[FAIL] Tidak ada kandidat dengan foto jalur baru.\n";
+    exit(1);
+}
+
+$relative = trim($candidate['photo_path'], "/\\");
+$originalPath = storageRoot() . DIRECTORY_SEPARATOR
+    . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+
+if (!is_file($originalPath)) {
+    echo "[FAIL] File foto tidak ditemukan: {$originalPath}\n";
+    exit(1);
+}
+
+echo "Foto uji: kandidat #{$candidate['id']} ({$candidate['name']})\n\n";
+
+$owners = $db->query('SELECT id FROM users ORDER BY id ASC')
+    ->fetchAll(PDO::FETCH_COLUMN);
+
 $image = null;
+$tempPath = null;
 
 try {
-    // 1. Dekripsi file
-    echo "[1] Decrypt original image...\n";
+    // 1. Cari pemilik AAD yang benar (berhasil ekstrak file asli).
+    echo "[1] Cari pemilik AAD steganografi...\n";
 
-    $decrypted = FileEncryptionService::decryptById(
-        $fileId,
-        $userId
-    );
+    $ownerId = null;
 
-    $pngContent = $decrypted['content'];
-
-    echo "[PASS] Original image decrypted.\n";
-
-    // 2. Validasi PNG
-    echo "[2] Validate PNG...\n";
-
-    $imageInfo = getimagesizefromstring($pngContent);
-
-    if (
-        $imageInfo === false ||
-        $imageInfo[2] !== IMAGETYPE_PNG
-    ) {
-        throw new RuntimeException('PNG tidak valid.');
+    foreach ($owners as $candidate_owner) {
+        try {
+            SteganographyService::extractMessage($originalPath, (int) $candidate_owner);
+            $ownerId = (int) $candidate_owner;
+            break;
+        } catch (Throwable $e) {
+            // AAD salah → lanjut.
+        }
     }
 
-    echo "[PASS] PNG valid: "
-        . $imageInfo[0] . 'x' . $imageInfo[1] . "\n";
+    if ($ownerId === null) {
+        throw new RuntimeException(
+            'Tidak ada user yang bisa mengekstrak metadata file asli.'
+        );
+    }
 
-    // 3. Load PNG menggunakan GD
-    echo "[3] Load image into GD...\n";
+    echo "[PASS] Pemilik AAD: user #{$ownerId}\n";
 
-    $image = imagecreatefromstring($pngContent);
+    // 2. Load PNG menggunakan GD.
+    echo "[2] Load image into GD...\n";
+
+    $image = imagecreatefrompng($originalPath);
 
     if ($image === false) {
         throw new RuntimeException('Gagal memuat PNG.');
@@ -80,14 +113,19 @@ try {
 
     echo "[PASS] One payload LSB modified.\n";
 
-    // 4. Simpan PNG sementara
-    echo "[4] Save tampered PNG...\n";
+    // 3. Simpan PNG sementara.
+    echo "[3] Save tampered PNG...\n";
 
     $tempPath = tempnam(sys_get_temp_dir(), 'tc_stego_');
 
     if ($tempPath === false) {
         throw new RuntimeException('Gagal membuat temporary file.');
     }
+
+    // tempnam tidak ber ekstensi .png, paksa ekstensi PNG.
+    $pngTempPath = $tempPath . '.png';
+    rename($tempPath, $pngTempPath);
+    $tempPath = $pngTempPath;
 
     if (!imagepng($image, $tempPath)) {
         throw new RuntimeException('Gagal menyimpan PNG.');
@@ -96,8 +134,8 @@ try {
     imagedestroy($image);
     $image = null;
 
-    // 5. Pastikan PNG hasil manipulasi tetap valid
-    echo "[5] Validate tampered PNG...\n";
+    // 4. Pastikan PNG hasil manipulasi tetap valid secara struktural.
+    echo "[4] Validate tampered PNG...\n";
 
     $tamperedInfo = getimagesize($tempPath);
 
@@ -112,16 +150,13 @@ try {
 
     echo "[PASS] Tampered PNG remains structurally valid.\n";
 
-    // 6. Ekstraksi harus gagal pada autentikasi AEAD
-    echo "[6] Attempt metadata extraction...\n";
+    // 5. Ekstraksi harus gagal pada autentikasi AEAD.
+    echo "[5] Attempt metadata extraction...\n";
 
     $rejected = false;
 
     try {
-        SteganographyService::extractMessage(
-            $tempPath,
-            $userId
-        );
+        SteganographyService::extractMessage($tempPath, $ownerId);
     } catch (Throwable $e) {
         $rejected = true;
 

@@ -25,6 +25,8 @@ mkdir -p \
     "$STORAGE_ROOT/id_photos" \
     "$STORAGE_ROOT/encrypted" \
     "$STORAGE_ROOT/private" \
+    "$STORAGE_ROOT/private/encrypted-files" \
+    "$STORAGE_ROOT/private/candidate-photos" \
     "$STORAGE_ROOT/temp" \
     backend/uploads/candidates
 

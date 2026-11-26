@@ -445,6 +445,7 @@ fn prepare_runtime_backend(
     for dir in [
         "storage/logs",
         "storage/private/encrypted-files",
+        "storage/private/candidate-photos",
         "storage/auth_photos",
         "uploads/candidates",
     ] {

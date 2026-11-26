@@ -360,6 +360,12 @@ match (true) {
         $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates';
         require_once __DIR__ . '/api/elections/candidates/list.php';
     })(),
+    // GET  /elections/{id}/candidates/{cid}/photo/metadata
+    //      - info steganografi di dalam foto paslon (admin)
+    preg_match('#^/elections/(\d+)/candidates/(\d+)/photo/metadata$#', $uri, $m) && $method === 'GET' => (function () use ($m) {
+        $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates/' . $m[2] . '/photo/metadata';
+        require_once __DIR__ . '/api/elections/candidates/photo_metadata.php';
+    })(),
     // POST /elections/{id}/candidates         - tambah kandidat (admin)
     preg_match('#^/elections/(\d+)/candidates$#', $uri, $m) && $method === 'POST' => (function () use ($m) {
         $_SERVER['REQUEST_URI'] = '/elections/' . $m[1] . '/candidates';

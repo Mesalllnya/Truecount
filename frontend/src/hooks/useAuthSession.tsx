@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 /** API base URL */
 import { apiBase, apiUrl } from '../lib/appConfig';
+import { stopAllCameraStreams } from './useAuthSecurity';
 
 /** User info from JWT */
 export interface User {
@@ -120,6 +121,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Logout - clear everything and redirect to login */
   const logout = useCallback(() => {
+    // Jaminan kamera mati saat logout (issue #54): hentikan SEMUA stream yang
+    // mungkin masih hidup/bocor dari sesi berjalan SEBELUM state dibersihkan,
+    // supaya LED kamera tidak tertinggal menyala.
+    stopAllCameraStreams();
     clearAuthStorage();
     setToken(null);
     setUser(null);

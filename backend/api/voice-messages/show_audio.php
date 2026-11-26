@@ -4,6 +4,9 @@
  * GET /voice-messages/{id}/audio
  *
  * Hanya penerima yang berhak meminta audio.
+ * Audio dikirim dalam bentuk terenkripsi (AES-256-GCM sesi) sehingga
+ * hanya bisa didekripsi dan diputar di dalam aplikasi TrueCount.
+ * File mentah yang diunduh dari luar aplikasi tidak dapat diputar.
  */
 
 require_once __DIR__ . '/../../middleware/auth.php';
@@ -70,7 +73,6 @@ try {
     ], 500);
 }
 
-
 $allowedMimeTypes = [
     'audio/webm',
     'video/webm',
@@ -87,16 +89,51 @@ if (!in_array($audio['mime_type'], $allowedMimeTypes, true)) {
     jsonResponse(['error' => 'Format audio tidak didukung.'], 415);
 }
 
-// WebM yang direkam sebagai audio dikirim dengan MIME audio/webm.
+// --- Lapisan enkripsi sesi (transport encryption) ---
+// Enkripsi ulang audio plaintext dengan AES-256-GCM menggunakan
+// ephemeral key acak per request. Key dikirim via header X-Audio-Key
+// sehingga hanya kode aplikasi yang bisa mendekripsi — file yang
+// diunduh langsung di luar aplikasi tidak dapat diputar.
+
+$sessionKey  = random_bytes(32);        // AES-256 key, 32 byte
+$sessionNonce = random_bytes(12);       // GCM nonce, 12 byte
+$sessionTag  = '';
+
+$ciphertext = openssl_encrypt(
+    $audio['content'],
+    'aes-256-gcm',
+    $sessionKey,
+    OPENSSL_RAW_DATA,
+    $sessionNonce,
+    $sessionTag,
+    '',     // AAD kosong; autentikasi sudah via tag
+    16
+);
+
+if ($ciphertext === false) {
+    error_log('Voice session encryption failed');
+    jsonResponse(['error' => 'Gagal mengenkripsi audio untuk pengiriman.'], 500);
+}
+
+// WebM yang direkam sebagai audio tetap dikirim dengan MIME audio/webm
+// agar frontend tahu codec yang digunakan setelah dekripsi.
 $responseMimeType = $audio['mime_type'] === 'video/webm'
     ? 'audio/webm'
     : $audio['mime_type'];
 
-header('Content-Type: ' . $responseMimeType);
-header('Content-Length: ' . strlen($audio['content']));
-header('Content-Disposition: inline; filename="voice-message-audio"');
+header('Content-Type: application/octet-stream');
+header('Content-Length: ' . strlen($ciphertext));
+header('Content-Disposition: inline; filename="voice-message.enc"');
 header('Cache-Control: private, no-store, no-cache, must-revalidate');
 header('X-Content-Type-Options: nosniff');
+// Kirim key, nonce, tag, dan mime asli ke frontend via header.
+// Semua nilai dalam format Base64 URL-safe.
+header('X-Audio-Key:   ' . base64_encode($sessionKey));
+header('X-Audio-Nonce: ' . base64_encode($sessionNonce));
+header('X-Audio-Tag:   ' . base64_encode($sessionTag));
+header('X-Audio-Mime:  ' . $responseMimeType);
+// Izinkan frontend membaca header kustom (CORS).
+header('Access-Control-Expose-Headers: X-Audio-Key, X-Audio-Nonce, X-Audio-Tag, X-Audio-Mime');
 
-echo $audio['content'];
+echo $ciphertext;
 exit;

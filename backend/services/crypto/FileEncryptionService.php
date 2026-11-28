@@ -157,13 +157,15 @@ class FileEncryptionService
 
         if ($isAudio) {
             // Obfuscate: header format dipertahankan, samples di-XOR.
-            // Nonce (32 hex) disisipkan sebagai prefix 32 byte di awal file
-            // sehingga tidak perlu kolom database baru.
+            // Nonce TIDAK disisipkan ke file — cukup disimpan di kolom
+            // `nonce` database. Dengan begitu signature audio (RIFF/EBML/
+            // OggS/ftyp) tetap berada di offset 0 sehingga file hasil
+            // simpan bisa langsung dibuka media player (berisi noise).
             $obfResult = AudioObfuscationService::obfuscate($plaintext, $mimeType);
-            $storedBytes = $obfResult['nonce'] . $obfResult['data'];
+            $storedBytes = $obfResult['data'];
             $algorithm   = self::ALGORITHM_AUDIO;
             // nonce & auth_tag diisi placeholder (kolom NOT NULL).
-            $dbNonce   = $obfResult['nonce'];   // 32 hex chars — disimpan juga di DB untuk referensi
+            $dbNonce   = $obfResult['nonce'];   // 32 hex chars — disimpan di DB
             $dbAuthTag = 'obfuscated';
         } else {
             // ChaCha20-Poly1305 untuk file non-audio.
@@ -379,10 +381,26 @@ class FileEncryptionService
         }
 
         if ($file['algorithm'] === self::ALGORITHM_AUDIO) {
-            // De-obfuscate audio: 32 byte pertama = nonce, sisanya = obfuscated audio.
-            $nonce       = substr($storedRaw, 0, 32);
-            $obfuscated  = substr($storedRaw, 32);
-            $plaintext   = AudioObfuscationService::deobfuscate(
+            // Nonce diambil dari database (kolom `nonce`).
+            $nonce = is_string($file['nonce']) ? $file['nonce'] : '';
+
+            if (!preg_match('/^[a-f0-9]{32}$/', $nonce)) {
+                throw new RuntimeException(
+                    'Metadata nonce audio tidak valid.'
+                );
+            }
+
+            $obfuscated = $storedRaw;
+
+            // Kompatibilitas format lama: file yang dibuat sebelum perbaikan
+            // menyimpan nonce sebagai prefix 32 byte pertama sehingga signature
+            // audio bergeser. Deteksi:32 byte pertama sama persis dengan nonce
+            // di database → buang prefix-nya.
+            if (substr($storedRaw, 0, 32) === $nonce) {
+                $obfuscated = substr($storedRaw, 32);
+            }
+
+            $plaintext = AudioObfuscationService::deobfuscate(
                 $obfuscated,
                 $file['mime_type'],
                 $nonce

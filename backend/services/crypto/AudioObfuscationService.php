@@ -21,7 +21,9 @@
  * Key repeating = HMAC-SHA256(CHACHA20_KEY, nonce) — 32 byte, diulang
  * sepanjang data audio agar seluruh samples ter-obfuscate.
  *
- * Nonce (32 hex chars) di-prefix ke awal file yang disimpan di storage.
+ * Nonce (32 hex chars) disimpan di kolom `nonce` database, TIDAK diprefix
+ * ke file — signature audio tetap berada di offset 0 sehingga file di
+ * storage tetap bisa dibuka media player (berisi noise).
  */
 
 require_once __DIR__ . '/../../config/env.php';

@@ -541,6 +541,14 @@ match (true) {
         jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
     })(),
 
+    $uri === '/voice-messages/sent' && $method === 'GET' => (function () {
+        require_once __DIR__ . '/api/voice-messages/sent.php';
+    })(),
+
+    $uri === '/voice-messages/sent' => (function () {
+        jsonResponse(['error' => 'Method tidak diizinkan.'], 405);
+    })(),
+
         // ── Cryptography: Encrypted Messages ──────────────────────
 
     $uri === '/encrypted-messages' && $method === 'POST' => (function () {

@@ -267,7 +267,7 @@ try {
                     $ownerId
                 );
             },
-            'ciphertext telah dimodifikasi'
+            'telah dimodifikasi'
         );
 
         $passed++;

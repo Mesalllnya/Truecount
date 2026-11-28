@@ -223,7 +223,7 @@ try {
             if ($storedFile) {
                 $storedName = $storedFile['stored_path'];
 
-                if (preg_match('/^[a-f0-9]{32}\.enc$/', $storedName)) {
+                if (preg_match('/^[a-f0-9]{32}\.(enc|webm|ogg|mp3|wav|m4a|aac|flac)$/', $storedName)) {
                     $storageDirectory = storagePath(
                         'private',
                         'encrypted-files'

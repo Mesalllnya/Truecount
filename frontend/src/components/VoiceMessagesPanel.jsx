@@ -13,6 +13,9 @@ import {
   Circle,
   CheckCircle2,
   Clock,
+  Upload,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 
 import { apiUrl } from '../lib/appConfig'
@@ -92,6 +95,10 @@ export default function VoiceMessagesPanel() {
   const [admins, setAdmins] = useState([])
   const [recipientId, setRecipientId] = useState('')
   const [messages, setMessages] = useState([])
+  const [sentMessages, setSentMessages] = useState([])
+
+  // Sub-tab daftar pesan: masuk (inbox) atau terkirim (history + status).
+  const [listTab, setListTab] = useState('inbox')
 
   const [recording, setRecording] = useState(false)
   const [recordedBlob, setRecordedBlob] = useState(null)
@@ -104,6 +111,7 @@ export default function VoiceMessagesPanel() {
 
   const [loading, setLoading] = useState(false)
   const [loadingInbox, setLoadingInbox] = useState(false)
+  const [loadingSent, setLoadingSent] = useState(false)
   const [loadingAudioId, setLoadingAudioId] = useState(null)
 
   const [error, setError] = useState('')
@@ -182,11 +190,41 @@ export default function VoiceMessagesPanel() {
     }
   }, [token])
 
+  const fetchSent = useCallback(async () => {
+    setLoadingSent(true)
+
+    try {
+      const response = await fetch(
+        apiUrl('/voice-messages/sent'),
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      const data = await readJson(response)
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || 'Gagal mengambil history terkirim.'
+        )
+      }
+
+      setSentMessages(data.messages || [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingSent(false)
+    }
+  }, [token])
+
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- state loading/error diset saat fetch dimulai
     fetchAdmins()
     fetchInbox()
-  }, [fetchAdmins, fetchInbox])
+    fetchSent()
+  }, [fetchAdmins, fetchInbox, fetchSent])
 
   useEffect(() => {
     return () => {
@@ -433,6 +471,7 @@ export default function VoiceMessagesPanel() {
       clearPreviewUrl()
 
       await fetchInbox()
+      await fetchSent()
     } catch (err) {
       setError(
         err.message || 'Terjadi kesalahan saat mengirim audio.'
@@ -765,28 +804,52 @@ export default function VoiceMessagesPanel() {
       <section className="voice-inbox">
         <div className="voice-section-heading">
           <div className="voice-heading-icon">
-            <Inbox size={20} />
+            {listTab === 'inbox' ? (
+              <Inbox size={20} />
+            ) : (
+              <Upload size={20} />
+            )}
           </div>
 
           <div>
-            <h3>Inbox Voice Messages</h3>
+            <h3>
+              {listTab === 'inbox'
+                ? 'Inbox Voice Messages'
+                : 'History Terkirim'}
+            </h3>
             <p>
-              Pesan suara yang dikirim oleh administrator lain.
+              {listTab === 'inbox'
+                ? 'Pesan suara yang dikirim oleh administrator lain.'
+                : 'Pesan suara yang kamu kirim beserta status penerima.'}
             </p>
           </div>
 
           <button
             type="button"
             className="voice-refresh"
-            onClick={fetchInbox}
-            disabled={loadingInbox}
-            title="Refresh inbox"
-            aria-label="Muat ulang inbox"
+            onClick={
+              listTab === 'inbox'
+                ? fetchInbox
+                : fetchSent
+            }
+            disabled={
+              listTab === 'inbox'
+                ? loadingInbox
+                : loadingSent
+            }
+            title={
+              listTab === 'inbox'
+                ? 'Refresh inbox'
+                : 'Refresh history terkirim'
+            }
+            aria-label="Muat ulang daftar pesan"
           >
             <RefreshCw
               size={18}
               className={
-                loadingInbox
+                (listTab === 'inbox'
+                  ? loadingInbox
+                  : loadingSent)
                   ? 'voice-spinning'
                   : ''
               }
@@ -794,29 +857,193 @@ export default function VoiceMessagesPanel() {
           </button>
         </div>
 
-        <div className="voice-message-list">
-          {loadingInbox && messages.length === 0 ? (
+        <div
+          className="voice-subtabs"
+          role="tablist"
+          aria-label="Daftar pesan suara"
+        >
+          <button
+            id="voice-subtab-inbox"
+            type="button"
+            role="tab"
+            className={
+              listTab === 'inbox'
+                ? 'voice-subtab active'
+                : 'voice-subtab'
+            }
+            aria-selected={listTab === 'inbox'}
+            aria-controls="voice-subpanel-list"
+            onClick={() => setListTab('inbox')}
+          >
+            <Inbox size={15} />
+            Masuk
+            {messages.some(message => !message.is_read) && (
+              <span className="voice-subtab-badge">
+                {
+                  messages.filter(
+                    message => !message.is_read
+                  ).length
+                }
+              </span>
+            )}
+          </button>
+
+          <button
+            id="voice-subtab-sent"
+            type="button"
+            role="tab"
+            className={
+              listTab === 'sent'
+                ? 'voice-subtab active'
+                : 'voice-subtab'
+            }
+            aria-selected={listTab === 'sent'}
+            aria-controls="voice-subpanel-list"
+            onClick={() => setListTab('sent')}
+          >
+            <Upload size={15} />
+            Terkirim
+          </button>
+        </div>
+
+        <div
+          id="voice-subpanel-list"
+          role="tabpanel"
+          aria-labelledby={
+            listTab === 'inbox'
+              ? 'voice-subtab-inbox'
+              : 'voice-subtab-sent'
+          }
+          className="voice-message-list"
+        >
+          {listTab === 'inbox' ? (
+            loadingInbox && messages.length === 0 ? (
+              <div className="voice-empty">
+                Memuat inbox...
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="voice-empty">
+                <Headphones size={34} />
+
+                <strong>
+                  Belum ada voice message
+                </strong>
+
+                <span>
+                  Pesan suara yang diterima akan muncul di sini.
+                </span>
+              </div>
+            ) : (
+              messages.map(message => (
+                <article
+                  className={
+                    `voice-message-card ${
+                      !message.is_read ? 'unread' : ''
+                    }`
+                  }
+                  key={message.id}
+                >
+                  <div className="voice-message-avatar">
+                    <Mic size={21} />
+                  </div>
+
+                  <div className="voice-message-info">
+                    <div className="voice-message-title">
+                      <strong>
+                        {message.sender_username}
+                      </strong>
+
+                      {!message.is_read ? (
+                        <span className="voice-unread-label">
+                          <Circle
+                            size={8}
+                            fill="currentColor"
+                          />
+                          Baru
+                        </span>
+                      ) : (
+                        <span className="voice-read-label">
+                          <CheckCircle2 size={13} />
+                          Dibaca
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="voice-message-meta">
+                      <span>
+                        <Clock size={13} />
+                        {formatDate(message.created_at)}
+                      </span>
+
+                      <span>
+                        {formatDuration(
+                          message.duration_seconds
+                        )}
+                      </span>
+                    </div>
+
+                    <span className="voice-message-size">
+                      {(message.file_size / 1024).toFixed(1)} KB
+                    </span>
+
+                    {playingMessageId === message.id && audioUrl && (
+                      <audio
+                        className="voice-playback"
+                        controls
+                        autoPlay
+                        src={audioUrl}
+                        onEnded={clearAudioUrl}
+                      />
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="voice-play-button"
+                    onClick={() => playMessage(message)}
+                    disabled={
+                      loadingAudioId === message.id
+                    }
+                    title="Putar pesan"
+                    aria-label={`Putar pesan dari ${message.sender_username}`}
+                  >
+                    {loadingAudioId === message.id ? (
+                      <RefreshCw
+                        size={17}
+                        className="voice-spinning"
+                      />
+                    ) : playingMessageId === message.id ? (
+                      <Pause size={18} />
+                    ) : (
+                      <Play size={18} />
+                    )}
+                  </button>
+                </article>
+              ))
+            )
+          ) : loadingSent && sentMessages.length === 0 ? (
             <div className="voice-empty">
-              Memuat inbox...
+              Memuat history terkirim...
             </div>
-          ) : messages.length === 0 ? (
+          ) : sentMessages.length === 0 ? (
             <div className="voice-empty">
-              <Headphones size={34} />
+              <Upload size={34} />
 
               <strong>
-                Belum ada voice message
+                Belum ada pesan terkirim
               </strong>
 
               <span>
-                Pesan suara yang diterima akan muncul di sini.
+                Pesan suara yang kamu kirim akan muncul di sini
+                beserta status sudah diputar atau belum.
               </span>
             </div>
           ) : (
-            messages.map(message => (
+            sentMessages.map(message => (
               <article
                 className={
                   `voice-message-card ${
-                    !message.is_read ? 'unread' : ''
+                    !message.is_read ? 'sent-pending' : ''
                   }`
                 }
                 key={message.id}
@@ -828,21 +1055,18 @@ export default function VoiceMessagesPanel() {
                 <div className="voice-message-info">
                   <div className="voice-message-title">
                     <strong>
-                      {message.sender_username}
+                      {message.recipient_username}
                     </strong>
 
-                    {!message.is_read ? (
-                      <span className="voice-unread-label">
-                        <Circle
-                          size={8}
-                          fill="currentColor"
-                        />
-                        Baru
+                    {message.is_read ? (
+                      <span className="voice-read-label">
+                        <Eye size={13} />
+                        Sudah diputar
                       </span>
                     ) : (
-                      <span className="voice-read-label">
-                        <CheckCircle2 size={13} />
-                        Dibaca
+                      <span className="voice-unread-label">
+                        <EyeOff size={13} />
+                        Belum diputar
                       </span>
                     )}
                   </div>
@@ -850,7 +1074,7 @@ export default function VoiceMessagesPanel() {
                   <div className="voice-message-meta">
                     <span>
                       <Clock size={13} />
-                      {formatDate(message.created_at)}
+                      Dikirim {formatDate(message.created_at)}
                     </span>
 
                     <span>
@@ -861,41 +1085,12 @@ export default function VoiceMessagesPanel() {
                   </div>
 
                   <span className="voice-message-size">
+                    {message.is_read && message.read_at
+                      ? `Diputar ${formatDate(message.read_at)} · `
+                      : ''}
                     {(message.file_size / 1024).toFixed(1)} KB
                   </span>
-
-                  {playingMessageId === message.id && audioUrl && (
-                    <audio
-                      className="voice-playback"
-                      controls
-                      autoPlay
-                      src={audioUrl}
-                      onEnded={clearAudioUrl}
-                    />
-                  )}
                 </div>
-
-                <button
-                  type="button"
-                  className="voice-play-button"
-                  onClick={() => playMessage(message)}
-                  disabled={
-                    loadingAudioId === message.id
-                  }
-                  title="Putar pesan"
-                  aria-label={`Putar pesan dari ${message.sender_username}`}
-                >
-                  {loadingAudioId === message.id ? (
-                    <RefreshCw
-                      size={17}
-                      className="voice-spinning"
-                    />
-                  ) : playingMessageId === message.id ? (
-                    <Pause size={18} />
-                  ) : (
-                    <Play size={18} />
-                  )}
-                </button>
               </article>
             ))
           )}
